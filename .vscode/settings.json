@@ -1,0 +1,12 @@
+{
+  "typescript.tsdk": "node_modules\\typescript\\lib",
+  "javascript.preferences.quoteStyle": "single",
+  "typescript.preferences.quoteStyle": "single",
+  "mocha.options": {
+    "compilers": "ts-node/register"
+  },
+  "mocha.requires": [
+    "ts-node/register"
+  ],
+  "mocha.files.glob": "test/**/*.test.ts"
+}
