@@ -40,7 +40,8 @@
     "docs": "typedoc --mode file --out docs src --exclude \"**/*+(index|.spec|.test|.e2e).ts\"",
     "gh-pages": "rimraf docs && npm run docs && gh-pages -d docs",
     "npm-publish": "npm publish",
-    "lint": "eslint \"./**/*.ts\""
+    "lint": "eslint \"./**/*.ts\"",
+    "tools:testrig": "gulp generateParser && ts-node tools/TestRig.ts"
   },
   "version": "0.0.0",
   "name": "prettier-velocity-html-plugin",

@@ -22,12 +22,13 @@
       "request": "launch",
       "envFile": "${workspaceFolder}/.env",
       "args": [
-        "${relativeFile}"
+        "${relativeFile}",
+        "test/parser/testCases/testCase02.html"
       ],
       "runtimeArgs": [
         "--nolazy",
         "-r",
-        "ts-node/register"
+        "ts-node/register",
       ],
       "stopOnEntry": false,
       "sourceMaps": true,
