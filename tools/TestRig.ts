@@ -7,8 +7,10 @@ import {
 } from "antlr4ts";
 import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
 import { VelocityHtmlLexer } from "../src/parser/generated/VelocityHtmlLexer";
+import { VelocityTokenFactory } from "../src/parser/VelocityTokenFactory";
 import { VelocityHtmlParser } from "../src/parser/generated/VelocityHtmlParser";
 import * as fs from "fs";
+import { VelocityToken } from "../src/parser/VelocityToken";
 
 function main(): void {
   if (process.argv.length < 3) {
@@ -18,12 +20,14 @@ function main(): void {
   const text = fs.readFileSync(process.argv[2], "utf-8");
   const inputStream = CharStreams.fromString(text.toString());
   const lexer = new VelocityHtmlLexer(inputStream);
+  const tokenFactory = new VelocityTokenFactory(lexer);
+  lexer.tokenFactory = tokenFactory;
   const tokens = new CommonTokenStream(lexer);
   tokens.fill();
 
   tokens.getTokens().forEach((token) => {
-    if (token instanceof CommonToken) {
-      console.log(token.toString(lexer));
+    if (token instanceof VelocityToken) {
+      console.log(token.toVelocityString(lexer));
     } else {
       console.log(token.toString());
     }

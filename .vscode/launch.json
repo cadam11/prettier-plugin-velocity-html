@@ -23,7 +23,7 @@
       "envFile": "${workspaceFolder}/.env",
       "args": [
         "${relativeFile}",
-        "test/parser/testCases/testCase02.html"
+        "test/parser/testCases/testCase01.html"
       ],
       "runtimeArgs": [
         "--nolazy",

@@ -5,12 +5,18 @@ lexer grammar VelocityHtmlLexer;
 } 
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
-   private isNotStartOfVtlReference(): boolean {
-      const currentPosition = this._tokenStartCharIndex;
+   private isNotStartOfVtlReference(offset: number = 0): boolean {
+      const currentPosition = this._tokenStartCharIndex + offset;
       const nextTwoCharacters = this.inputStream.getText(Interval.of(currentPosition, currentPosition + 1));
       console.log('nextCharacters', nextTwoCharacters);
       // Curly braces break formatting of antlr4 plugin
       return nextTwoCharacters !== '$\u007B';
+   }
+
+   public isVtlReferenceInsideString = false;
+
+   private makeVtlReferenceInsideToken(): void {
+      console.log();
    }
 }
 
@@ -18,15 +24,21 @@ TAG_START_OPEN: '<' { console.log('after TAG_START_OPEN') } -> pushMode(INSIDE_T
 
 TAG_END_OPEN: '<' '/' { console.log('after TAG_END_OPEN') }-> pushMode(INSIDE_TAG);
 
-VELOCITY_REFERENCE: '$' '{'  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
+HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
-HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[<]+  { console.log('after HTML_TEXT') };
+HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r<]+  { console.log('after HTML_TEXT') };
 
+WS
+   : [ \t\n\r] +
+   ;
 
+fragment VTL_REFERENCE_START: '$' '{';
 
 mode INSIDE_VELOCITY_REFERENCE;
 
-VTL_IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]*;
+VTL_IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]* { this.makeVtlReferenceInsideToken() };
+
+VTL_DOT: '.';
 
 VTL_METHOD_OPEN: '(';
 
@@ -40,16 +52,18 @@ VTL_VALUE
    | VTL_INSIDE_REFERENCE;
 
 VTL_STRING
-   : '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"';
+   : '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
+   | '\'' (('\\' ~[\\\u0000-\u001F]) |  ~ ['\\\u0000-\u001F])* '\''
+   ;
 
 VTL_NUMBER
    : [1-9][0-9]*;
 
 VTL_CLOSE
-   : '}' -> skip, popMode;
+   : '}' '"'? ->  popMode;
 
 VTL_WS
-   : [ ] + -> skip
+   : [ ] + 
    ;
 
 mode INSIDE_TAG;
@@ -58,18 +72,20 @@ EQUAL: '=';
 // \- since - means "range" inside [...]
 
 HTML_STRING
-   : '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
+   : {this.isNotStartOfVtlReference(1)}?  '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
    // Unescaped one must not contain spaces
 //    | (('\\' ~[\\\u0000-\u0020]) |  ~ ["\\\u0000-\u0020])+
    ;
 
+HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
+
 TAG_CLOSE: '>' { console.log('after TAG_CLOSE') } -> popMode;
 SELF_CLOSING_TAG_CLOSE :'/' '>' -> popMode;
 
-HTML_TAG_VTL:  '$' '{' -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
+HTML_TAG_VTL:  VTL_REFERENCE_START -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
-WS
-   : [ \t\n\r] + -> skip
+HTML_WS
+   : [ \t\n\r] +
    ;
 
 // handle characters which failed to match any other token
