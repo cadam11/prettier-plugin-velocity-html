@@ -5,14 +5,13 @@ import del from "del";
 import exec from "child_process";
 import logger from "fancy-log";
 import * as fs from "fs";
+import * as path from "path";
 
 const TARGET_PATH = "dist";
 const SOURCE_PATH = "src";
 const TS_SOURCE_FILES = SOURCE_PATH + "/**/*.ts";
 const GENERATED_PARSER_FILES = SOURCE_PATH + "/parser/generated";
 const GRAMMAR_FILE = SOURCE_PATH + "/parser/VelocityHtmlParser.g4";
-
-const tsProject = tsc.createProject("tsconfig.json");
 
 function execWithPromise(cmd: string): Promise<unknown> {
   logger(`Executing "${cmd}"`);
@@ -42,22 +41,32 @@ function generateParser(): Promise<unknown> {
   );
 }
 
-function buildTs(source: NodeJS.ReadWriteStream): NodeJS.ReadWriteStream {
+function buildTs(
+  source: NodeJS.ReadWriteStream,
+  targetFolder: string
+): NodeJS.ReadWriteStream {
+  const tsProject = tsc.createProject("tsconfig.json");
   const tsResult = source.pipe(sourcemaps.init()).pipe(tsProject());
 
-  tsResult.dts.pipe(gulp.dest(TARGET_PATH));
+  // tsResult.dts.pipe(gulp.dest(TARGET_PATH));
 
   return tsResult.js
     .pipe(sourcemaps.write(".", { sourceRoot: "./", includeContent: false }))
-    .pipe(gulp.dest(TARGET_PATH));
+    .pipe(gulp.dest(path.join(TARGET_PATH, targetFolder)));
 }
 
 function buildMain(): NodeJS.ReadWriteStream {
-  return buildTs(gulp.src("src/**/*.ts"));
+  return buildTs(gulp.src("src/**/*.ts"), "src");
 }
 
 function buildTest(): NodeJS.ReadWriteStream {
-  return buildTs(gulp.src("test/**/*.ts"));
+  return buildTs(gulp.src("test/**/*.ts"), "test");
+}
+
+function copyTestArtifacts() {
+  return gulp
+    .src("test/**/*.html")
+    .pipe(gulp.dest(path.join(TARGET_PATH, "test")));
 }
 
 function watch(): fs.FSWatcher {
@@ -65,11 +74,10 @@ function watch(): fs.FSWatcher {
 }
 
 const allGenerateParser = gulp.series(clean, generateParser);
-const allBuildTest = gulp.series(clean, generateParser, buildTest);
-const allBuildMain = gulp.series(clean, generateParser, buildMain);
+const allBuild = gulp.series(
+  clean,
+  generateParser,
+  gulp.parallel(buildMain, copyTestArtifacts, buildTest)
+);
 
-export {
-  allBuildMain as buildMain,
-  allGenerateParser as generateParser,
-  allBuildTest as buildTest,
-};
+export { allGenerateParser as generateParser, allBuild as build };

@@ -30,6 +30,7 @@
     "gulp-typescript": "^6.0.0-alpha.1",
     "mocha": "^8.3.0",
     "prettier": "^2.2.1",
+    "source-map-support": "^0.5.19",
     "ts-node": "^9.1.1",
     "tslint": "^6.1.3",
     "tslint-microsoft-contrib": "^6.2.0",
@@ -37,8 +38,8 @@
     "typescript": "^4.2.2"
   },
   "scripts": {
-    "build": "gulp",
-    "test": "node node_modules/mocha/bin/mocha --require ts-node/register test/**/*.test.ts --reporter spec",
+    "build": "gulp build",
+    "test": "npm run build && node --require source-map-support/register node_modules/mocha/bin/mocha dist/**/*.test.js --reporter spec",
     "docs": "typedoc --mode file --out docs src --exclude \"**/*+(index|.spec|.test|.e2e).ts\"",
     "gh-pages": "rimraf docs && npm run docs && gh-pages -d docs",
     "npm-publish": "npm publish",

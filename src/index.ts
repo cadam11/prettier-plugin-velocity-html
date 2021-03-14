@@ -1,19 +1,21 @@
 // This is the library entry point
 
-import { Doc, FastPath } from "prettier";
+import { Doc, FastPath, doc } from "prettier";
 import { HtmlTagNode } from "./parser/Node";
 import parseVelocityHtml from "./parser/parser";
+import printer from "./printer";
 
-export default {
-  languages: [
-    {
-      name: "Velocity+HTML",
-      parsers: ["velocity-html"],
-      extensions: [".vm"],
-    },
-  ],
-  parsers: {
-    "velocity-html": parseVelocityHtml,
+export const languages = [
+  {
+    name: "Velocity+HTML",
+    parsers: ["velocity-html"],
+    extensions: [".vm"],
+  },
+];
+
+export const parsers = {
+  "velocity-html": {
+    parse: parseVelocityHtml,
     astFormat: "velocity-html-ast",
     locStart: function (node: HtmlTagNode): number {
       return node.locationStart;
@@ -22,20 +24,10 @@ export default {
       return node.closeTag.locationStart;
     },
   },
-  printers: {
-    "velocity-html-ast": {
-      print: function (
-        path: FastPath,
-        options: object,
-        print: (path: FastPath) => Doc
-      ): Doc {
-        const node = path.getValue();
+};
 
-        // if (Array.isArray(node)) {
-        //   return builders.concat(path.map(print));
-        // }
-        return node.value;
-      },
-    },
+export const printers = {
+  "velocity-html-ast": {
+    print: printer,
   },
 };

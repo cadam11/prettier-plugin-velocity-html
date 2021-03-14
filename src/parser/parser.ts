@@ -15,7 +15,14 @@ import {
 } from "./Node";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
 
-export class ParserException extends Error {}
+export class ParserException extends Error {
+  // loc is read by prettier error handler
+  public loc: number;
+  constructor(token: Token, message: string) {
+    super(message);
+    this.loc = token.charPositionInLine;
+  }
+}
 
 export default function parse(
   text: string,
@@ -45,33 +52,41 @@ export default function parse(
   const nodes: ParserNode[] = [];
   const parentStack: HtmlStartTagNode[] = [];
   const tokens = tokenStream.getTokens();
+  let currentHtmlNode: HtmlStartTagNode;
+  let currentHtmlAttribute: Token;
+
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
     let nextToken: Token | undefined;
     if (i < tokens.length - 1) {
       nextToken = tokens[i + 1];
     }
-    let currentHtmlNode: HtmlStartTagNode;
-    let currentHtmlAttribute: Token;
     switch (token.type) {
-      case VelocityHtmlLexer.TAG_START_OPEN:
+      case VelocityHtmlLexer.TAG_START_OPEN: {
+        const parent = parentStack[0];
         currentHtmlNode = new HtmlStartTagNode(
-          parentStack[0],
+          parent,
           token.charPositionInLine
         );
+        if (parent) {
+          parent.children.push(currentHtmlNode);
+        }
         break;
+      }
       case VelocityHtmlLexer.HTML_NAME:
         if (!currentHtmlNode) {
-          throw new ParserException();
+          throw new ParserException(token, "currentHtml not set");
         }
         if (nextToken && nextToken.text !== "=") {
           if (currentHtmlNode.tagName) {
             throw new ParserException(
+              token,
               "Want to set tag name, but tag name already set"
             );
           }
           currentHtmlNode.tagName = token.text;
         } else if (nextToken.text == "=") {
+          i++;
           currentHtmlAttribute = token;
         }
         break;
@@ -83,7 +98,10 @@ export default function parse(
           currentHtmlNode.addAttribute(currentHtmlAttribute, token);
           currentHtmlAttribute = null;
         } else {
-          throw new ParserException("Expected attribute key to be present");
+          throw new ParserException(
+            token,
+            "Expected attribute key to be present"
+          );
         }
         break;
       case VelocityHtmlLexer.TAG_CLOSE:
@@ -107,22 +125,23 @@ export default function parse(
           currentCloseToken = tokens[++i];
           if (currentCloseToken.type === VelocityHtmlLexer.HTML_NAME) {
             closeTagNode.tagName = currentCloseToken.text;
-          } else if (currentCloseToken.type !== VelocityHtmlLexer.TAG_CLOSE) {
+          } else if (currentCloseToken.type === VelocityHtmlLexer.TAG_CLOSE) {
             break;
           } else {
             throw new ParserException(
+              token,
               `Unexpected token type ${currentCloseToken.type}`
             );
           }
         } while (i < tokens.length);
-        parentStack.unshift();
+        parentStack.shift();
         currentHtmlNode = parentStack[0];
         break;
       }
       case VelocityHtmlLexer.EOF:
         break;
       default:
-        throw new ParserException(`Unexpected token ${token.type}`);
+        throw new ParserException(token, `Unexpected token ${token.type}`);
     }
   }
   return nodes[0];

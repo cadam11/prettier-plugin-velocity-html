@@ -1,6 +1,6 @@
 {
   "include": [
-    "src/**/*.ts"    
+    "**/*.ts"
   ],
   "exclude": [
     "spec",
@@ -20,7 +20,7 @@
     "declaration": true,
     "sourceMap": true,
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": false,
     "noImplicitAny": true,
     "strictNullChecks": false,

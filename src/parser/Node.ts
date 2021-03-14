@@ -4,9 +4,10 @@ export class ParserNode {}
 
 export class HtmlTagNode extends ParserNode {
   public tagName: string;
-  public attributes: [{ key: Token; value: Token }];
+  public attributes: { key: Token; value: Token }[] = [];
   public closeTag: HtmlCloseTagNode;
-  private content: Token[];
+  private content: Token[] = [];
+  public children: HtmlTagNode[] = [];
   public constructor(public parent: HtmlTagNode, public locationStart: number) {
     super();
   }
