@@ -5,11 +5,4 @@ export class AwesomeLibrary {
   /**
    * Creates an instance of AwesomeLibrary.
    */
-  constructor() {
-    console.log("Yeah");
-  }
-
-  DoSomething(): void {
-    console.log("Damn");
-  }
 }

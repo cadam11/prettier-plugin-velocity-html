@@ -2,7 +2,8 @@
     "extends": "./tsconfig.json",
     "include": [
       "gulpfile.ts",
-      "tools/**/*.ts"
+      "tools/**/*.ts",
+      "test/**/*.ts"
     ],
     "exclude": []
   }
