@@ -8,7 +8,7 @@ lexer grammar VelocityHtmlLexer;
    private isNotStartOfVtlReference(offset: number = 0): boolean {
       const currentPosition = this._tokenStartCharIndex + offset;
       const nextTwoCharacters = this.inputStream.getText(Interval.of(currentPosition, currentPosition + 1));
-      console.log('nextCharacters', nextTwoCharacters);
+      this.debug('nextCharacters', nextTwoCharacters);
       // Curly braces break formatting of antlr4 plugin
       return nextTwoCharacters !== '$\u007B';
    }
@@ -16,17 +16,24 @@ lexer grammar VelocityHtmlLexer;
    public isVtlReferenceInsideString = false;
 
    private makeVtlReferenceInsideToken(): void {
-      console.log();
+   }
+
+   public isDebugEnabled = false;
+
+   private debug(...something: any[]): void {
+     if (this.isDebugEnabled) {
+       console.log.apply(undefined, something);
+     }
    }
 }
 
-TAG_START_OPEN: '<' { console.log('after TAG_START_OPEN') } -> pushMode(INSIDE_TAG);
+TAG_START_OPEN: '<' { this.debug('after TAG_START_OPEN') } -> pushMode(INSIDE_TAG);
 
-TAG_END_OPEN: '<' '/' { console.log('after TAG_END_OPEN') }-> pushMode(INSIDE_TAG);
+TAG_END_OPEN: '<' '/' { this.debug('after TAG_END_OPEN') }-> pushMode(INSIDE_TAG);
 
 HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
-HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r<]+  { console.log('after HTML_TEXT') };
+HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r<]+  { this.debug('after HTML_TEXT') };
 
 WS
    : [ \t\n\r] +
@@ -67,7 +74,7 @@ VTL_WS
    ;
 
 mode INSIDE_TAG;
-HTML_NAME: [a-zA-Z0-9]+ { console.log('after HTML_NAME') };
+HTML_NAME: [a-zA-Z0-9]+ { this.debug('after HTML_NAME') };
 EQUAL: '=';
 // \- since - means "range" inside [...]
 
@@ -79,13 +86,13 @@ HTML_STRING
 
 HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
-TAG_CLOSE: '>' { console.log('after TAG_CLOSE') } -> popMode;
+TAG_CLOSE: '>' { this.debug('after TAG_CLOSE') } -> popMode;
 SELF_CLOSING_TAG_CLOSE :'/' '>' -> popMode;
 
 HTML_TAG_VTL:  VTL_REFERENCE_START -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
 HTML_WS
-   : [ \t\n\r] +
+   : [ \t\n\r] + -> skip
    ;
 
 // handle characters which failed to match any other token

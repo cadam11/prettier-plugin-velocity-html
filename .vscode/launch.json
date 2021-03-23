@@ -86,10 +86,12 @@
       "request": "launch",
       "program": "${workspaceRoot}/node_modules/.bin/mocha",
       "args": [
+        "--no-timeouts",
         "--require",
         "source-map-support/register",
         "dist/**/*.test.js"
       ],
+      "console": "integratedTerminal",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "preLaunchTask": "npm: build"
     },
