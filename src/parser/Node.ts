@@ -1,9 +1,9 @@
-import { Token } from "antlr4ts";
+import { VelocityToken } from "./VelocityToken";
 
 export class ParserNode {}
 
 export class AttributeNode extends ParserNode {
-  public constructor(public key: Token, public value?: Token) {
+  public constructor(public key: VelocityToken, public value?: VelocityToken) {
     super();
   }
 }
@@ -12,17 +12,17 @@ export class HtmlTagNode extends ParserNode {
   public tagName: string;
   public attributes: AttributeNode[] = [];
   public closeTag: HtmlCloseTagNode;
-  private content: Token[] = [];
+  private content: VelocityToken[] = [];
   public children: HtmlTagNode[] = [];
   public constructor(public parent: HtmlTagNode, public locationStart: number) {
     super();
   }
 
-  public addAttribute(key: Token, value?: Token): void {
+  public addAttribute(key: VelocityToken, value?: VelocityToken): void {
     this.attributes.push(new AttributeNode(key, value));
   }
 
-  public addContent(content: Token) {
+  public addContent(content: VelocityToken) {
     this.content.push(content);
   }
 }

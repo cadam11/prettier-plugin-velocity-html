@@ -36,9 +36,9 @@ export default function (
     return concat(el);
   } else if (node instanceof AttributeNode) {
     if (node.value) {
-      return concat([node.key.text, "=", '"', node.value.text, '"']);
+      return concat([node.key.textValue, "=", '"', node.value.textValue, '"']);
     } else {
-      return concat([node.key.text]);
+      return concat([node.key.textValue]);
     }
   }
 }

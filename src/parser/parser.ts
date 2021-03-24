@@ -14,6 +14,7 @@ import {
   HtmlTagNode as HtmlStartTagNode,
   ParserNode,
 } from "./Node";
+import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
 
 export class ParserException extends Error {
@@ -35,6 +36,7 @@ export default function parse(
   const inputStream = CharStreams.fromString(text);
   const lexer = new VelocityHtmlLexer(inputStream);
   const tokenFactory = new VelocityTokenFactory(lexer);
+  lexer.tokenFactory = tokenFactory;
   const errors: Error[] = [];
   lexer.removeErrorListeners();
   lexer.addErrorListener({
@@ -56,12 +58,12 @@ export default function parse(
   const parentStack: HtmlStartTagNode[] = [];
   const tokens = tokenStream.getTokens();
   let currentHtmlNode: HtmlStartTagNode;
-  let currentHtmlAttribute: Token;
+  let currentHtmlAttribute: VelocityToken;
 
   let mode: LexerMode = "outsideTag";
 
   for (let i = 0; i < tokens.length; i++) {
-    const token = tokens[i];
+    const token: VelocityToken = tokens[i] as VelocityToken;
     let nextToken: Token | undefined;
     if (i < tokens.length - 1) {
       nextToken = tokens[i + 1];
@@ -93,8 +95,9 @@ export default function parse(
       }
       case "tagOpen": {
         switch (token.type) {
-          case VelocityHtmlLexer.HTML_NAME: {
-            currentHtmlNode.tagName = token.text;
+          case VelocityHtmlLexer.HTML_NAME:
+          case VelocityHtmlLexer.HTML_STRING: {
+            currentHtmlNode.tagName = token.textValue;
             mode = "attributeLHS";
             break;
           }
@@ -106,7 +109,8 @@ export default function parse(
       }
       case "attributeLHS": {
         switch (token.type) {
-          case VelocityHtmlLexer.HTML_NAME: {
+          case VelocityHtmlLexer.HTML_NAME:
+          case VelocityHtmlLexer.HTML_STRING: {
             if (nextToken.type !== VelocityHtmlLexer.EQUAL) {
               currentHtmlNode.addAttribute(token);
             } else {
@@ -130,7 +134,8 @@ export default function parse(
       }
       case "attributeRHS": {
         switch (token.type) {
-          case VelocityHtmlLexer.HTML_NAME: {
+          case VelocityHtmlLexer.HTML_NAME:
+          case VelocityHtmlLexer.HTML_STRING: {
             currentHtmlNode.addAttribute(currentHtmlAttribute, token);
             currentHtmlAttribute = null;
             mode = "attributeLHS";

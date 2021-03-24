@@ -79,10 +79,13 @@ EQUAL: '=';
 // \- since - means "range" inside [...]
 
 HTML_STRING
-   : {this.isNotStartOfVtlReference(1)}?  '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
+   : {this.isNotStartOfVtlReference(1)}?  '"' ( VALID_ESCAPES |  ~ ["\\\u0000-\u001F])* '"'
    // Unescaped one must not contain spaces
-//    | (('\\' ~[\\\u0000-\u0020]) |  ~ ["\\\u0000-\u0020])+
+   | {this.isNotStartOfVtlReference(1)}? '\'' ( VALID_ESCAPES |  ~ ['\\\u0000-\u001F])* '\''
    ;
+
+// Just allow everything to be escaped.
+fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
 
 HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 

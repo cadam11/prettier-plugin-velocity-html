@@ -1,5 +1,7 @@
 import { CommonToken, Recognizer } from "antlr4ts";
 import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
+import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
+import { ParserException } from "./parser";
 
 export class VelocityToken extends CommonToken {
   public isInsideString = false;
@@ -15,5 +17,16 @@ export class VelocityToken extends CommonToken {
       );
     }
     return stringRepresentation;
+  }
+
+  get textValue(): string {
+    switch (this.type) {
+      case VelocityHtmlLexer.HTML_STRING:
+        return this.text.substring(1, this.text.length - 1);
+      case VelocityHtmlLexer.HTML_NAME:
+        return this.text;
+      default:
+        throw new ParserException(this, "Expected token");
+    }
   }
 }

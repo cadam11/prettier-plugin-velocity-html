@@ -8,6 +8,10 @@ describe("prettier", () => {
       "<input name=address maxlength=200>",
       `<input name="address" maxlength="200">`,
     ],
+    [
+      "<input name='address' maxlength='200'>",
+      `<input name="address" maxlength="200">`,
+    ],
   ] as [string, string][]).forEach(([input, expectedOutput]) => {
     it(`should format ${input}`, () => {
       const formatted = format(input, {
