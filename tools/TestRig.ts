@@ -32,7 +32,7 @@ function main(): void {
   let input = null;
 
   if (options.file) {
-    input = fs.readFileSync(process.argv[2], "utf-8").toString();
+    input = fs.readFileSync(options.file, "utf-8").toString();
   } else if (options.text) {
     input = options.text;
   } else {

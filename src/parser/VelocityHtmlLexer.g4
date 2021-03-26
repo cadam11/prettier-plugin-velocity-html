@@ -74,17 +74,18 @@ VTL_WS
    ;
 
 mode INSIDE_TAG;
-HTML_NAME: [a-zA-Z0-9]+ { this.debug('after HTML_NAME') };
+HTML_NAME: [\-a-zA-Z0-9]+ { this.debug('after HTML_NAME') };
 EQUAL: '=';
 // \- since - means "range" inside [...]
 
 HTML_STRING
-   : {this.isNotStartOfVtlReference(1)}?  '"' ( VALID_ESCAPES |  ~ ["\\\u0000-\u001F])* '"'
+   : {this.isNotStartOfVtlReference(1)}?  '"' ( VALID_ESCAPES |  ~ ["])* '"'
    // Unescaped one must not contain spaces
-   | {this.isNotStartOfVtlReference(1)}? '\'' ( VALID_ESCAPES |  ~ ['\\\u0000-\u001F])* '\''
+   | {this.isNotStartOfVtlReference(1)}? '\'' ( VALID_ESCAPES |  ~ ['])* '\''
    ;
 
 // Just allow everything to be escaped.
+// TODO Does this make sense?
 fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
 
 HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);

@@ -20,13 +20,25 @@ import { VelocityTokenFactory } from "./VelocityTokenFactory";
 export class ParserException extends Error {
   // loc is read by prettier error handler
   public loc: number;
-  constructor(token: Token, message: string) {
-    super(message);
+  constructor(
+    token: VelocityToken,
+    mode?: string,
+    recognizer?: Recognizer<unknown, ATNSimulator>
+  ) {
+    const tokenName = recognizer
+      ? recognizer.vocabulary.getDisplayName(token.type)
+      : token.type;
+    super(`Unexpected token <${tokenName}> ${mode ? " in mode " + mode : ""}`);
     this.loc = token.charPositionInLine;
   }
 }
 
-type LexerMode = "tagOpen" | "attributeLHS" | "attributeRHS" | "outsideTag";
+type LexerMode =
+  | "tagOpen"
+  | "attributeLHS"
+  | "attributeRHS"
+  | "outsideTag"
+  | "tagClose";
 
 export default function parse(
   text: string,
@@ -64,6 +76,7 @@ export default function parse(
 
   for (let i = 0; i < tokens.length; i++) {
     const token: VelocityToken = tokens[i] as VelocityToken;
+    const newParserException = () => new ParserException(token, mode, lexer);
     let nextToken: Token | undefined;
     if (i < tokens.length - 1) {
       nextToken = tokens[i + 1];
@@ -87,8 +100,17 @@ export default function parse(
           case VelocityHtmlLexer.EOF: {
             break;
           }
+          case VelocityHtmlLexer.TAG_END_OPEN: {
+            mode = "tagClose";
+            const closeTagNode = new HtmlCloseTagNode(
+              currentHtmlNode,
+              token.charPositionInLine
+            );
+            currentHtmlNode.closeTag = closeTagNode;
+            break;
+          }
           default: {
-            throw new ParserException(token, "Unexpected token");
+            throw newParserException();
           }
         }
         break;
@@ -102,7 +124,7 @@ export default function parse(
             break;
           }
           default: {
-            throw new ParserException(token, "Unexpected token");
+            throw newParserException();
           }
         }
         break;
@@ -127,7 +149,7 @@ export default function parse(
             break;
           }
           default: {
-            throw new ParserException(token, "Unexpected token");
+            throw newParserException();
           }
         }
         break;
@@ -142,13 +164,32 @@ export default function parse(
             break;
           }
           default: {
-            throw new ParserException(token, "Unexpected token");
+            throw newParserException();
+          }
+        }
+        break;
+      }
+      case "tagClose": {
+        switch (token.type) {
+          case VelocityHtmlLexer.HTML_NAME:
+          case VelocityHtmlLexer.HTML_STRING: {
+            currentHtmlNode.closeTag.tagName = token.textValue;
+            break;
+          }
+          case VelocityHtmlLexer.TAG_CLOSE: {
+            parentStack.shift();
+            currentHtmlNode = parentStack[0];
+            mode = "outsideTag";
+            break;
+          }
+          default: {
+            throw newParserException();
           }
         }
         break;
       }
       default: {
-        throw new ParserException(token, "Unexpected token");
+        throw newParserException();
       }
     }
 

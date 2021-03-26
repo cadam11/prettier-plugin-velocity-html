@@ -18,10 +18,9 @@ export default function (
       group(
         concat([
           "<",
-          softline,
-          group(
-            concat([node.tagName, line, group(join(line, printedAttributes))])
-          ),
+          node.tagName,
+          indent(concat([line, join(line, printedAttributes)])),
+          // ),
           ">",
         ])
       ),
@@ -31,7 +30,7 @@ export default function (
     }
 
     if (node.closeTag) {
-      el.push(concat([hardline, "</", node.closeTag.tagName, ">"]));
+      el.push(concat(["</", node.closeTag.tagName, ">"]));
     }
     return concat(el);
   } else if (node instanceof AttributeNode) {
