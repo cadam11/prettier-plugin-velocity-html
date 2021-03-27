@@ -3,28 +3,7 @@ import { expect } from "chai";
 import * as fs from "fs";
 
 describe("prettier", () => {
-  ([
-    [
-      "<input name=address maxlength=200>",
-      `<input name="address" maxlength="200">`,
-    ],
-    [
-      "<input name='address' maxlength='200'>",
-      `<input name="address" maxlength="200">`,
-    ],
-    [
-      '<input name="address" maxlength="200">',
-      `<input name="address" maxlength="200">`,
-    ],
-    ['<div class="foo"></div>', '<div class="foo"></div>'],
-    ['<div   class="foo"   ></div>', '<div class="foo"></div>'],
-    [
-      '<div   class="foo bar"   id="header"   ></div>',
-      '<div class="foo bar" id="header"></div>',
-    ],
-    ["<div data-prettier></div>", "<div data-prettier></div>"],
-    ['<div data-prettier="true"></div>', '<div data-prettier="true"></div>'],
-  ] as [string, string][]).forEach(([input, expectedOutput]) => {
+  ([] as [string, string][]).forEach(([input, expectedOutput]) => {
     it(`should format ${input}`, () => {
       const formatted = format(input, {
         parser: "velocity-html",

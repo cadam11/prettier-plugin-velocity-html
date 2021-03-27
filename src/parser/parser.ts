@@ -12,7 +12,11 @@ import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
 import {
   HtmlCloseTagNode,
   HtmlTagNode as HtmlStartTagNode,
+  HtmlTagNode,
+  HtmlTextNode,
+  NodeWithChildren,
   ParserNode,
+  RootNode,
 } from "./Node";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -66,8 +70,9 @@ export default function parse(
   const tokenStream = new CommonTokenStream(lexer);
   tokenStream.fill();
 
+  const rootNode = new RootNode();
   const nodes: ParserNode[] = [];
-  const parentStack: HtmlStartTagNode[] = [];
+  const parentStack: NodeWithChildren[] = [rootNode];
   const tokens = tokenStream.getTokens();
   let currentHtmlNode: HtmlStartTagNode;
   let currentHtmlAttribute: VelocityToken;
@@ -91,9 +96,12 @@ export default function parse(
               parent,
               token.charPositionInLine
             );
-            if (parent) {
-              parent.children.push(currentHtmlNode);
+            const prev = parent.children[parent.children.length - 1];
+            if (prev != null) {
+              currentHtmlNode.prev = prev;
+              prev.next = currentHtmlNode;
             }
+            parent.addChild(currentHtmlNode);
             mode = "tagOpen";
             break;
           }
@@ -107,6 +115,16 @@ export default function parse(
               token.charPositionInLine
             );
             currentHtmlNode.closeTag = closeTagNode;
+            break;
+          }
+          case VelocityHtmlLexer.HTML_TEXT: {
+            currentHtmlNode.addChild(new HtmlTextNode(token));
+            break;
+          }
+          case VelocityHtmlLexer.WS: {
+            if (token.text !== "\n") {
+              throw newParserException();
+            }
             break;
           }
           default: {
@@ -144,7 +162,10 @@ export default function parse(
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
             nodes.push(currentHtmlNode);
-            parentStack.unshift(currentHtmlNode);
+            // Self closing tag
+            if (!currentHtmlNode.isSelfClosing()) {
+              parentStack.unshift(currentHtmlNode);
+            }
             mode = "outsideTag";
             break;
           }
@@ -178,7 +199,8 @@ export default function parse(
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
             parentStack.shift();
-            currentHtmlNode = parentStack[0];
+            // TODO
+            currentHtmlNode = parentStack[0] as HtmlTagNode;
             mode = "outsideTag";
             break;
           }
@@ -250,5 +272,5 @@ export default function parse(
     //     throw new ParserException(token, `Unexpected token ${token.type}`);
     // }
   }
-  return nodes[0];
+  return rootNode;
 }
