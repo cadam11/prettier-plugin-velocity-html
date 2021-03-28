@@ -5,6 +5,7 @@ import {
   HtmlTextNode,
   ParserNode,
   RootNode,
+  WhitespaceNode,
 } from "./parser/Node";
 import { Token } from "antlr4ts";
 
@@ -26,7 +27,7 @@ export default function (
         const childNode = childPath.getValue();
         const printedChild = print(childPath);
         const nextBetweenLine =
-          childNode.next && childNode.next.isLeadingSpaceSensitive
+          childNode.next != null && !childNode.next.isLeadingSpaceSensitive()
             ? hardline
             : "";
         return concat([printedChild, nextBetweenLine]);
@@ -50,7 +51,7 @@ export default function (
       el.push(indent(concat(path.map(print, "children"))));
     }
 
-    if (node.closeTag) {
+    if (node.closeTag != null) {
       el.push(concat(["</", node.closeTag.tagName, ">"]));
     }
     if (node.isSelfClosing()) {
@@ -58,14 +59,16 @@ export default function (
     }
     return group(concat(el));
   } else if (node instanceof AttributeNode) {
-    if (node.value) {
+    if (node.value != null) {
       return concat([node.key.textValue, "=", '"', node.value.textValue, '"']);
     } else {
       return concat([node.key.textValue]);
     }
   } else if (node instanceof HtmlTextNode) {
-    return concat([node.token.text]);
+    return concat([node.token.textValue]);
+  } else if (node instanceof WhitespaceNode) {
+    return node.whitespace;
   } else {
-    throw new Error("Unknown type " + node.toString());
+    throw new Error("Unknown type " + node.constructor.toString());
   }
 }

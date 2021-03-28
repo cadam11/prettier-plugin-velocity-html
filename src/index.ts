@@ -1,33 +1,42 @@
 // This is the library entry point
 
-import { Doc, FastPath, doc } from "prettier";
+import { Plugin } from "prettier";
 import { HtmlTagNode } from "./parser/Node";
 import parseVelocityHtml from "./parser/parser";
+import { preprocess } from "./preprocess";
 import printer from "./printer";
 
-export const languages = [
-  {
-    name: "Velocity+HTML",
-    parsers: ["velocity-html"],
-    extensions: [".vm"],
-  },
-];
-
-export const parsers = {
-  "velocity-html": {
-    parse: parseVelocityHtml,
-    astFormat: "velocity-html-ast",
-    locStart: function (node: HtmlTagNode): number {
-      return node.locationStart;
-    },
-    locEnd: function (node: HtmlTagNode): number {
-      return node.closeTag.locationStart;
+const plugin: Plugin = {
+  parsers: {
+    "velocity-html": {
+      parse: parseVelocityHtml,
+      astFormat: "velocity-html-ast",
+      locStart: function (node: HtmlTagNode): number {
+        return node.locationStart;
+      },
+      locEnd: function (node: HtmlTagNode): number {
+        return node.closeTag.locationStart;
+      },
     },
   },
+  printers: {
+    // TODO No preprocess in types?
+    "velocity-html-ast": {
+      print: printer,
+      preprocess,
+    } as any,
+  },
+  languages: [
+    {
+      name: "Velocity+HTML",
+      parsers: ["velocity-html"],
+      extensions: [".vm"],
+    },
+  ],
 };
 
-export const printers = {
-  "velocity-html-ast": {
-    print: printer,
-  },
-};
+export const languages = plugin.languages;
+
+export const parsers = plugin.parsers;
+
+export const printers = plugin.printers;

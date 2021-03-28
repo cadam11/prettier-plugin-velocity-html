@@ -16,7 +16,8 @@ module.exports = {
   ],
   rules: {
     "no-console": 1, // Means warning
-    "prettier/prettier": 2, // Means error  }
+    "prettier/prettier": 2, // Means error  
+    "@typescript-eslint/strict-boolean-expressions": ["error", {"allowString": false, "allowNumber": false, "allowNullableObject": false}]
   },
   // overrides: [{
   //   files: ["src/**/*.ts"],

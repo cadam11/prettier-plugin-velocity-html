@@ -22,11 +22,14 @@ export class VelocityToken extends CommonToken {
   get textValue(): string {
     switch (this.type) {
       case VelocityHtmlLexer.HTML_STRING:
-        return this.text.substring(1, this.text.length - 1);
+        return this.text != null
+          ? this.text.substring(1, this.text.length - 1)
+          : "";
       case VelocityHtmlLexer.HTML_NAME:
-        return this.text;
+      case VelocityHtmlLexer.HTML_TEXT:
+        return this.text != null ? this.text : "";
       default:
-        throw new ParserException(this, "Expected token");
+        throw new ParserException(this);
     }
   }
 }

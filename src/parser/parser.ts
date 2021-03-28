@@ -17,23 +17,37 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
+  WhitespaceNode,
 } from "./Node";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
 
 export class ParserException extends Error {
   // loc is read by prettier error handler
-  public loc: number;
+  public loc: {
+    start: {
+      column: number;
+      line: number;
+    };
+  };
   constructor(
     token: VelocityToken,
     mode?: string,
     recognizer?: Recognizer<unknown, ATNSimulator>
   ) {
-    const tokenName = recognizer
-      ? recognizer.vocabulary.getDisplayName(token.type)
-      : token.type;
-    super(`Unexpected token <${tokenName}> ${mode ? " in mode " + mode : ""}`);
-    this.loc = token.charPositionInLine;
+    const tokenName =
+      recognizer != null
+        ? recognizer.vocabulary.getDisplayName(token.type)
+        : token.type;
+    super(
+      `Unexpected token <${tokenName}> ${mode != null ? "in mode " + mode : ""}`
+    );
+    this.loc = {
+      start: {
+        column: token.charPositionInLine,
+        line: token.line,
+      },
+    };
   }
 }
 
@@ -71,11 +85,10 @@ export default function parse(
   tokenStream.fill();
 
   const rootNode = new RootNode();
-  const nodes: ParserNode[] = [];
   const parentStack: NodeWithChildren[] = [rootNode];
   const tokens = tokenStream.getTokens();
-  let currentHtmlNode: HtmlStartTagNode;
-  let currentHtmlAttribute: VelocityToken;
+  let currentNode: NodeWithChildren = rootNode;
+  let currentHtmlAttribute: VelocityToken | null = null;
 
   let mode: LexerMode = "outsideTag";
 
@@ -92,16 +105,11 @@ export default function parse(
         switch (token.type) {
           case VelocityHtmlLexer.TAG_START_OPEN: {
             const parent = parentStack[0];
-            currentHtmlNode = new HtmlStartTagNode(
+            currentNode = new HtmlStartTagNode(
               parent,
               token.charPositionInLine
             );
-            const prev = parent.children[parent.children.length - 1];
-            if (prev != null) {
-              currentHtmlNode.prev = prev;
-              prev.next = currentHtmlNode;
-            }
-            parent.addChild(currentHtmlNode);
+            parent.addChild(currentNode);
             mode = "tagOpen";
             break;
           }
@@ -109,22 +117,34 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.TAG_END_OPEN: {
+            if (!(currentNode instanceof HtmlStartTagNode)) {
+              throw newParserException();
+            }
             mode = "tagClose";
             const closeTagNode = new HtmlCloseTagNode(
-              currentHtmlNode,
+              currentNode,
               token.charPositionInLine
             );
-            currentHtmlNode.closeTag = closeTagNode;
+            currentNode.closeTag = closeTagNode;
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT: {
-            currentHtmlNode.addChild(new HtmlTextNode(token));
+            currentNode.addChild(new HtmlTextNode(token));
             break;
           }
           case VelocityHtmlLexer.WS: {
-            if (token.text !== "\n") {
-              throw newParserException();
+            if (
+              currentNode.isWhitespaceCollapsible() &&
+              currentNode.children.length !== 0
+            ) {
+              currentNode.addChild(new WhitespaceNode(" "));
+            } else if (
+              !currentNode.isWhitespaceCollapsible() &&
+              token.text != null
+            ) {
+              currentNode.addChild(new WhitespaceNode(token.text));
             }
+            // else ignore whitespace
             break;
           }
           default: {
@@ -134,10 +154,13 @@ export default function parse(
         break;
       }
       case "tagOpen": {
+        if (!(currentNode instanceof HtmlStartTagNode)) {
+          throw newParserException();
+        }
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
-            currentHtmlNode.tagName = token.textValue;
+            currentNode.tagName = token.textValue;
             mode = "attributeLHS";
             break;
           }
@@ -148,11 +171,17 @@ export default function parse(
         break;
       }
       case "attributeLHS": {
+        if (!(currentNode instanceof HtmlTagNode)) {
+          throw newParserException();
+        }
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
-            if (nextToken.type !== VelocityHtmlLexer.EQUAL) {
-              currentHtmlNode.addAttribute(token);
+            if (
+              nextToken != null &&
+              nextToken.type !== VelocityHtmlLexer.EQUAL
+            ) {
+              currentNode.addAttribute(token);
             } else {
               currentHtmlAttribute = token;
               i++;
@@ -161,10 +190,9 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
-            nodes.push(currentHtmlNode);
             // Self closing tag
-            if (!currentHtmlNode.isSelfClosing()) {
-              parentStack.unshift(currentHtmlNode);
+            if (!currentNode.isSelfClosing()) {
+              parentStack.unshift(currentNode);
             }
             mode = "outsideTag";
             break;
@@ -176,10 +204,16 @@ export default function parse(
         break;
       }
       case "attributeRHS": {
+        if (!(currentNode instanceof HtmlStartTagNode)) {
+          throw newParserException();
+        }
+        if (currentHtmlAttribute == null) {
+          throw newParserException();
+        }
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
-            currentHtmlNode.addAttribute(currentHtmlAttribute, token);
+            currentNode.addAttribute(currentHtmlAttribute, token);
             currentHtmlAttribute = null;
             mode = "attributeLHS";
             break;
@@ -191,16 +225,19 @@ export default function parse(
         break;
       }
       case "tagClose": {
+        if (!(currentNode instanceof HtmlStartTagNode)) {
+          throw newParserException();
+        }
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
-            currentHtmlNode.closeTag.tagName = token.textValue;
+            currentNode.closeTag.tagName = token.textValue;
             break;
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
             parentStack.shift();
             // TODO
-            currentHtmlNode = parentStack[0] as HtmlTagNode;
+            currentNode = parentStack[0] as HtmlTagNode;
             mode = "outsideTag";
             break;
           }
