@@ -93,7 +93,7 @@ function main(): void {
   }
 
   if (options.format) {
-    prettier.format(input, prettierOptions);
+    console.log(prettier.format(input, prettierOptions));
   }
 
   //   const errors: Error[] = [];

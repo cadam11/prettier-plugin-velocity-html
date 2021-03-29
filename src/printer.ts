@@ -39,20 +39,20 @@ export default function (
     const el: Doc[] = [
       group(
         concat([
-          "<",
-          node.tagName,
+          `<${node.tagName}`,
           indent(concat([line, join(line, printedAttributes)])),
           // ),
-          !node.isSelfClosing() ? ">" : "",
+          ...(!node.isSelfClosing() ? [softline, ">"] : [""]),
         ])
       ),
     ];
     if (node.children.length > 0) {
-      el.push(indent(concat(path.map(print, "children"))));
+      el.push(indent(concat([softline, ...path.map(print, "children")])));
+      el.push(softline);
     }
 
     if (node.closeTag != null) {
-      el.push(concat(["</", node.closeTag.tagName, ">"]));
+      el.push(concat([`</${node.closeTag.tagName}>`]));
     }
     if (node.isSelfClosing()) {
       el.push(concat([line, "/>"]));
@@ -60,7 +60,7 @@ export default function (
     return group(concat(el));
   } else if (node instanceof AttributeNode) {
     if (node.value != null) {
-      return concat([node.key.textValue, "=", '"', node.value.textValue, '"']);
+      return concat([`${node.key.textValue}="${node.value.textValue}"`]);
     } else {
       return concat([node.key.textValue]);
     }
