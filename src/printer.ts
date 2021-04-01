@@ -36,16 +36,20 @@ export default function (
   } else if (node instanceof HtmlTagNode) {
     const printedAttributes: Doc[] = path.map(print, "attributes");
 
-    const el: Doc[] = [
-      group(
-        concat([
-          `<${node.tagName}`,
-          indent(concat([line, join(line, printedAttributes)])),
-          // ),
-          ...(!node.isSelfClosing() ? [softline, ">"] : [""]),
-        ])
-      ),
-    ];
+    const el: Doc[] = [];
+
+    const tagOpenParts: Doc[] = [`<${node.tagName}`];
+
+    if (printedAttributes.length > 0) {
+      tagOpenParts.push(indent(concat([line, join(line, printedAttributes)])));
+    }
+
+    if (!node.isSelfClosing()) {
+      tagOpenParts.push(softline, ">");
+    }
+
+    el.push(group(concat(tagOpenParts)));
+
     if (node.children.length > 0) {
       el.push(indent(concat([softline, ...path.map(print, "children")])));
       el.push(softline);
@@ -60,9 +64,19 @@ export default function (
     return group(concat(el));
   } else if (node instanceof AttributeNode) {
     if (node.value != null) {
-      return concat([`${node.key.textValue}="${node.value.textValue}"`]);
+      if (node.name === "class") {
+        const classNames = node.value.trim().split(/\s+/);
+        return concat([
+          'class="',
+          indent(concat([softline, join(line, classNames)])),
+          '"',
+          softline,
+        ]);
+      } else {
+        return concat([`${node.name}="${node.value}"`]);
+      }
     } else {
-      return concat([node.key.textValue]);
+      return concat([node.nameToken.textValue]);
     }
   } else if (node instanceof HtmlTextNode) {
     return concat([node.token.textValue]);

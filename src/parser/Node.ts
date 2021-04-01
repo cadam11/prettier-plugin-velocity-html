@@ -51,12 +51,22 @@ export abstract class NodeWithChildren extends ParserNode {
 
 export class AttributeNode extends ParserNode {
   clone(): ParserNode {
-    return new AttributeNode(this.key, this.value);
+    return new AttributeNode(this.nameToken, this.valueToken);
   }
   isLeadingSpaceSensitive(): boolean {
     return false;
   }
-  public constructor(public key: VelocityToken, public value?: VelocityToken) {
+  get name(): string {
+    return this.nameToken.textValue;
+  }
+  get value(): string | undefined {
+    return this.valueToken != null ? this.valueToken.textValue : undefined;
+  }
+
+  public constructor(
+    public nameToken: VelocityToken,
+    public valueToken?: VelocityToken
+  ) {
     super();
   }
 }
