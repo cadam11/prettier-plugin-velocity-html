@@ -18,6 +18,10 @@ const {
   line,
 } = doc.builders;
 
+function escapeDoubleQuote(text: string): string {
+  return text.replace(/"/g, "&quot;");
+}
+
 export default function (
   path: FastPath<ParserNode>,
   options: object,
@@ -88,7 +92,7 @@ export default function (
           softline,
         ]);
       } else {
-        return concat([`${node.name}="${node.value}"`]);
+        return concat([`${node.name}="${escapeDoubleQuote(node.value)}"`]);
       }
     } else {
       return concat([node.nameToken.textValue]);

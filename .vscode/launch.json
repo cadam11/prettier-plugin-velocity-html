@@ -96,6 +96,17 @@
       "preLaunchTask": "npm: build"
     },
     {
+      "name": "testrig",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--nolazy", "-r", "ts-node/register/transpile-only"],
+      "args": ["tools/TestRig.ts", "--file", "tools/local/local_debug.html", "--token", "--doc", "--format"],      
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "preLaunchTask": "npm: build"
+    },
+    {
       "name": "Debug Gulp",
       "type": "node",
       "request": "launch",

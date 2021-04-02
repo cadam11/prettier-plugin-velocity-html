@@ -111,6 +111,8 @@ export class HtmlTagNode extends NodeWithChildren {
   isLeadingSpaceSensitive(): boolean {
     return false;
   }
+
+  private selfClosingTags = ["input", "meta", "img"];
   public tagName: string;
   public attributes: AttributeNode[] = [];
   public closeTag: HtmlCloseTagNode;
@@ -122,7 +124,7 @@ export class HtmlTagNode extends NodeWithChildren {
   }
 
   public isSelfClosing(): boolean {
-    return this.tagName === "input" || this.tagName === "meta";
+    return this.selfClosingTags.includes(this.tagName);
   }
 
   public isWhitespaceSensitive(): boolean {

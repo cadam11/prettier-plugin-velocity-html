@@ -4,6 +4,7 @@ import { Plugin } from "prettier";
 import { HtmlTagNode } from "./parser/Node";
 import parseVelocityHtml from "./parser/parser";
 import { preprocess } from "./preprocess";
+import { embed } from "./embed";
 import printer from "./printer";
 
 const plugin: Plugin = {
@@ -23,6 +24,7 @@ const plugin: Plugin = {
     // TODO No preprocess in types?
     "velocity-html-ast": {
       print: printer,
+      embed,
       preprocess,
     } as any,
   },
