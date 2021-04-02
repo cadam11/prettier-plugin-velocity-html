@@ -5,11 +5,18 @@ import {
   HtmlTextNode,
   ParserNode,
   RootNode,
-  WhitespaceNode,
 } from "./parser/Node";
-import { Token } from "antlr4ts";
 
-const { concat, hardline, softline, join, group, indent, line } = doc.builders;
+const {
+  fill,
+  concat,
+  hardline,
+  softline,
+  join,
+  group,
+  indent,
+  line,
+} = doc.builders;
 
 export default function (
   path: FastPath<ParserNode>,
@@ -51,7 +58,15 @@ export default function (
     el.push(group(concat(tagOpenParts)));
 
     if (node.children.length > 0) {
-      el.push(indent(concat([softline, ...path.map(print, "children")])));
+      const printedChildren = path.map((childPath, childIndex) => {
+        const childNode = childPath.getValue();
+        const parts: Doc[] = [print(childPath)];
+        if (childNode.next != null && childNode.hasTrailingSpaces) {
+          parts.push(line);
+        }
+        return concat(parts);
+      }, "children");
+      el.push(indent(concat([softline, ...printedChildren])));
       el.push(softline);
     }
 
@@ -79,9 +94,7 @@ export default function (
       return concat([node.nameToken.textValue]);
     }
   } else if (node instanceof HtmlTextNode) {
-    return concat([node.token.textValue]);
-  } else if (node instanceof WhitespaceNode) {
-    return node.whitespace;
+    return fill([node.text]);
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

@@ -32,7 +32,14 @@ export abstract class ParserNode {
 export abstract class NodeWithChildren extends ParserNode {
   public children: ParserNode[] = [];
 
-  abstract isWhitespaceCollapsible(): boolean;
+  /**
+   * Can collapse and trim whitespace?
+   */
+  abstract isWhitespaceSensitive(): boolean;
+
+  public get lastChild(): ParserNode | undefined {
+    return this.children[this.children.length - 1];
+  }
 
   public walk(
     fn: (node: ParserNode, index: number, array: ParserNode[]) => void
@@ -46,6 +53,7 @@ export abstract class NodeWithChildren extends ParserNode {
 
   public addChild(child: ParserNode): void {
     this.children.push(child);
+    child.parent = this;
   }
 }
 
@@ -78,7 +86,7 @@ export class RootNode extends NodeWithChildren {
   isLeadingSpaceSensitive(): boolean {
     return false;
   }
-  public isWhitespaceCollapsible(): boolean {
+  public isWhitespaceSensitive(): boolean {
     return true;
   }
   public constructor() {
@@ -90,17 +98,12 @@ export class HtmlTextNode extends ParserNode {
   isLeadingSpaceSensitive(): boolean {
     return false;
   }
-  public constructor(public token: VelocityToken) {
+  public constructor(public text: string) {
     super();
   }
-}
 
-export class WhitespaceNode extends ParserNode {
-  isLeadingSpaceSensitive(): boolean {
-    return false;
-  }
-  public constructor(public whitespace: string) {
-    super();
+  public get isWhitespaceOnly(): boolean {
+    return /^\s+$/.exec(this.text) != null;
   }
 }
 
@@ -122,7 +125,7 @@ export class HtmlTagNode extends NodeWithChildren {
     return this.tagName === "input" || this.tagName === "meta";
   }
 
-  public isWhitespaceCollapsible(): boolean {
+  public isWhitespaceSensitive(): boolean {
     // TODO Add css whitespace.startsWith('pre')
     return this.tagName !== "pre";
   }

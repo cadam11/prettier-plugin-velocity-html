@@ -20,7 +20,7 @@ const program = new Command();
 interface TestRigOpts {
   file: string | undefined;
   text: string | undefined;
-  tokens: boolean;
+  token: boolean;
   doc: boolean;
   ast: boolean;
   format: boolean;
@@ -31,7 +31,7 @@ function main(): void {
   program
     .option("--file <file>", "file input")
     .option("--text <text>", "text input")
-    .option("--tokens", "display tokens")
+    .option("--token", "display tokens")
     .option("--ast", "display AST")
     .option("--doc", "display Doc[]")
     .option("--format", "format input");
@@ -56,7 +56,7 @@ function main(): void {
     [input] = input.split(seperator);
   }
 
-  if (options.tokens) {
+  if (options.token) {
     const inputStream = CharStreams.fromString(input);
     const lexer = new VelocityHtmlLexer(inputStream);
     lexer.isDebugEnabled = true;

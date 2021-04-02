@@ -1,8 +1,8 @@
 import {
+  HtmlTextNode,
   NodeWithChildren,
   ParserNode,
   RootNode,
-  WhitespaceNode,
 } from "./parser/Node";
 
 import { Options } from "prettier";
@@ -23,15 +23,17 @@ function extractWhitespaces(ast: RootNode) {
     if (node instanceof NodeWithChildren) {
       node.children = node.children.reduce(
         (newChildren, child, childIndex, children) => {
-          if (child instanceof WhitespaceNode) {
+          if (child instanceof HtmlTextNode && child.isWhitespaceOnly) {
             return newChildren;
           } else {
+            const previousSibling = children[childIndex - 1];
             child.hasLeadingSpaces =
-              childIndex !== 0 &&
-              children[childIndex - 1] instanceof WhitespaceNode;
+              previousSibling instanceof HtmlTextNode &&
+              previousSibling.isWhitespaceOnly;
+            const nextSibling = children[childIndex + 1];
             child.hasTrailingSpaces =
-              childIndex !== node.children.length - 1 &&
-              children[childIndex + 1] instanceof WhitespaceNode;
+              nextSibling instanceof HtmlTextNode &&
+              nextSibling.isWhitespaceOnly;
             return [...newChildren, child];
           }
         },

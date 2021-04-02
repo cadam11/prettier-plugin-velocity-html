@@ -17,7 +17,6 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
-  WhitespaceNode,
 } from "./Node";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -102,6 +101,14 @@ export default function parse(
 
     switch (mode) {
       case "outsideTag": {
+        const addTextNode = (text: string) => {
+          const lastChild = currentNode.lastChild;
+          if (lastChild != null && lastChild instanceof HtmlTextNode) {
+            lastChild.text += text;
+          } else {
+            currentNode.addChild(new HtmlTextNode(text));
+          }
+        };
         switch (token.type) {
           case VelocityHtmlLexer.TAG_START_OPEN: {
             const parent = parentStack[0];
@@ -129,20 +136,22 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT: {
-            currentNode.addChild(new HtmlTextNode(token));
+            addTextNode(token.textValue);
             break;
           }
           case VelocityHtmlLexer.WS: {
+            // Trim leading whitespace. Collapse other whitespace
+            // TODO Trim trailing whitespace.
             if (
-              currentNode.isWhitespaceCollapsible() &&
+              currentNode.isWhitespaceSensitive() &&
               currentNode.children.length !== 0
             ) {
-              currentNode.addChild(new WhitespaceNode(" "));
+              addTextNode(" ");
             } else if (
-              !currentNode.isWhitespaceCollapsible() &&
+              !currentNode.isWhitespaceSensitive() &&
               token.text != null
             ) {
-              currentNode.addChild(new WhitespaceNode(token.text));
+              addTextNode(token.textValue);
             }
             // else ignore whitespace
             break;
@@ -255,7 +264,7 @@ export default function parse(
     // switch (token.type) {
     //   case VelocityHtmlLexer.HTML_NAME:
     //     if (!currentHtmlNode) {
-    //       throw new ParserException(token, "currentHtml not set");
+    //       throw parserException(token, "currentHtml not set");
     //     }
     //     break;
     //   case VelocityHtmlLexer.VTL_IDENTIFIER:

@@ -20,7 +20,9 @@ describe("prettier", () => {
         .readFileSync(__dirname + "/parser/testCases/" + testCaseName)
         .toString();
       const [input, expectedOutput] = testCaseContent.split(
-        "\n" + "=".repeat(79) + "\n"
+        "\n" +
+          "=====================================output=====================================" +
+          "\n"
       );
       const formatted = format(input, {
         parser: "velocity-html",
