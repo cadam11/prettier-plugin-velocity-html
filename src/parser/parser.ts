@@ -10,7 +10,6 @@ import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
 import { AST } from "prettier";
 import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
 import {
-  HtmlCloseTagNode,
   HtmlTagNode as HtmlStartTagNode,
   HtmlTagNode,
   HtmlTextNode,
@@ -101,21 +100,18 @@ export default function parse(
 
     switch (mode) {
       case "outsideTag": {
-        const addTextNode = (text: string) => {
+        const addTextNode = (text: string, token: VelocityToken) => {
           const lastChild = currentNode.lastChild;
           if (lastChild != null && lastChild instanceof HtmlTextNode) {
-            lastChild.text += text;
+            lastChild.addText(text, token);
           } else {
-            currentNode.addChild(new HtmlTextNode(text));
+            currentNode.addChild(new HtmlTextNode(text, token));
           }
         };
         switch (token.type) {
           case VelocityHtmlLexer.TAG_START_OPEN: {
             const parent = parentStack[0];
-            currentNode = new HtmlStartTagNode(
-              parent,
-              token.charPositionInLine
-            );
+            currentNode = new HtmlStartTagNode(parent, token);
             parent.addChild(currentNode);
             mode = "tagOpen";
             break;
@@ -128,15 +124,11 @@ export default function parse(
               throw newParserException();
             }
             mode = "tagClose";
-            const closeTagNode = new HtmlCloseTagNode(
-              currentNode,
-              token.charPositionInLine
-            );
-            currentNode.closeTag = closeTagNode;
+            currentNode.endToken = token;
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT: {
-            addTextNode(token.textValue);
+            addTextNode(token.textValue, token);
             break;
           }
           case VelocityHtmlLexer.WS: {
@@ -146,12 +138,12 @@ export default function parse(
               currentNode.isWhitespaceSensitive() &&
               currentNode.children.length !== 0
             ) {
-              addTextNode(" ");
+              addTextNode(" ", token);
             } else if (
               !currentNode.isWhitespaceSensitive() &&
               token.text != null
             ) {
-              addTextNode(token.textValue);
+              addTextNode(token.textValue, token);
             }
             // else ignore whitespace
             break;
@@ -200,7 +192,7 @@ export default function parse(
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
             // Self closing tag
-            if (!currentNode.isSelfClosing()) {
+            if (!currentNode.isSelfClosing) {
               parentStack.unshift(currentNode);
             }
             mode = "outsideTag";
@@ -240,7 +232,7 @@ export default function parse(
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
-            currentNode.closeTag.tagName = token.textValue;
+            currentNode.hasClosingTag = true;
             break;
           }
           case VelocityHtmlLexer.TAG_CLOSE: {

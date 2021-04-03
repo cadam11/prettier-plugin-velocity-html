@@ -13,10 +13,10 @@ const plugin: Plugin = {
       parse: parseVelocityHtml,
       astFormat: "velocity-html-ast",
       locStart: function (node: HtmlTagNode): number {
-        return node.locationStart;
+        return node.startLocation.line;
       },
       locEnd: function (node: HtmlTagNode): number {
-        return node.closeTag.locationStart;
+        return node.endLocation != null ? node.endLocation.line : 0;
       },
     },
   },

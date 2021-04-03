@@ -1,3 +1,4 @@
+import { Parser } from "antlr4ts";
 import { Doc, doc, FastPath } from "prettier";
 import {
   AttributeNode,
@@ -22,6 +23,31 @@ function escapeDoubleQuote(text: string): string {
   return text.replace(/"/g, "&quot;");
 }
 
+function printChildren(
+  path: FastPath<ParserNode>,
+  options: object,
+  print: (path: FastPath) => Doc
+): Doc[] {
+  return path.map((childPath, childIndex) => {
+    const childNode = childPath.getValue();
+    const parts: Doc[] = [];
+    parts.push(print(childPath));
+    const next = childNode.next;
+    if (next != null) {
+      const lineDifference =
+        next.startLocation.line - childNode.endLocation!.line;
+      if (lineDifference == 0) {
+        parts.push(line);
+      } else if (lineDifference == 1) {
+        parts.push(hardline);
+      } else {
+        parts.push(hardline, hardline);
+      }
+    }
+    return concat(parts);
+  }, "children");
+}
+
 export default function (
   path: FastPath<ParserNode>,
   options: object,
@@ -34,15 +60,16 @@ export default function (
 
     // return join(line, printedChildren);
     return concat(
-      path.map((childPath, childIndex) => {
-        const childNode = childPath.getValue();
-        const printedChild = print(childPath);
-        const nextBetweenLine =
-          childNode.next != null && !childNode.next.isLeadingSpaceSensitive()
-            ? hardline
-            : "";
-        return concat([printedChild, nextBetweenLine]);
-      }, "children")
+      // path.map((childPath, childIndex) => {
+      //   const childNode = childPath.getValue();
+      //   const printedChild = print(childPath);
+      //   const nextBetweenLine =
+      //     childNode.next != null && !childNode.next.isLeadingSpaceSensitive()
+      //       ? hardline
+      //       : "";
+      //   return concat([printedChild, nextBetweenLine]);
+      // }, "children")
+      printChildren(path, options, print)
     );
   } else if (node instanceof HtmlTagNode) {
     const printedAttributes: Doc[] = path.map(print, "attributes");
@@ -55,29 +82,22 @@ export default function (
       tagOpenParts.push(indent(concat([line, join(line, printedAttributes)])));
     }
 
-    if (!node.isSelfClosing()) {
+    if (!node.isSelfClosing) {
       tagOpenParts.push(softline, ">");
     }
 
     el.push(group(concat(tagOpenParts)));
 
     if (node.children.length > 0) {
-      const printedChildren = path.map((childPath, childIndex) => {
-        const childNode = childPath.getValue();
-        const parts: Doc[] = [print(childPath)];
-        if (childNode.next != null && childNode.hasTrailingSpaces) {
-          parts.push(line);
-        }
-        return concat(parts);
-      }, "children");
+      const printedChildren = printChildren(path, options, print);
       el.push(indent(concat([softline, ...printedChildren])));
       el.push(softline);
     }
 
-    if (node.closeTag != null) {
-      el.push(concat([`</${node.closeTag.tagName}>`]));
+    if (node.hasClosingTag != null) {
+      el.push(concat([`</${node.tagName}>`]));
     }
-    if (node.isSelfClosing()) {
+    if (node.isSelfClosing) {
       el.push(concat([line, "/>"]));
     }
     return group(concat(el));

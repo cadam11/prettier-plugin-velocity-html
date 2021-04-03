@@ -1,7 +1,36 @@
-import { Parser } from "antlr4ts";
 import { VelocityToken } from "./VelocityToken";
 
+interface SourceCodeLocation {
+  line: number;
+  column: number;
+}
+
 export abstract class ParserNode {
+  public endToken: VelocityToken | undefined;
+  public startLocation: SourceCodeLocation;
+  protected _endLocation: SourceCodeLocation | undefined;
+  public get endLocation(): SourceCodeLocation | undefined {
+    return this.endToken != null
+      ? {
+          column:
+            this.endToken.charPositionInLine +
+            (this.endToken.text != null ? this.endToken.text.length : 0),
+          line: this.endToken.line,
+        }
+      : this._endLocation;
+  }
+
+  constructor(startLocation: SourceCodeLocation | VelocityToken) {
+    if (startLocation instanceof VelocityToken) {
+      this.startLocation = {
+        column: startLocation.charPositionInLine,
+        line: startLocation.line,
+      };
+    } else {
+      this.startLocation = startLocation;
+    }
+  }
+
   public get prev(): ParserNode | undefined {
     return this.index != null && this.parent != null
       ? this.parent.children[this.index - 1]
@@ -75,7 +104,7 @@ export class AttributeNode extends ParserNode {
     public nameToken: VelocityToken,
     public valueToken?: VelocityToken
   ) {
-    super();
+    super(nameToken);
   }
 }
 
@@ -90,7 +119,7 @@ export class RootNode extends NodeWithChildren {
     return true;
   }
   public constructor() {
-    super();
+    super({ column: 0, line: 0 });
   }
 }
 
@@ -98,8 +127,13 @@ export class HtmlTextNode extends ParserNode {
   isLeadingSpaceSensitive(): boolean {
     return false;
   }
-  public constructor(public text: string) {
-    super();
+  public constructor(public text: string, token: VelocityToken) {
+    super(token);
+  }
+
+  public addText(text: string, token: VelocityToken): void {
+    this.text += text;
+    this.endToken = token;
   }
 
   public get isWhitespaceOnly(): boolean {
@@ -113,18 +147,27 @@ export class HtmlTagNode extends NodeWithChildren {
   }
 
   private selfClosingTags = ["input", "meta", "img"];
-  public tagName: string;
+  private _tagName: string;
+  public isSelfClosing: boolean;
+  public hasClosingTag: boolean;
   public attributes: AttributeNode[] = [];
-  public closeTag: HtmlCloseTagNode;
+
   public constructor(
     public parent: NodeWithChildren,
-    public locationStart: number
+    public token: VelocityToken
   ) {
-    super();
+    super(token);
   }
 
-  public isSelfClosing(): boolean {
-    return this.selfClosingTags.includes(this.tagName);
+  public set tagName(tagName: string) {
+    this._tagName = tagName;
+    this.isSelfClosing = this.selfClosingTags.includes(tagName);
+    // TODO This is messed up.
+    this._endLocation = this.startLocation;
+  }
+
+  public get tagName(): string {
+    return this._tagName != null ? this._tagName : "";
   }
 
   public isWhitespaceSensitive(): boolean {
@@ -134,19 +177,5 @@ export class HtmlTagNode extends NodeWithChildren {
 
   public addAttribute(key: VelocityToken, value?: VelocityToken): void {
     this.attributes.push(new AttributeNode(key, value));
-  }
-}
-
-export class HtmlCloseTagNode extends ParserNode {
-  isLeadingSpaceSensitive(): boolean {
-    return false;
-  }
-  public tagName: string;
-
-  public constructor(
-    public startNode: ParserNode,
-    public locationStart: number
-  ) {
-    super();
   }
 }
