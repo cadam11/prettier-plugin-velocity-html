@@ -27,6 +27,8 @@ export class VelocityToken extends CommonToken {
           : "";
       case VelocityHtmlLexer.HTML_NAME:
       case VelocityHtmlLexer.HTML_TEXT:
+      case VelocityHtmlLexer.COMMENT:
+      case VelocityHtmlLexer.DOCTYPE_TYPE:
         return this.text != null ? this.text : "";
       default:
         throw new ParserException(this);

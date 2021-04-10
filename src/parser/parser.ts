@@ -9,7 +9,10 @@ import {
 import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
 import { AST } from "prettier";
 import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
+import { VelocityHtmlParser } from "./generated/VelocityHtmlParser";
 import {
+  HtmlCommentNode,
+  HtmlDocTypeNode,
   HtmlTagNode as HtmlStartTagNode,
   HtmlTagNode,
   HtmlTextNode,
@@ -54,7 +57,8 @@ type LexerMode =
   | "attributeLHS"
   | "attributeRHS"
   | "outsideTag"
-  | "tagClose";
+  | "tagClose"
+  | "doctype";
 
 export default function parse(
   text: string,
@@ -85,7 +89,7 @@ export default function parse(
   const rootNode = new RootNode();
   const parentStack: NodeWithChildren[] = [rootNode];
   const tokens = tokenStream.getTokens();
-  let currentNode: NodeWithChildren = rootNode;
+  let currentNode: ParserNode = rootNode;
   let currentHtmlAttribute: VelocityToken | null = null;
 
   let mode: LexerMode = "outsideTag";
@@ -94,24 +98,31 @@ export default function parse(
     const token: VelocityToken = tokens[i] as VelocityToken;
     const newParserException = () => new ParserException(token, mode, lexer);
     let nextToken: Token | undefined;
+    // Not every node is a parent.
+    const parent = parentStack[0];
     if (i < tokens.length - 1) {
       nextToken = tokens[i + 1];
     }
 
     switch (mode) {
       case "outsideTag": {
+        if (!(currentNode instanceof NodeWithChildren)) {
+          throw newParserException();
+        }
         const addTextNode = (text: string, token: VelocityToken) => {
-          const lastChild = currentNode.lastChild;
+          const lastChild = (currentNode as NodeWithChildren).lastChild;
           if (lastChild != null && lastChild instanceof HtmlTextNode) {
             lastChild.addText(text, token);
           } else {
-            currentNode.addChild(new HtmlTextNode(text, token));
+            (currentNode as NodeWithChildren).addChild(
+              new HtmlTextNode(text, token)
+            );
           }
         };
         switch (token.type) {
           case VelocityHtmlLexer.TAG_START_OPEN: {
-            const parent = parentStack[0];
-            currentNode = new HtmlStartTagNode(parent, token);
+            currentNode = new HtmlStartTagNode(token);
+            currentNode.parent = parent;
             parent.addChild(currentNode);
             mode = "tagOpen";
             break;
@@ -131,6 +142,12 @@ export default function parse(
             addTextNode(token.textValue, token);
             break;
           }
+          case VelocityHtmlLexer.COMMENT: {
+            const commentNode = new HtmlCommentNode(token);
+            commentNode.parent = currentNode;
+            currentNode.addChild(commentNode);
+            break;
+          }
           case VelocityHtmlLexer.WS: {
             // Trim leading whitespace. Collapse other whitespace
             // TODO Trim trailing whitespace.
@@ -146,6 +163,13 @@ export default function parse(
               addTextNode(token.textValue, token);
             }
             // else ignore whitespace
+            break;
+          }
+          case VelocityHtmlLexer.DOCTYPE_START: {
+            mode = "doctype";
+            currentNode = new HtmlDocTypeNode(token);
+            currentNode.parent = parent;
+            parent.addChild(currentNode);
             break;
           }
           default: {
@@ -188,6 +212,10 @@ export default function parse(
               i++;
               mode = "attributeRHS";
             }
+            break;
+          }
+          case VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE: {
+            mode = "outsideTag";
             break;
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
@@ -238,6 +266,28 @@ export default function parse(
           case VelocityHtmlLexer.TAG_CLOSE: {
             parentStack.shift();
             // TODO
+            currentNode = parentStack[0] as HtmlTagNode;
+            mode = "outsideTag";
+            break;
+          }
+          default: {
+            throw newParserException();
+          }
+        }
+        break;
+      }
+      case "doctype": {
+        if (!(currentNode instanceof HtmlDocTypeNode)) {
+          throw newParserException();
+        }
+        switch (token.type) {
+          case VelocityHtmlLexer.DOCTYPE_TYPE: {
+            currentNode.types.push(token.textValue);
+            break;
+          }
+          case VelocityHtmlLexer.DOCTYPE_END: {
+            currentNode.endToken = token;
+            // TODO Duplicated logic
             currentNode = parentStack[0] as HtmlTagNode;
             mode = "outsideTag";
             break;

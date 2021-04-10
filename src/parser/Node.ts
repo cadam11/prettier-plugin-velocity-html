@@ -1,3 +1,4 @@
+import { tokenToString } from "typescript";
 import { VelocityToken } from "./VelocityToken";
 
 interface SourceCodeLocation {
@@ -152,10 +153,7 @@ export class HtmlTagNode extends NodeWithChildren {
   public hasClosingTag: boolean;
   public attributes: AttributeNode[] = [];
 
-  public constructor(
-    public parent: NodeWithChildren,
-    public token: VelocityToken
-  ) {
+  public constructor(public token: VelocityToken) {
     super(token);
   }
 
@@ -177,5 +175,30 @@ export class HtmlTagNode extends NodeWithChildren {
 
   public addAttribute(key: VelocityToken, value?: VelocityToken): void {
     this.attributes.push(new AttributeNode(key, value));
+  }
+}
+
+export class HtmlCommentNode extends ParserNode {
+  isLeadingSpaceSensitive(): boolean {
+    return false;
+  }
+
+  public text: string;
+
+  public constructor(token: VelocityToken) {
+    super(token);
+    this.text = token.textValue;
+  }
+}
+
+export class HtmlDocTypeNode extends ParserNode {
+  isLeadingSpaceSensitive(): boolean {
+    return false;
+  }
+
+  public types: string[] = [];
+
+  public constructor(token: VelocityToken) {
+    super(token);
   }
 }

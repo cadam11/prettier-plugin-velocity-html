@@ -2,6 +2,8 @@ import { Parser } from "antlr4ts";
 import { Doc, doc, FastPath } from "prettier";
 import {
   AttributeNode,
+  HtmlCommentNode,
+  HtmlDocTypeNode,
   HtmlTagNode,
   HtmlTextNode,
   ParserNode,
@@ -119,6 +121,12 @@ export default function (
     }
   } else if (node instanceof HtmlTextNode) {
     return fill([node.text]);
+  } else if (node instanceof HtmlCommentNode) {
+    return concat([node.text]);
+  } else if (node instanceof HtmlDocTypeNode) {
+    return group(
+      concat([group(concat([`<!DOCTYPE ${node.types.join(" ")}`])), ">"])
+    );
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

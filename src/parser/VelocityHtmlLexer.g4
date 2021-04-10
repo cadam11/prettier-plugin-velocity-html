@@ -27,6 +27,10 @@ lexer grammar VelocityHtmlLexer;
    }
 }
 
+COMMENT: '<!--' .*? '-->';
+
+DOCTYPE_START: '<!' ('doctype' | 'DOCTYPE') -> pushMode(DOCTYPE_MODE);
+
 TAG_START_OPEN: '<' { this.debug('after TAG_START_OPEN') } -> pushMode(INSIDE_TAG);
 
 TAG_END_OPEN: '<' '/' { this.debug('after TAG_END_OPEN') }-> pushMode(INSIDE_TAG);
@@ -98,6 +102,15 @@ HTML_TAG_VTL:  VTL_REFERENCE_START -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 HTML_WS
    : [ \t\n\r] + -> skip
    ;
+
+mode DOCTYPE_MODE;
+
+// https://html.spec.whatwg.org/multipage/parsing.html#before-doctype-name-state
+DOCTYPE_TYPE: ~[\t\n\f >]+;
+
+DOCTYPE_WS: [\t\n\f ] + -> skip;
+
+DOCTYPE_END: '>' -> popMode;
 
 // handle characters which failed to match any other token
 ErrorCharacter : . ;
