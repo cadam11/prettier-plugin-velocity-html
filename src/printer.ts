@@ -1,4 +1,5 @@
 import { Parser } from "antlr4ts";
+import { should } from "chai";
 import { Doc, doc, FastPath } from "prettier";
 import {
   AttributeNode,
@@ -49,6 +50,32 @@ function printChildren(
     return concat(parts);
   }, "children");
 }
+
+// function isLastChildTagOpen(node: HtmlTagNode) {
+//   const lastChild = node.lastChild;
+//   // return (
+//   //   lastChild != null &&
+//   //   lastChild.isTrailingSpaceSensitive() &&
+//   //   !lastChild.hasTrailingSpaces
+//   // );
+//   return (
+//     lastChild != null &&
+//     lastChild instanceof HtmlTagNode &&
+//     !shouldTagBeClosed(lastChild)
+//   );
+// }
+
+// function shouldTagBeClosed(node: HtmlTagNode) {
+//   return node.parent instanceof RootNode || node.next == null;
+// }
+
+// function isPreviousTagOpen(node: HtmlTagNode) {
+//   return (
+//     node.prev != null &&
+//     node.prev instanceof HtmlTagNode &&
+//     !shouldTagBeClosed(node.prev)
+//   );
+// }
 
 export default function (
   path: FastPath<ParserNode>,
@@ -108,10 +135,14 @@ export default function (
       if (node.name === "class") {
         const classNames = node.value.trim().split(/\s+/);
         return concat([
-          'class="',
-          indent(concat([softline, join(line, classNames)])),
-          '"',
-          softline,
+          group(
+            concat([
+              'class="',
+              indent(concat([softline, join(line, classNames)])),
+              softline,
+              '"',
+            ])
+          ),
         ]);
       } else {
         return concat([`${node.name}="${escapeDoubleQuote(node.value)}"`]);

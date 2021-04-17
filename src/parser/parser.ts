@@ -135,7 +135,6 @@ export default function parse(
               throw newParserException();
             }
             mode = "tagClose";
-            currentNode.endToken = token;
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT: {
@@ -144,8 +143,8 @@ export default function parse(
           }
           case VelocityHtmlLexer.COMMENT: {
             const commentNode = new HtmlCommentNode(token);
-            commentNode.parent = currentNode;
-            currentNode.addChild(commentNode);
+            commentNode.parent = parent;
+            parent.addChild(commentNode);
             break;
           }
           case VelocityHtmlLexer.WS: {
@@ -215,6 +214,9 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE: {
+            currentNode.endToken = token;
+            // No shift necessary. Self closing tags not added to parentStack.
+            currentNode = parentStack[0];
             mode = "outsideTag";
             break;
           }
@@ -222,6 +224,8 @@ export default function parse(
             // Self closing tag
             if (!currentNode.isSelfClosing) {
               parentStack.unshift(currentNode);
+            } else {
+              currentNode.endToken = token;
             }
             mode = "outsideTag";
             break;
@@ -264,9 +268,9 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
+            currentNode.endToken = token;
             parentStack.shift();
-            // TODO
-            currentNode = parentStack[0] as HtmlTagNode;
+            currentNode = parentStack[0];
             mode = "outsideTag";
             break;
           }
@@ -288,7 +292,7 @@ export default function parse(
           case VelocityHtmlLexer.DOCTYPE_END: {
             currentNode.endToken = token;
             // TODO Duplicated logic
-            currentNode = parentStack[0] as HtmlTagNode;
+            currentNode = parentStack[0];
             mode = "outsideTag";
             break;
           }
@@ -302,63 +306,6 @@ export default function parse(
         throw newParserException();
       }
     }
-
-    // switch (token.type) {
-    //   case VelocityHtmlLexer.HTML_NAME:
-    //     if (!currentHtmlNode) {
-    //       throw parserException(token, "currentHtml not set");
-    //     }
-    //     break;
-    //   case VelocityHtmlLexer.VTL_IDENTIFIER:
-    //     if (currentHtmlAttribute != null) {
-    //       currentHtmlNode.addAttribute(currentHtmlAttribute, token);
-    //       currentHtmlAttribute = null;
-    //     } else {
-    //       throw new ParserException(
-    //         token,
-    //         "Expected attribute key to be present"
-    //       );
-    //     }
-    //     break;
-    //   case VelocityHtmlLexer.TAG_CLOSE:
-    //     nodes.push(currentHtmlNode);
-    //     parentStack.unshift(currentHtmlNode);
-    //     break;
-    //   case VelocityHtmlLexer.WS:
-    //     // Ignore WS in HTML
-    //     break;
-    //   case VelocityHtmlLexer.HTML_TEXT:
-    //     currentHtmlNode.addContent(token);
-    //     break;
-    //   case VelocityHtmlLexer.TAG_END_OPEN: {
-    //     let currentCloseToken = token;
-    //     const closeTagNode = new HtmlCloseTagNode(
-    //       currentHtmlNode,
-    //       token.charPositionInLine
-    //     );
-    //     currentHtmlNode.closeTag = closeTagNode;
-    //     do {
-    //       currentCloseToken = tokens[++i];
-    //       if (currentCloseToken.type === VelocityHtmlLexer.HTML_NAME) {
-    //         closeTagNode.tagName = currentCloseToken.text;
-    //       } else if (currentCloseToken.type === VelocityHtmlLexer.TAG_CLOSE) {
-    //         break;
-    //       } else {
-    //         throw new ParserException(
-    //           token,
-    //           `Unexpected token type ${currentCloseToken.type}`
-    //         );
-    //       }
-    //     } while (i < tokens.length);
-    //     parentStack.shift();
-    //     currentHtmlNode = parentStack[0];
-    //     break;
-    //   }
-    //   case VelocityHtmlLexer.EOF:
-    //     break;
-    //   default:
-    //     throw new ParserException(token, `Unexpected token ${token.type}`);
-    // }
   }
   return rootNode;
 }
