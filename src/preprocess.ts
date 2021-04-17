@@ -3,7 +3,7 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
-} from "./parser/Node";
+} from "./parser/VelocityParserNodes";
 
 import { Options } from "prettier";
 

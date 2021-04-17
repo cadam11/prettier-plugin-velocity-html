@@ -9,7 +9,7 @@ import {
   HtmlTextNode,
   ParserNode,
   RootNode,
-} from "./parser/Node";
+} from "./parser/VelocityParserNodes";
 
 const {
   fill,
@@ -151,7 +151,15 @@ export default function (
       return concat([node.nameToken.textValue]);
     }
   } else if (node instanceof HtmlTextNode) {
-    return fill([node.text]);
+    const words = node.text.trim().split(/\s+/);
+    const parts: Doc[] = [];
+    words.forEach((word, index) => {
+      parts.push(word);
+      if (index < words.length - 1) {
+        parts.push(line);
+      }
+    });
+    return fill(parts);
   } else if (node instanceof HtmlCommentNode) {
     return concat([node.text]);
   } else if (node instanceof HtmlDocTypeNode) {

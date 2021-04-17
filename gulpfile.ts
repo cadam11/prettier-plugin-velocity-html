@@ -63,6 +63,10 @@ function buildTest(): NodeJS.ReadWriteStream {
   return buildTs(gulp.src("test/**/*.ts"), "test");
 }
 
+function buildTools(): NodeJS.ReadWriteStream {
+  return buildTs(gulp.src("tools/**/*.ts"), "tools");
+}
+
 function copyTestArtifacts() {
   return gulp
     .src("test/**/*.html")
@@ -77,7 +81,7 @@ const allGenerateParser = gulp.series(clean, generateParser);
 const allBuild = gulp.series(
   clean,
   generateParser,
-  gulp.parallel(buildMain, copyTestArtifacts, buildTest)
+  gulp.parallel(buildMain, copyTestArtifacts, buildTest, buildTools)
 );
 
 export { allGenerateParser as generateParser, allBuild as build };

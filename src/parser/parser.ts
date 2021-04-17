@@ -19,7 +19,7 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
-} from "./Node";
+} from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
 
@@ -226,6 +226,7 @@ export default function parse(
               parentStack.unshift(currentNode);
             } else {
               currentNode.endToken = token;
+              currentNode = parentStack[0];
             }
             mode = "outsideTag";
             break;

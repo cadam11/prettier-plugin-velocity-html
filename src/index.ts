@@ -1,7 +1,7 @@
 // This is the library entry point
 
 import { Plugin } from "prettier";
-import { HtmlTagNode } from "./parser/Node";
+import { HtmlTagNode } from "./parser/VelocityParserNodes";
 import parseVelocityHtml from "./parser/parser";
 import { preprocess } from "./preprocess";
 import { embed } from "./embed";

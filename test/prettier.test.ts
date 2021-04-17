@@ -36,6 +36,10 @@ describe("prettier", () => {
     );
   });
 
+  after(async () => {
+    await browser.close();
+  });
+
   const SCREENSHOT_FOLDER = path.join(
     process.cwd(),
     "dist",
@@ -118,7 +122,6 @@ describe("prettier", () => {
         // pluginSearchDirs: ["./dir-with-plugins"],
         plugins: ["./dist/src"],
       });
-      expect(formatted).to.equal(expectedOutput);
 
       const pathWithoutExtension = path.join(SCREENSHOT_FOLDER, testCaseName);
 
@@ -126,16 +129,28 @@ describe("prettier", () => {
         parser: "html",
       });
 
-      expect(
-        compareScreenshots(
-          await takeScreenshot(`${pathWithoutExtension}_velocity`, formatted),
-          await takeScreenshot(
-            `${pathWithoutExtension}_prettier`,
-            prettierFormatted
-          ),
-          `${pathWithoutExtension}_diff.png`
-        )
-      ).to.equal(0);
+      const numberOfMismatchedPixels = compareScreenshots(
+        await takeScreenshot(`${pathWithoutExtension}_velocity`, formatted),
+        await takeScreenshot(
+          `${pathWithoutExtension}_prettier`,
+          prettierFormatted
+        ),
+        `${pathWithoutExtension}_diff.png`
+      );
+
+      // Comparing strings prints a very good diff.
+      expect(formatted).to.equal(
+        expectedOutput,
+        `Expected does not match actual. Rendered output is equal to prettier? ${
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          numberOfMismatchedPixels === 0
+        }`
+      );
+      expect(numberOfMismatchedPixels).to.equal(0);
+      // expect({ formatted, numberOfMismatchedPixels }).to.deep.equal({
+      //   formatted: expectedOutput,
+      //   numberOfMismatchedPixels: 0,
+      // });
     });
   });
 });

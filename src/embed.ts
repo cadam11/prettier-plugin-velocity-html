@@ -1,5 +1,5 @@
 import { doc, Doc, FastPath, Options, ParserOptions } from "prettier";
-import { AttributeNode, ParserNode } from "./parser/Node";
+import { AttributeNode, ParserNode } from "./parser/VelocityParserNodes";
 
 const {
   fill,

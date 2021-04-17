@@ -100,8 +100,7 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["--nolazy", "-r", "ts-node/register/transpile-only"],
-      "args": ["tools/TestRig.ts", "--file", "tools/local/local-debug.html", "--token", "--doc", "--format"],      
+      "args": ["--require", "source-map-support/register", "dist/tools/TestRig.js", "--file", "tools/local/local-debug.html", "--token", "--doc", "--format"],      
       "console": "integratedTerminal",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "preLaunchTask": "npm: build"
