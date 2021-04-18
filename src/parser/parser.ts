@@ -104,6 +104,14 @@ export default function parse(
       nextToken = tokens[i + 1];
     }
 
+    const popParentStack = (): void => {
+      if (currentNode.endToken == null) {
+        throw new Error("endToken of currentNode is null");
+      }
+      parentStack.shift();
+      currentNode = parentStack[0];
+    };
+
     switch (mode) {
       case "outsideTag": {
         if (!(currentNode instanceof NodeWithChildren)) {
@@ -120,21 +128,21 @@ export default function parse(
             );
           }
         };
-        const addNode = (node: ParserNode) => {
-          node.parent = parent;
-          parent.addChild(node);
+        const setNewCurrentNode = (node: ParserNode): ParserNode => {
+          currentNode = node;
+          currentNode.parent = parent;
+          parent.addChild(currentNode);
+          return node;
         };
         switch (token.type) {
           case VelocityHtmlLexer.IE_COMMENT_START: {
-            currentNode = new IeConditionalCommentNode(token);
-            addNode(currentNode as NodeWithChildren);
-            parentStack.unshift(currentNode as NodeWithChildren);
+            setNewCurrentNode(new IeConditionalCommentNode(token));
+            parentStack.unshift(currentNode);
             mode = "outsideTag";
             break;
           }
           case VelocityHtmlLexer.TAG_START_OPEN: {
-            currentNode = new HtmlStartTagNode(token);
-            addNode(currentNode as NodeWithChildren);
+            setNewCurrentNode(new HtmlStartTagNode(token));
             mode = "tagOpen";
             break;
           }
@@ -150,21 +158,18 @@ export default function parse(
           }
           case VelocityHtmlLexer.IE_COMMENT_CLOSE: {
             currentNode.endToken = token;
-            parentStack.shift();
-            currentNode = parentStack[0];
+            popParentStack();
             break;
           }
           case VelocityHtmlLexer.SCRIPT_START_OPEN: {
-            currentNode = new HtmlStartTagNode(token);
+            setNewCurrentNode(new HtmlStartTagNode(token));
             (currentNode as HtmlStartTagNode).tagName = "script";
-            addNode(currentNode as NodeWithChildren);
             mode = "attributeLHS";
             break;
           }
           case VelocityHtmlLexer.SCRIPT_END_TAG: {
             currentNode.endToken = token;
-            parentStack.shift();
-            currentNode = parentStack[0];
+            popParentStack();
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT: {
@@ -234,18 +239,15 @@ export default function parse(
             }
             break;
           }
-          case VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE: {
-            currentNode.endToken = token;
-            // No shift necessary. Self closing tags not added to parentStack.
-            currentNode = parentStack[0];
-            mode = "outsideTag";
-            break;
-          }
+          case VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE:
           case VelocityHtmlLexer.TAG_CLOSE: {
-            // Self closing tag
-            if (!currentNode.isSelfClosing) {
+            const isSelfClosing =
+              currentNode.isSelfClosing ||
+              token.type == -VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE;
+            if (!isSelfClosing) {
               parentStack.unshift(currentNode);
             } else {
+              // Self closing tags must not be added to the parent stack.
               currentNode.endToken = token;
               currentNode = parentStack[0];
             }
@@ -291,8 +293,7 @@ export default function parse(
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
             currentNode.endToken = token;
-            parentStack.shift();
-            currentNode = parentStack[0];
+            popParentStack();
             mode = "outsideTag";
             break;
           }
