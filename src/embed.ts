@@ -1,9 +1,16 @@
 import { doc, Doc, FastPath, Options, ParserOptions } from "prettier";
-import { AttributeNode, ParserNode } from "./parser/VelocityParserNodes";
+import {
+  AttributeNode,
+  HtmlTagNode,
+  HtmlTextNode,
+  ParserNode,
+} from "./parser/VelocityParserNodes";
+import { concatChildren, printClosingTag, printOpeningTag } from "./printer";
 
 const {
   fill,
   concat,
+  breakParent,
   hardline,
   softline,
   join,
@@ -26,6 +33,7 @@ export const embed = (
       doc = textToDoc(
         node.value!,
         {
+          ...options,
           parser: "css",
           __isHTMLStyleAttribute: true,
           __embeddedInHtml: true,
@@ -35,11 +43,38 @@ export const embed = (
       );
     }
     if (doc != null) {
+      return concat([node.name, '="', concatChildren(doc), '"']);
+    }
+  } else if (node instanceof HtmlTagNode) {
+    if (node.tagName == "script") {
+      const scriptText = node.children
+        .map((child) => {
+          if (!(child instanceof HtmlTextNode)) {
+            throw new Error(`Unexpected type ${child.toString()}`);
+          }
+          return child.text;
+        })
+        .join(" ");
+
+      const doc =
+        scriptText !== ""
+          ? textToDoc(
+              scriptText,
+              {
+                ...options,
+                parser: "babel",
+                __embeddedInHtml: true,
+                __babelSourceType: "script",
+              } as any,
+              // TODO Scheduled for removal
+              { stripTrailingHardline: true }
+            )
+          : "";
       return concat([
-        node.name,
-        '="',
-        group(concat([indent(concat([softline, doc])), softline])),
-        '"',
+        breakParent,
+        printOpeningTag(node, path, print),
+        concatChildren(doc),
+        printClosingTag(node),
       ]);
     }
   }

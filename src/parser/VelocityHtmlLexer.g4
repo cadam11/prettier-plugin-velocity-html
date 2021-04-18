@@ -15,6 +15,25 @@ lexer grammar VelocityHtmlLexer;
 
    public isVtlReferenceInsideString = false;
 
+   public nextTagCloseMode : number | null = null;
+
+   public popModeForCurrentTag() : void {
+     this.debug(`before ${this.text}`, this.printModeStack());
+     if (this.nextTagCloseMode != null) {
+      this.mode(this.nextTagCloseMode);
+      this.nextTagCloseMode = null;
+     } else {
+      this.popMode();
+     }
+     this.debug(`after ${this.text}`, this.printModeStack());
+  }
+
+  public printModeStack() {
+    const modeStack = this._modeStack.toArray();
+    return `mode: ${this._mode}, modeStack: ${modeStack.length === 0? '<empty>' : modeStack}`;
+  }
+
+
    private makeVtlReferenceInsideToken(): void {
    }
 
@@ -27,21 +46,37 @@ lexer grammar VelocityHtmlLexer;
    }
 }
 
-COMMENT: '<!--' .*? '-->';
 
-DOCTYPE_START: '<!' ('doctype' | 'DOCTYPE') -> pushMode(DOCTYPE_MODE);
+IE_COMMENT_START: '<!--[' .*? ']>';
 
-TAG_START_OPEN: '<' { this.debug('after TAG_START_OPEN') } -> pushMode(INSIDE_TAG);
+IE_COMMENT_CLOSE: '<![endif]-->';
 
-TAG_END_OPEN: '<' '/' { this.debug('after TAG_END_OPEN') }-> pushMode(INSIDE_TAG);
+// Comment that is NOT an IE comment.
+COMMENT: '<!--' ~[[]*? '-->';
+
+// doctype case-insensitive
+DOCTYPE_START: '<!' [dD] [oO] [cC] [tT] [yY] [pP] [eE] -> pushMode(DOCTYPE_MODE);
+
+// Text inside a script tag cannot be tokenized with the DEFAULT_MODE, because tags behave differently.
+// See SCRIPT_MODE for more information.
+SCRIPT_START_OPEN: '<script' { this.nextTagCloseMode = VelocityHtmlLexer.SCRIPT_MODE } -> pushMode(TAG_MODE);
+
+TAG_START_OPEN: '<' -> pushMode(TAG_MODE);
+
+TAG_END_OPEN: '<' '/' -> pushMode(TAG_MODE);
 
 HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
-HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r<]+  { this.debug('after HTML_TEXT') };
+HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r\f<]+;
 
 WS
-   : [ \t\n\r] +
+   : DEFAULT_WS
    ;
+
+fragment DEFAULT_WS: [ \t\n\r\f] +;
+
+// handle characters which failed to match any other token
+ERROR_CHARACTER : . ;
 
 fragment VTL_REFERENCE_START: '$' '{';
 
@@ -77,8 +112,16 @@ VTL_WS
    : [ ] + 
    ;
 
-mode INSIDE_TAG;
-HTML_NAME: [\-a-zA-Z0-9]+ { this.debug('after HTML_NAME') };
+VTL_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
+
+mode TAG_MODE;
+// Mix between tag name and attribute name:
+// Tag open state: ASCII alpha https://html.spec.whatwg.org/#tag-open-state
+// Tag name state: Not tab, lf, ff, space, solidus, > https://html.spec.whatwg.org/#tag-name-state
+// Attribute name: https://html.spec.whatwg.org/#attribute-name-state
+fragment HTML_LIBERAL_NAME: ~[ \t\n\r\f/><="']+;
+
+HTML_NAME: HTML_LIBERAL_NAME;
 EQUAL: '=';
 // \- since - means "range" inside [...]
 
@@ -94,23 +137,39 @@ fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
 
 HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
-TAG_CLOSE: '>' { this.debug('after TAG_CLOSE') } -> popMode;
+TAG_CLOSE: '>' { this.popModeForCurrentTag() };
 SELF_CLOSING_TAG_CLOSE :'/' '>' -> popMode;
 
 HTML_TAG_VTL:  VTL_REFERENCE_START -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
 HTML_WS
-   : [ \t\n\r] + -> skip
+   : DEFAULT_WS -> skip
    ;
+
+HTML_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
 
 mode DOCTYPE_MODE;
 
 // https://html.spec.whatwg.org/multipage/parsing.html#before-doctype-name-state
-DOCTYPE_TYPE: ~[\t\n\f >]+;
+DOCTYPE_TYPE: ~[ \t\n\r\f>] +;
 
-DOCTYPE_WS: [\t\n\f ] + -> skip;
+DOCTYPE_WS: DEFAULT_WS + -> skip;
 
 DOCTYPE_END: '>' -> popMode;
 
-// handle characters which failed to match any other token
-ErrorCharacter : . ;
+DOCTYPE_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
+
+mode SCRIPT_MODE;
+
+// Script state only changes on closing script tag: https://html.spec.whatwg.org/#script-data-less-than-sign-state
+// TODO Space after t possible?
+SCRIPT_END_TAG: '</'[sS] [cC] [rR] [iI] [pP] [tT] '>' -> mode(DEFAULT_MODE);
+
+// All other valid tags (ASCII alpha: https://html.spec.whatwg.org/#script-data-end-tag-open-state)
+SCRIPT_OTHER_CLOSING_TAG: '<' '/'? HTML_LIBERAL_NAME -> type(HTML_TEXT);
+
+SCRIPT_TEXT: ~[ \t\n\r\f<]+ -> type(HTML_TEXT);
+
+SCRIPT_WS: DEFAULT_WS -> type(HTML_TEXT);
+
+SCRIPT_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);

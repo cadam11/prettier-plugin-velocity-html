@@ -1,20 +1,13 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call */
 
-import {
-  CharStreams,
-  CommonToken,
-  CommonTokenStream,
-  Recognizer,
-  Token,
-} from "antlr4ts";
-import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
+import { CharStreams, CommonTokenStream } from "antlr4ts";
 import { VelocityHtmlLexer } from "../src/parser/generated/VelocityHtmlLexer";
 import { VelocityTokenFactory } from "../src/parser/VelocityTokenFactory";
-import { VelocityHtmlParser } from "../src/parser/generated/VelocityHtmlParser";
 import * as fs from "fs";
 import { VelocityToken } from "../src/parser/VelocityToken";
-import { Command, option, opts } from "commander";
+import { Command } from "commander";
 import * as prettier from "prettier";
+import { LexerATNSimulator } from "antlr4ts/atn/LexerATNSimulator";
 const program = new Command();
 
 interface TestRigOpts {
@@ -57,6 +50,7 @@ function main(): void {
   }
 
   if (options.token) {
+    // (LexerATNSimulator as any).debug = true;
     const inputStream = CharStreams.fromString(input);
     const lexer = new VelocityHtmlLexer(inputStream);
     lexer.isDebugEnabled = true;
@@ -95,41 +89,6 @@ function main(): void {
   if (options.format) {
     console.log(prettier.format(input, prettierOptions));
   }
-
-  //   const errors: Error[] = [];
-  //   lexer.removeErrorListeners();
-  //   lexer.addErrorListener({
-  //     syntaxError(
-  //       recognizer: Recognizer<Token, ATNSimulator>,
-  //       offendingSymbol,
-  //       line,
-  //       charPositionInLine,
-  //       msg,
-  //       e
-  //     ) {
-  //       errors.push(new Error(msg));
-  //     },
-  //   });
-  //   const tokenStream = new CommonTokenStream(lexer);
-  //   console.log(tokenStream);
-  //   const parser = new VelocityHtmlParser(tokenStream);
-  //   parser.removeErrorListeners();
-  //   parser.addErrorListener({
-  //     syntaxError(
-  //       recognizer: Recognizer<Token, ATNSimulator>,
-  //       offendingSymbol,
-  //       line,
-  //       charPositionInLine,
-  //       msg,
-  //       e
-  //     ) {
-  //       errors.push(new Error(msg));
-  //     },
-  //   });
-  //   const jsonContext = parser.document();
-  //   if (errors.length > 0) {
-  //     throw errors[0];
-  //   }
 }
 
 main();

@@ -154,12 +154,25 @@ export class HtmlTextNode extends ParserNode {
   }
   public constructor(public text: string, token: VelocityToken) {
     super(token);
+    // Bypass check
+    this._endToken = token;
   }
 
   public addText(text: string, token: VelocityToken): void {
-    this.text += text;
-    // Bypass check
-    this._endToken = token;
+    if (this.isWhitespaceOnly && !token.isWhitespaceOnly) {
+      this.text = text;
+      // Discard leading spaces. It will be trimmed later and then the startLocation is wrong.
+      this.startLocation = {
+        column: token.charPositionInLine,
+        line: token.line,
+      };
+      // Bypass check
+      this._endToken = token;
+    } else {
+      this.text += text;
+      // Bypass check
+      this._endToken = token;
+    }
   }
 
   public get isWhitespaceOnly(): boolean {
@@ -175,7 +188,7 @@ export class HtmlTagNode extends NodeWithChildren {
     return this.tagName === "pre";
   }
 
-  private selfClosingTags = ["input", "meta", "img"];
+  private selfClosingTags = ["input", "meta", "img", "link"];
   private _tagName: string;
   public isSelfClosing: boolean;
   public hasClosingTag: boolean;
@@ -218,6 +231,26 @@ export class HtmlCommentNode extends ParserNode {
     super(token);
     this.text = token.textValue;
     this.endToken = token;
+  }
+}
+
+export class IeConditionalCommentNode extends NodeWithChildren {
+  isWhitespaceSensitive(): boolean {
+    return false;
+  }
+  isLeadingSpaceSensitive(): boolean {
+    return false;
+  }
+  isTrailingSpaceSensitive(): boolean {
+    return false;
+  }
+
+  get text(): string {
+    return this.token.textValue;
+  }
+
+  public constructor(public token: VelocityToken) {
+    super(token);
   }
 }
 

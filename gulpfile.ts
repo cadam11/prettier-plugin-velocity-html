@@ -11,7 +11,6 @@ const TARGET_PATH = "dist";
 const SOURCE_PATH = "src";
 const TS_SOURCE_FILES = SOURCE_PATH + "/**/*.ts";
 const GENERATED_PARSER_FILES = SOURCE_PATH + "/parser/generated";
-const GRAMMAR_FILE = SOURCE_PATH + "/parser/VelocityHtmlParser.g4";
 
 function execWithPromise(cmd: string): Promise<unknown> {
   logger(`Executing "${cmd}"`);
@@ -36,8 +35,6 @@ const ANTLR_CMD = `./node_modules/.bin/antlr4ts -Dlanguage=JavaScript -Xexact-ou
 function generateParser(): Promise<unknown> {
   return execWithPromise(
     `${ANTLR_CMD} -no-listener -no-visitor ${SOURCE_PATH}/parser/VelocityHtmlLexer.g4`
-  ).then(() =>
-    execWithPromise(`${ANTLR_CMD} -no-listener -visitor ${GRAMMAR_FILE}`)
   );
 }
 

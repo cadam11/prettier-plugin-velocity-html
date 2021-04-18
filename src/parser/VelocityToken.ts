@@ -19,6 +19,11 @@ export class VelocityToken extends CommonToken {
     return stringRepresentation;
   }
 
+  get isWhitespaceOnly(): boolean {
+    return /^\s+$/.exec(this.textValue) != null;
+  }
+
+  // TODO Refactor
   get textValue(): string {
     switch (this.type) {
       case VelocityHtmlLexer.HTML_STRING:
@@ -29,6 +34,8 @@ export class VelocityToken extends CommonToken {
       case VelocityHtmlLexer.HTML_TEXT:
       case VelocityHtmlLexer.COMMENT:
       case VelocityHtmlLexer.DOCTYPE_TYPE:
+      case VelocityHtmlLexer.IE_COMMENT_START:
+      case VelocityHtmlLexer.WS:
         return this.text != null ? this.text : "";
       default:
         throw new ParserException(this);

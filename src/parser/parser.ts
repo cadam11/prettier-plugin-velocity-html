@@ -9,13 +9,13 @@ import {
 import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
 import { AST } from "prettier";
 import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
-import { VelocityHtmlParser } from "./generated/VelocityHtmlParser";
 import {
   HtmlCommentNode,
   HtmlDocTypeNode,
   HtmlTagNode as HtmlStartTagNode,
   HtmlTagNode,
   HtmlTextNode,
+  IeConditionalCommentNode,
   NodeWithChildren,
   ParserNode,
   RootNode,
@@ -119,11 +119,21 @@ export default function parse(
             );
           }
         };
+        const addNode = (node: ParserNode) => {
+          node.parent = parent;
+          parent.addChild(node);
+        };
         switch (token.type) {
+          case VelocityHtmlLexer.IE_COMMENT_START: {
+            currentNode = new IeConditionalCommentNode(token);
+            addNode(currentNode as NodeWithChildren);
+            parentStack.unshift(currentNode as NodeWithChildren);
+            mode = "outsideTag";
+            break;
+          }
           case VelocityHtmlLexer.TAG_START_OPEN: {
             currentNode = new HtmlStartTagNode(token);
-            currentNode.parent = parent;
-            parent.addChild(currentNode);
+            addNode(currentNode as NodeWithChildren);
             mode = "tagOpen";
             break;
           }
@@ -135,6 +145,25 @@ export default function parse(
               throw newParserException();
             }
             mode = "tagClose";
+            break;
+          }
+          case VelocityHtmlLexer.IE_COMMENT_CLOSE: {
+            currentNode.endToken = token;
+            parentStack.shift();
+            currentNode = parentStack[0];
+            break;
+          }
+          case VelocityHtmlLexer.SCRIPT_START_OPEN: {
+            currentNode = new HtmlStartTagNode(token);
+            (currentNode as HtmlStartTagNode).tagName = "script";
+            addNode(currentNode as NodeWithChildren);
+            mode = "attributeLHS";
+            break;
+          }
+          case VelocityHtmlLexer.SCRIPT_END_TAG: {
+            currentNode.endToken = token;
+            parentStack.shift();
+            currentNode = parentStack[0];
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT: {
@@ -150,6 +179,7 @@ export default function parse(
           case VelocityHtmlLexer.WS: {
             // Trim leading whitespace. Collapse other whitespace
             // TODO Trim trailing whitespace.
+            // TODO Refactor isWhitespaceSensitive makes no sense.
             if (
               currentNode.isWhitespaceSensitive() &&
               currentNode.children.length !== 0
@@ -157,7 +187,7 @@ export default function parse(
               addTextNode(" ", token);
             } else if (
               !currentNode.isWhitespaceSensitive() &&
-              token.text != null
+              !token.isWhitespaceOnly
             ) {
               addTextNode(token.textValue, token);
             }

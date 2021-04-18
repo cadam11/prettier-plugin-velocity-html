@@ -1,7 +1,7 @@
 import { format } from "prettier";
 import { expect } from "chai";
 import * as fs from "fs";
-import { Browser, BrowserContext, chromium } from "playwright";
+import { Browser, chromium } from "playwright";
 import * as path from "path";
 import { PNG } from "pngjs";
 import pixelmatch from "pixelmatch";

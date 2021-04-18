@@ -7,6 +7,7 @@ import {
   HtmlDocTypeNode,
   HtmlTagNode,
   HtmlTextNode,
+  IeConditionalCommentNode,
   ParserNode,
   RootNode,
 } from "./parser/VelocityParserNodes";
@@ -26,6 +27,50 @@ function escapeDoubleQuote(text: string): string {
   return text.replace(/"/g, "&quot;");
 }
 
+export function printOpeningTag(
+  node: HtmlTagNode,
+  path: FastPath<ParserNode>,
+  print: (path: FastPath) => Doc
+): Doc {
+  const printedAttributes: Doc[] = path.map(print, "attributes");
+  const tagOpenParts: Doc[] = [`<${node.tagName}`];
+
+  if (printedAttributes.length > 0) {
+    tagOpenParts.push(indent(concat([line, join(line, printedAttributes)])));
+  }
+
+  if (!node.isSelfClosing) {
+    tagOpenParts.push(softline, ">");
+  }
+
+  return group(concat(tagOpenParts));
+}
+
+export function printClosingTag(node: HtmlTagNode): Doc {
+  if (node.isSelfClosing) {
+    return concat([line, "/>"]);
+  } else {
+    return concat([`</${node.tagName}>`]);
+  }
+}
+
+export function concatChildren(children: Doc[] | Doc) {
+  if (children === "") {
+    return "";
+  }
+  return group(
+    concat([
+      indent(
+        concat([
+          softline,
+          ...(children instanceof Array ? children : [children]),
+        ])
+      ),
+      softline,
+    ])
+  );
+}
+
 function printChildren(
   path: FastPath<ParserNode>,
   options: object,
@@ -34,17 +79,60 @@ function printChildren(
   return path.map((childPath, childIndex) => {
     const childNode = childPath.getValue();
     const parts: Doc[] = [];
-    parts.push(print(childPath));
-    const next = childNode.next;
-    if (next != null) {
-      const lineDifference =
-        next.startLocation.line - childNode.endLocation!.line;
-      if (lineDifference == 0) {
-        parts.push(line);
-      } else if (lineDifference == 1) {
-        parts.push(hardline);
+    const childParts = print(childPath);
+    if (childNode instanceof HtmlTextNode) {
+      parts.push(childParts);
+    } else {
+      const prev = childNode.prev;
+      /*
+       * Text or text mixed in with tags should break differently than tags only.
+       * <p>foo <strong>baz</strong> bar bar </p>
+       * should break like
+       * <p>
+       *   foo <strong>baz</strong>
+       *   bar bar
+       * </p>
+       * and not like
+       * <p>
+       *   foo
+       *   <strong>baz</strong>
+       *   bar
+       *   bar
+       * </p>
+       * This is achieved by pushing the line inside the children group and instead of next to it.
+       */
+      if (prev instanceof HtmlTextNode) {
+        parts.push(group(concat([line, childParts])));
       } else {
-        parts.push(hardline, hardline);
+        parts.push(childParts);
+      }
+
+      const next = childNode.next;
+      if (next != null) {
+        const lineDifference =
+          next.startLocation.line - childNode.endLocation!.line;
+        /*
+         * Keep the line break if current child is followed by text.
+         * The children of
+         * <label>
+         *  <input name="address"/>
+         *  Address
+         * </label>
+         * should not collapse onto single line
+         */
+        if (next instanceof HtmlTextNode && lineDifference == 0) {
+          parts[parts.length - 1] = group(
+            concat([parts[parts.length - 1], line])
+          );
+        } else {
+          if (lineDifference == 0) {
+            parts.push(line);
+          } else if (lineDifference == 1) {
+            parts.push(hardline);
+          } else {
+            parts.push(hardline, hardline);
+          }
+        }
       }
     }
     return concat(parts);
@@ -101,34 +189,16 @@ export default function (
       printChildren(path, options, print)
     );
   } else if (node instanceof HtmlTagNode) {
-    const printedAttributes: Doc[] = path.map(print, "attributes");
-
-    const el: Doc[] = [];
-
-    const tagOpenParts: Doc[] = [`<${node.tagName}`];
-
-    if (printedAttributes.length > 0) {
-      tagOpenParts.push(indent(concat([line, join(line, printedAttributes)])));
-    }
-
-    if (!node.isSelfClosing) {
-      tagOpenParts.push(softline, ">");
-    }
-
-    el.push(group(concat(tagOpenParts)));
+    const el: Doc[] = [printOpeningTag(node, path, print)];
 
     if (node.children.length > 0) {
       const printedChildren = printChildren(path, options, print);
-      el.push(indent(concat([softline, ...printedChildren])));
-      el.push(softline);
+      // el.push(indent(concat([softline, ...printedChildren])));
+      // el.push(softline);
+      el.push(concatChildren(printedChildren));
     }
 
-    if (node.hasClosingTag != null) {
-      el.push(concat([`</${node.tagName}>`]));
-    }
-    if (node.isSelfClosing) {
-      el.push(concat([line, "/>"]));
-    }
+    el.push(printClosingTag(node));
     return group(concat(el));
   } else if (node instanceof AttributeNode) {
     if (node.value != null) {
@@ -166,6 +236,17 @@ export default function (
     return group(
       concat([group(concat([`<!DOCTYPE ${node.types.join(" ")}`])), ">"])
     );
+  } else if (node instanceof IeConditionalCommentNode) {
+    const el: Doc[] = [node.text];
+
+    if (node.children.length > 0) {
+      const printedChildren = printChildren(path, options, print);
+      el.push(indent(concat([softline, ...printedChildren])));
+      el.push(softline);
+    }
+
+    el.push(`<![endif]-->`);
+    return group(concat(el));
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }
