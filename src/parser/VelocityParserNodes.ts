@@ -1,5 +1,3 @@
-import { tokenToString } from "typescript";
-import { ParserException } from "./parser";
 import { VelocityToken } from "./VelocityToken";
 
 interface SourceCodeLocation {
@@ -68,10 +66,6 @@ export abstract class ParserNode {
 
   public hasLeadingSpaces = false;
   public hasTrailingSpaces = false;
-
-  abstract isLeadingSpaceSensitive(): boolean;
-
-  abstract isTrailingSpaceSensitive(): boolean;
 }
 
 export abstract class NodeWithChildren extends ParserNode {
@@ -103,14 +97,8 @@ export abstract class NodeWithChildren extends ParserNode {
 }
 
 export class AttributeNode extends ParserNode {
-  isTrailingSpaceSensitive(): boolean {
-    return false;
-  }
   clone(): ParserNode {
     return new AttributeNode(this.nameToken, this.valueToken);
-  }
-  isLeadingSpaceSensitive(): boolean {
-    return false;
   }
   get name(): string {
     return this.nameToken.textValue;
@@ -128,14 +116,8 @@ export class AttributeNode extends ParserNode {
 }
 
 export class RootNode extends NodeWithChildren {
-  isTrailingSpaceSensitive(): boolean {
-    return false;
-  }
   clone(): ParserNode {
     return new RootNode();
-  }
-  isLeadingSpaceSensitive(): boolean {
-    return false;
   }
   public isWhitespaceSensitive(): boolean {
     return true;
@@ -146,12 +128,6 @@ export class RootNode extends NodeWithChildren {
 }
 
 export class HtmlTextNode extends ParserNode {
-  isTrailingSpaceSensitive(): boolean {
-    return true;
-  }
-  isLeadingSpaceSensitive(): boolean {
-    return false;
-  }
   public constructor(public text: string, token: VelocityToken) {
     super(token);
     // Bypass check
@@ -181,13 +157,6 @@ export class HtmlTextNode extends ParserNode {
 }
 
 export class HtmlTagNode extends NodeWithChildren {
-  isTrailingSpaceSensitive(): boolean {
-    return this.tagName === "pre";
-  }
-  isLeadingSpaceSensitive(): boolean {
-    return this.tagName === "pre";
-  }
-
   private selfClosingTags = ["input", "meta", "img", "link"];
   private _tagName: string;
   public isSelfClosing: boolean;
@@ -218,13 +187,6 @@ export class HtmlTagNode extends NodeWithChildren {
 }
 
 export class HtmlCommentNode extends ParserNode {
-  isTrailingSpaceSensitive(): boolean {
-    return false;
-  }
-  isLeadingSpaceSensitive(): boolean {
-    return false;
-  }
-
   public text: string;
 
   public constructor(token: VelocityToken) {
@@ -238,12 +200,6 @@ export class IeConditionalCommentNode extends NodeWithChildren {
   isWhitespaceSensitive(): boolean {
     return false;
   }
-  isLeadingSpaceSensitive(): boolean {
-    return false;
-  }
-  isTrailingSpaceSensitive(): boolean {
-    return false;
-  }
 
   get text(): string {
     return this.token.textValue;
@@ -255,13 +211,6 @@ export class IeConditionalCommentNode extends NodeWithChildren {
 }
 
 export class HtmlDocTypeNode extends ParserNode {
-  isTrailingSpaceSensitive(): boolean {
-    return false;
-  }
-  isLeadingSpaceSensitive(): boolean {
-    return false;
-  }
-
   public types: string[] = [];
 
   public constructor(token: VelocityToken) {
