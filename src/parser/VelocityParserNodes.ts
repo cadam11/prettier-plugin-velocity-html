@@ -63,18 +63,10 @@ export abstract class ParserNode {
   ): void {
     fn(this, 0, [this]);
   }
-
-  public hasLeadingSpaces = false;
-  public hasTrailingSpaces = false;
 }
 
 export abstract class NodeWithChildren extends ParserNode {
   public children: ParserNode[] = [];
-
-  /**
-   * Can collapse and trim whitespace?
-   */
-  abstract isWhitespaceSensitive(): boolean;
 
   public get lastChild(): ParserNode | undefined {
     return this.children[this.children.length - 1];
@@ -118,9 +110,6 @@ export class AttributeNode extends ParserNode {
 export class RootNode extends NodeWithChildren {
   clone(): ParserNode {
     return new RootNode();
-  }
-  public isWhitespaceSensitive(): boolean {
-    return true;
   }
   public constructor() {
     super({ column: 0, line: 0 });
@@ -176,11 +165,6 @@ export class HtmlTagNode extends NodeWithChildren {
     return this._tagName != null ? this._tagName : "";
   }
 
-  public isWhitespaceSensitive(): boolean {
-    // TODO Add css whitespace.startsWith('pre')
-    return this.tagName !== "pre";
-  }
-
   public addAttribute(key: VelocityToken, value?: VelocityToken): void {
     this.attributes.push(new AttributeNode(key, value));
   }
@@ -197,10 +181,6 @@ export class HtmlCommentNode extends ParserNode {
 }
 
 export class IeConditionalCommentNode extends NodeWithChildren {
-  isWhitespaceSensitive(): boolean {
-    return false;
-  }
-
   get text(): string {
     return this.token.textValue;
   }

@@ -109,6 +109,7 @@ export default function parse(
         if (!(currentNode instanceof NodeWithChildren)) {
           throw newParserException();
         }
+        // Concatenate text to be able to use fill() later.
         const addTextNode = (text: string, token: VelocityToken) => {
           const lastChild = (currentNode as NodeWithChildren).lastChild;
           if (lastChild != null && lastChild instanceof HtmlTextNode) {
@@ -178,18 +179,8 @@ export default function parse(
           }
           case VelocityHtmlLexer.WS: {
             // Trim leading whitespace. Collapse other whitespace
-            // TODO Trim trailing whitespace.
-            // TODO Refactor isWhitespaceSensitive makes no sense.
-            if (
-              currentNode.isWhitespaceSensitive() &&
-              currentNode.children.length !== 0
-            ) {
+            if (currentNode.children.length !== 0) {
               addTextNode(" ", token);
-            } else if (
-              !currentNode.isWhitespaceSensitive() &&
-              !token.isWhitespaceOnly
-            ) {
-              addTextNode(token.textValue, token);
             }
             // else ignore whitespace
             break;

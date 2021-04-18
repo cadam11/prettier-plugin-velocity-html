@@ -23,19 +23,11 @@ function extractWhitespaces(ast: RootNode) {
     if (node instanceof NodeWithChildren) {
       node.children = node.children.reduce(
         (newChildren, child, childIndex, children) => {
+          // Throw away whitespace only text. printer uses sourceLocation later to determine formatting.
           if (child instanceof HtmlTextNode && child.isWhitespaceOnly) {
             return newChildren;
-          } else {
-            const previousSibling = children[childIndex - 1];
-            child.hasLeadingSpaces =
-              previousSibling instanceof HtmlTextNode &&
-              previousSibling.isWhitespaceOnly;
-            const nextSibling = children[childIndex + 1];
-            child.hasTrailingSpaces =
-              nextSibling instanceof HtmlTextNode &&
-              nextSibling.isWhitespaceOnly;
-            return [...newChildren, child];
           }
+          return [...newChildren, child];
         },
         [] as ParserNode[]
       );
