@@ -101,7 +101,7 @@ function printChildren(
        * </p>
        * This is achieved by pushing the line inside the children group and instead of next to it.
        */
-      if (prev instanceof HtmlTextNode) {
+      if (prev instanceof HtmlTextNode && childNode.hasLeadingSpaces) {
         parts.push(group(concat([line, childParts])));
       } else {
         parts.push(childParts);
@@ -122,7 +122,10 @@ function printChildren(
          */
         if (next instanceof HtmlTextNode && lineDifference == 0) {
           parts[parts.length - 1] = group(
-            concat([parts[parts.length - 1], line])
+            concat([
+              parts[parts.length - 1],
+              childNode.hasTrailingSpaces ? line : "",
+            ])
           );
         } else {
           if (lineDifference == 0) {

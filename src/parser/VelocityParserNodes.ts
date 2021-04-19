@@ -63,6 +63,9 @@ export abstract class ParserNode {
   ): void {
     fn(this, 0, [this]);
   }
+
+  public hasLeadingSpaces = false;
+  public hasTrailingSpaces = false;
 }
 
 export abstract class NodeWithChildren extends ParserNode {
@@ -117,31 +120,97 @@ export class RootNode extends NodeWithChildren {
 }
 
 export class HtmlTextNode extends ParserNode {
-  public constructor(public text: string, token: VelocityToken) {
+  public tokens: VelocityToken[] = [];
+
+  public constructor(token: VelocityToken) {
     super(token);
     // Bypass check
     this._endToken = token;
+    this.tokens.push(token);
   }
 
-  public addText(text: string, token: VelocityToken): void {
-    if (this.isWhitespaceOnly && !token.isWhitespaceOnly) {
-      this.text = text;
-      // Discard leading spaces. It will be trimmed later and then the startLocation is wrong.
-      this.startLocation = {
-        column: token.charPositionInLine,
-        line: token.line,
-      };
-      // Bypass check
-      this._endToken = token;
-    } else {
-      this.text += text;
-      // Bypass check
-      this._endToken = token;
-    }
+  public get text(): string {
+    return this.tokens.map((token) => token.textValue).join("");
+  }
+
+  public addText(token: VelocityToken): void {
+    // TODO Fix this in a different way
+    // if (this.isWhitespaceOnly && !token.isWhitespaceOnly) {
+    //   this.text = text;
+    //   // Discard leading spaces. It will be trimmed later and then the startLocation is wrong.
+    //   this.startLocation = {
+    //     column: token.charPositionInLine,
+    //     line: token.line,
+    //   };
+    //   // Bypass check
+    //   this._endToken = token;
+    // } else {
+
+    // this.text += text;
+    this.tokens.push(token);
+    // Bypass check
+    this._endToken = token;
+    // }
   }
 
   public get isWhitespaceOnly(): boolean {
     return /^\s+$/.exec(this.text) != null;
+  }
+
+  public removeTrailingWhitespaceTokens(): boolean {
+    const tokens = this.tokens;
+    return this.removeWhitespaceTokens(
+      (function* () {
+        for (let i = tokens.length - 1; i >= 0; i--) {
+          yield tokens[i];
+        }
+      })(),
+      (numberOfWhitespaceTokens) => tokens.length - numberOfWhitespaceTokens
+    );
+  }
+
+  public removeLeadingWhitespace(): boolean {
+    const tokens = this.tokens;
+    return this.removeWhitespaceTokens(
+      (function* () {
+        for (let i = 0; i < tokens.length; i++) {
+          yield tokens[i];
+        }
+      })(),
+      () => 0
+    );
+  }
+
+  private removeWhitespaceTokens(
+    iterator: Generator<VelocityToken>,
+    startIndexFn: (numberOfWhitespaceTokens: number) => number
+  ): boolean {
+    if (this.isWhitespaceOnly) {
+      throw new Error(
+        "Cannot remove whitespace tokens on whitespace only text. Result would be the empty string."
+      );
+    }
+    let numberOfTailingWhitespaceTokens = 0;
+
+    let token = iterator.next();
+    while (token.done != null && !token.done) {
+      if (token.value.isWhitespaceOnly) {
+        numberOfTailingWhitespaceTokens++;
+        token = iterator.next();
+      } else {
+        break;
+      }
+    }
+    this.tokens.splice(
+      startIndexFn(numberOfTailingWhitespaceTokens),
+      numberOfTailingWhitespaceTokens
+    );
+    this._endToken = this.tokens[this.tokens.length - 1];
+    this.startLocation = {
+      column: this.tokens[0].charPositionInLine,
+      line: this.tokens[0].line,
+    };
+    return numberOfTailingWhitespaceTokens > 0;
   }
 }
 

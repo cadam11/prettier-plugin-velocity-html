@@ -118,14 +118,12 @@ export default function parse(
           throw newParserException();
         }
         // Concatenate text to be able to use fill() later.
-        const addTextNode = (text: string, token: VelocityToken) => {
+        const addTextNode = (token: VelocityToken) => {
           const lastChild = (currentNode as NodeWithChildren).lastChild;
           if (lastChild != null && lastChild instanceof HtmlTextNode) {
-            lastChild.addText(text, token);
+            lastChild.addText(token);
           } else {
-            (currentNode as NodeWithChildren).addChild(
-              new HtmlTextNode(text, token)
-            );
+            (currentNode as NodeWithChildren).addChild(new HtmlTextNode(token));
           }
         };
         const setNewCurrentNode = (node: ParserNode): ParserNode => {
@@ -172,21 +170,18 @@ export default function parse(
             popParentStack();
             break;
           }
-          case VelocityHtmlLexer.HTML_TEXT: {
-            addTextNode(token.textValue, token);
-            break;
-          }
           case VelocityHtmlLexer.COMMENT: {
             const commentNode = new HtmlCommentNode(token);
             commentNode.parent = parent;
             parent.addChild(commentNode);
             break;
           }
+          case VelocityHtmlLexer.HTML_TEXT:
           case VelocityHtmlLexer.WS: {
             // Trim leading whitespace. Collapse other whitespace
-            if (currentNode.children.length !== 0) {
-              addTextNode(" ", token);
-            }
+            // if (currentNode.children.length !== 0) {
+            addTextNode(token);
+            // }
             // else ignore whitespace
             break;
           }

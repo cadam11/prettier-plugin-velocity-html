@@ -26,8 +26,19 @@ function extractWhitespaces(ast: RootNode) {
           // Throw away whitespace only text. printer uses sourceLocation later to determine formatting.
           if (child instanceof HtmlTextNode && child.isWhitespaceOnly) {
             return newChildren;
+          } else {
+            const previousSibling = children[childIndex - 1];
+            child.hasLeadingSpaces =
+              previousSibling instanceof HtmlTextNode &&
+              (previousSibling.isWhitespaceOnly ||
+                previousSibling.removeTrailingWhitespaceTokens());
+            const nextSibling = children[childIndex + 1];
+            child.hasTrailingSpaces =
+              nextSibling instanceof HtmlTextNode &&
+              (nextSibling.isWhitespaceOnly ||
+                nextSibling.removeLeadingWhitespace());
+            return [...newChildren, child];
           }
-          return [...newChildren, child];
         },
         [] as ParserNode[]
       );
