@@ -215,7 +215,26 @@ export class HtmlTextNode extends ParserNode {
 }
 
 export class HtmlTagNode extends NodeWithChildren {
-  private selfClosingTags = ["input", "meta", "img", "link"];
+  // Taken from https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
+
+  private selfClosingTags = [
+    "area",
+    "base",
+    "br",
+    "col",
+    "embed",
+    "hr",
+    "img",
+    "input",
+    "keygen",
+    "link",
+    "meta",
+    "param",
+    "source",
+    "track",
+    "wbr",
+  ];
+
   private _tagName: string;
   public isSelfClosing: boolean;
   public hasClosingTag: boolean;

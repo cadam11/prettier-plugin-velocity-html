@@ -6,6 +6,12 @@ import * as path from "path";
 import { PNG } from "pngjs";
 import pixelmatch from "pixelmatch";
 
+const sleep = async (time: number) => {
+  return new Promise((resolve) => {
+    setTimeout(() => resolve(null), time);
+  });
+};
+
 describe("prettier", () => {
   let browser: Browser;
   ([] as [string, string][]).forEach(([input, expectedOutput]) => {
@@ -55,6 +61,11 @@ describe("prettier", () => {
     fs.writeFileSync(htmlPath, html);
     const page = await browser.newPage();
     await page.goto(`file://${htmlPath}`);
+    // Chrome shows a short loading spinner inside video elements. It cannot be paused() (only thing I have tried), therefore we wait until it is hopefully done.
+    // If we don't wait the screenshot comparision won't work.
+    if (html.includes("<video")) {
+      await sleep(2000);
+    }
     const screenshotPath = `${pathWithoutExtension}.png`;
     await page.screenshot({ path: screenshotPath });
     await page.close();

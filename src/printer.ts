@@ -71,6 +71,22 @@ export function concatChildren(children: Doc[] | Doc) {
   );
 }
 
+function calculateDifferenceBetweenChildren(
+  prev: ParserNode,
+  next: ParserNode,
+  // Whitespace sensitive text or mixed content cannot use softline.
+  noSoftline = false
+): Doc {
+  const lineDifference = next.startLocation.line - prev.endLocation!.line;
+  if (lineDifference == 0) {
+    return noSoftline ? line : softline;
+  } else if (lineDifference == 1) {
+    return hardline;
+  } else {
+    return concat([hardline, hardline]);
+  }
+}
+
 function printChildren(
   path: FastPath<ParserNode>,
   options: object,
@@ -80,61 +96,54 @@ function printChildren(
     const childNode = childPath.getValue();
     const parts: Doc[] = [];
     const childParts = print(childPath);
+    /*
+     * Text or mixed content should fill as much horizontal space as possible.
+     * In contrast, tag content should break uniformly.
+     * <p>foo <strong>baz</strong> bar bar </p>
+     * should break like
+     * <p>
+     *   foo <strong>baz</strong>
+     *   bar bar
+     * </p>
+     * and not like
+     * <p>
+     *   foo
+     *   <strong>baz</strong>
+     *   bar
+     *   bar
+     * </p>
+     * This is achieved by pushing the line inside the children group and instead of next to it.
+     */
     if (childNode instanceof HtmlTextNode) {
       parts.push(childParts);
     } else {
       const prev = childNode.prev;
-      /*
-       * Text or text mixed in with tags should break differently than tags only.
-       * <p>foo <strong>baz</strong> bar bar </p>
-       * should break like
-       * <p>
-       *   foo <strong>baz</strong>
-       *   bar bar
-       * </p>
-       * and not like
-       * <p>
-       *   foo
-       *   <strong>baz</strong>
-       *   bar
-       *   bar
-       * </p>
-       * This is achieved by pushing the line inside the children group and instead of next to it.
-       */
+      // Different treatment for mixed content. See above.
       if (prev instanceof HtmlTextNode && childNode.hasLeadingSpaces) {
-        parts.push(group(concat([line, childParts])));
+        parts.push(
+          group(
+            concat([
+              calculateDifferenceBetweenChildren(prev, childNode, true),
+              childParts,
+            ])
+          )
+        );
       } else {
         parts.push(childParts);
       }
 
       const next = childNode.next;
       if (next != null) {
-        const lineDifference =
-          next.startLocation.line - childNode.endLocation!.line;
-        /*
-         * Keep the line break if current child is followed by text.
-         * The children of
-         * <label>
-         *  <input name="address"/>
-         *  Address
-         * </label>
-         * should not collapse onto single line
-         */
-        if (next instanceof HtmlTextNode && lineDifference == 0) {
+        // Different treatment for mixed content. See above.
+        if (next instanceof HtmlTextNode && childNode.hasTrailingSpaces) {
           parts[parts.length - 1] = group(
             concat([
               parts[parts.length - 1],
-              childNode.hasTrailingSpaces ? line : "",
+              calculateDifferenceBetweenChildren(childNode, next, true),
             ])
           );
-        } else {
-          if (lineDifference == 0) {
-            parts.push(line);
-          } else if (lineDifference == 1) {
-            parts.push(hardline);
-          } else {
-            parts.push(hardline, hardline);
-          }
+        } else if (!(next instanceof HtmlTextNode)) {
+          parts.push(calculateDifferenceBetweenChildren(childNode, next));
         }
       }
     }

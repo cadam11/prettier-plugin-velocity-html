@@ -178,11 +178,7 @@ export default function parse(
           }
           case VelocityHtmlLexer.HTML_TEXT:
           case VelocityHtmlLexer.WS: {
-            // Trim leading whitespace. Collapse other whitespace
-            // if (currentNode.children.length !== 0) {
             addTextNode(token);
-            // }
-            // else ignore whitespace
             break;
           }
           case VelocityHtmlLexer.DOCTYPE_START: {
