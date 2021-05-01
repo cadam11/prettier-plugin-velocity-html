@@ -1,5 +1,3 @@
-import { Parser } from "antlr4ts";
-import { should } from "chai";
 import { Doc, doc, FastPath } from "prettier";
 import {
   AttributeNode,
@@ -8,12 +6,17 @@ import {
   HtmlTagNode,
   HtmlTextNode,
   IeConditionalCommentNode,
+  NodeWithChildren,
   ParserNode,
   RootNode,
 } from "./parser/VelocityParserNodes";
 
 const {
+  literalline,
+  breakParent,
+  dedentToRoot,
   fill,
+  ifBreak,
   concat,
   hardline,
   softline,
@@ -54,11 +57,12 @@ export function printClosingTag(node: HtmlTagNode): Doc {
   }
 }
 
-export function concatChildren(children: Doc[] | Doc) {
-  if (children === "") {
+export function concatChildren(children: Doc[] | Doc): Doc {
+  if (children == "") {
     return "";
   }
   return group(
+    // TODO softline and line if only one child
     concat([
       indent(
         concat([
@@ -71,15 +75,35 @@ export function concatChildren(children: Doc[] | Doc) {
   );
 }
 
+export function concatTagChildren(
+  node: NodeWithChildren,
+  children: Doc[]
+): Doc {
+  // Add no line if preformatted or we already have a line
+  const noLeadingWhitespace = node.isSelfOrParentPreformatted;
+  const noTrailingWhitespace = node.isSelfOrParentPreformatted;
+  return group(
+    // TODO softline and line if only one child
+    concat([
+      indent(
+        concat([
+          noLeadingWhitespace ? "" : softline,
+          ...(children instanceof Array ? children : [children]),
+        ])
+      ),
+      noTrailingWhitespace ? "" : softline,
+    ])
+  );
+}
+
 function calculateDifferenceBetweenChildren(
   prev: ParserNode,
   next: ParserNode,
-  // Whitespace sensitive text or mixed content cannot use softline.
-  noSoftline = false
+  sameLineDoc: Doc
 ): Doc {
   const lineDifference = next.startLocation.line - prev.endLocation!.line;
   if (lineDifference == 0) {
-    return noSoftline ? line : softline;
+    return sameLineDoc;
   } else if (lineDifference == 1) {
     return hardline;
   } else {
@@ -89,7 +113,7 @@ function calculateDifferenceBetweenChildren(
 
 function printChildren(
   path: FastPath<ParserNode>,
-  options: object,
+  options: unknown,
   print: (path: FastPath) => Doc
 ): Doc[] {
   return path.map((childPath, childIndex) => {
@@ -114,16 +138,40 @@ function printChildren(
      * </p>
      * This is achieved by pushing the line inside the children group and instead of next to it.
      */
-    if (childNode instanceof HtmlTextNode) {
+    // https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
+    if (childNode.isOnlyChild && childNode instanceof HtmlTextNode) {
+      const isParentInlineRenderingMode =
+        childNode.parent != null && childNode.parent.isInlineRenderMode;
+      // If only child and inline rendering mode, then output leading and trailing space.
+      if (isParentInlineRenderingMode && childNode.hasLeadingSpaces) {
+        parts.push(ifBreak("", " "));
+      }
       parts.push(childParts);
+      if (isParentInlineRenderingMode && childNode.hasTrailingSpaces) {
+        parts.push(ifBreak("", " "));
+      }
     } else {
       const prev = childNode.prev;
       // Different treatment for mixed content. See above.
-      if (prev instanceof HtmlTextNode && childNode.hasLeadingSpaces) {
+      if (prev != null && prev instanceof HtmlTagNode && prev.isPreformatted) {
         parts.push(
           group(
             concat([
-              calculateDifferenceBetweenChildren(prev, childNode, true),
+              calculateDifferenceBetweenChildren(prev, childNode, hardline),
+              childParts,
+            ])
+          )
+        );
+      } else if (
+        prev != null &&
+        prev.isInlineRenderMode &&
+        childNode.isInlineRenderMode &&
+        childNode.hasLeadingSpaces
+      ) {
+        parts.push(
+          group(
+            concat([
+              calculateDifferenceBetweenChildren(prev, childNode, line),
               childParts,
             ])
           )
@@ -135,15 +183,28 @@ function printChildren(
       const next = childNode.next;
       if (next != null) {
         // Different treatment for mixed content. See above.
-        if (next instanceof HtmlTextNode && childNode.hasTrailingSpaces) {
+        if (childNode instanceof HtmlTagNode && childNode.isPreformatted) {
+          // Always at least one hardline after preformatted text
+          // parts.push(
+          //   calculateDifferenceBetweenChildren(childNode, next, hardline)
+          // );
+        } else if (
+          next.isInlineRenderMode &&
+          !childNode.isInlineRenderMode &&
+          // childNode.isInlineRenderMode &&
+          childNode.hasTrailingSpaces
+        ) {
           parts[parts.length - 1] = group(
             concat([
               parts[parts.length - 1],
-              calculateDifferenceBetweenChildren(childNode, next, true),
+              // Whitespace sensitive text or mixed content cannot use softline.
+              calculateDifferenceBetweenChildren(childNode, next, line),
             ])
           );
-        } else if (!(next instanceof HtmlTextNode)) {
-          parts.push(calculateDifferenceBetweenChildren(childNode, next));
+        } else if (next.isBlockRenderMode) {
+          parts.push(
+            calculateDifferenceBetweenChildren(childNode, next, softline)
+          );
         }
       }
     }
@@ -179,39 +240,23 @@ function printChildren(
 
 export default function (
   path: FastPath<ParserNode>,
-  options: object,
+  options: unknown,
   print: (path: FastPath) => Doc
 ): Doc {
   const node: ParserNode = path.getValue();
 
   if (node instanceof RootNode) {
-    // const printedChildren: Doc[] = path.map(print, "children");
-
-    // return join(line, printedChildren);
-    return concat(
-      // path.map((childPath, childIndex) => {
-      //   const childNode = childPath.getValue();
-      //   const printedChild = print(childPath);
-      //   const nextBetweenLine =
-      //     childNode.next != null && !childNode.next.isLeadingSpaceSensitive()
-      //       ? hardline
-      //       : "";
-      //   return concat([printedChild, nextBetweenLine]);
-      // }, "children")
-      printChildren(path, options, print)
-    );
+    return concat(printChildren(path, options, print));
   } else if (node instanceof HtmlTagNode) {
-    const el: Doc[] = [printOpeningTag(node, path, print)];
-
-    if (node.children.length > 0) {
-      const printedChildren = printChildren(path, options, print);
-      // el.push(indent(concat([softline, ...printedChildren])));
-      // el.push(softline);
-      el.push(concatChildren(printedChildren));
-    }
-
-    el.push(printClosingTag(node));
-    return group(concat(el));
+    return group(
+      concat([
+        printOpeningTag(node, path, print),
+        node.children.length > 0
+          ? concatTagChildren(node, printChildren(path, options, print))
+          : "",
+        printClosingTag(node),
+      ])
+    );
   } else if (node instanceof AttributeNode) {
     if (node.value != null) {
       if (node.name === "class") {
@@ -233,15 +278,27 @@ export default function (
       return concat([node.nameToken.textValue]);
     }
   } else if (node instanceof HtmlTextNode) {
-    const words = node.text.trim().split(/\s+/);
-    const parts: Doc[] = [];
-    words.forEach((word, index) => {
-      parts.push(word);
-      if (index < words.length - 1) {
-        parts.push(line);
-      }
-    });
-    return fill(parts);
+    if (node.isSelfOrParentPreformatted) {
+      const textLines = node.text.split("\n");
+      const parts: Doc[] = [];
+      textLines.forEach((textLine, index) => {
+        parts.push(textLine);
+        if (index < textLines.length - 1) {
+          parts.push(literalline, breakParent);
+        }
+      });
+      return concat([dedentToRoot(softline), fill(parts)]);
+    } else {
+      const words = node.text.trim().split(/\s+/);
+      const parts: Doc[] = [];
+      words.forEach((word, index) => {
+        parts.push(word);
+        if (index < words.length - 1) {
+          parts.push(line);
+        }
+      });
+      return fill(parts);
+    }
   } else if (node instanceof HtmlCommentNode) {
     return concat([node.text]);
   } else if (node instanceof HtmlDocTypeNode) {

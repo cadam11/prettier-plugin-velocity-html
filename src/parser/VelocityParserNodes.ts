@@ -1,8 +1,14 @@
 import { VelocityToken } from "./VelocityToken";
+import officalHtmlTags from "./officialHtmlTags";
 
 interface SourceCodeLocation {
   line: number;
   column: number;
+}
+
+export enum RenderMode {
+  BLOCK,
+  INLINE,
 }
 
 export abstract class ParserNode {
@@ -32,6 +38,14 @@ export abstract class ParserNode {
       : this._endLocation;
   }
 
+  public get isInlineRenderMode(): boolean {
+    return this.getRenderMode() == RenderMode.INLINE;
+  }
+
+  public get isBlockRenderMode(): boolean {
+    return this.getRenderMode() == RenderMode.BLOCK;
+  }
+
   constructor(startLocation: SourceCodeLocation | VelocityToken) {
     if (startLocation instanceof VelocityToken) {
       this.startLocation = {
@@ -42,6 +56,8 @@ export abstract class ParserNode {
       this.startLocation = startLocation;
     }
   }
+
+  public abstract getRenderMode(): RenderMode;
 
   public get prev(): ParserNode | undefined {
     return this.index != null && this.parent != null
@@ -58,6 +74,10 @@ export abstract class ParserNode {
   }
   public parent: NodeWithChildren | undefined;
 
+  public get isOnlyChild(): boolean {
+    return this.parent != null && this.parent.children.length == 1;
+  }
+
   public walk(
     fn: (node: ParserNode, index: number, array: ParserNode[]) => void
   ): void {
@@ -66,6 +86,18 @@ export abstract class ParserNode {
 
   public hasLeadingSpaces = false;
   public hasTrailingSpaces = false;
+
+  public get isSelfOrParentPreformatted(): boolean {
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
+    let parent: ParserNode | undefined = this;
+    while (parent != null) {
+      if (parent instanceof HtmlTagNode && parent.isPreformatted) {
+        return true;
+      }
+      parent = parent.parent;
+    }
+    return false;
+  }
 }
 
 export abstract class NodeWithChildren extends ParserNode {
@@ -92,6 +124,9 @@ export abstract class NodeWithChildren extends ParserNode {
 }
 
 export class AttributeNode extends ParserNode {
+  public getRenderMode(): RenderMode {
+    return RenderMode.INLINE;
+  }
   clone(): ParserNode {
     return new AttributeNode(this.nameToken, this.valueToken);
   }
@@ -111,6 +146,9 @@ export class AttributeNode extends ParserNode {
 }
 
 export class RootNode extends NodeWithChildren {
+  public getRenderMode(): RenderMode {
+    return RenderMode.BLOCK;
+  }
   clone(): ParserNode {
     return new RootNode();
   }
@@ -120,6 +158,9 @@ export class RootNode extends NodeWithChildren {
 }
 
 export class HtmlTextNode extends ParserNode {
+  public getRenderMode(): RenderMode {
+    return RenderMode.INLINE;
+  }
   public tokens: VelocityToken[] = [];
 
   public constructor(token: VelocityToken) {
@@ -169,6 +210,17 @@ export class HtmlTextNode extends ParserNode {
     );
   }
 
+  public trimWhitespace(): void {
+    if (this.isWhitespaceOnly) {
+      this.tokens = [];
+      this.hasLeadingSpaces = true;
+      this.hasTrailingSpaces = true;
+    } else {
+      this.hasLeadingSpaces = this.removeLeadingWhitespace();
+      this.hasTrailingSpaces = this.removeTrailingWhitespaceTokens();
+    }
+  }
+
   public removeLeadingWhitespace(): boolean {
     const tokens = this.tokens;
     return this.removeWhitespaceTokens(
@@ -215,6 +267,9 @@ export class HtmlTextNode extends ParserNode {
 }
 
 export class HtmlTagNode extends NodeWithChildren {
+  public getRenderMode(): RenderMode {
+    return this._isInlineRenderMode ? RenderMode.INLINE : RenderMode.BLOCK;
+  }
   // Taken from https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
 
   private selfClosingTags = [
@@ -235,10 +290,52 @@ export class HtmlTagNode extends NodeWithChildren {
     "wbr",
   ];
 
+  private blockLevelElements = [
+    "address",
+    "article",
+    "aside",
+    "blockquote",
+    "details",
+    "dialog",
+    "dd",
+    "div",
+    "dl",
+    "dt",
+    "fieldset",
+    "figcaption",
+    "figure",
+    "footer",
+    "form",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "html",
+    "header",
+    "hgroup",
+    "hr",
+    "li",
+    "main",
+    "nav",
+    "ol",
+    "p",
+    "pre",
+    "section",
+    "param",
+    "table",
+    "ul",
+  ];
+
+  private preformattedTags = ["pre", "textarea"];
+
   private _tagName: string;
   public isSelfClosing: boolean;
   public hasClosingTag: boolean;
   public attributes: AttributeNode[] = [];
+  public isPreformatted: boolean;
+  public _isInlineRenderMode: boolean;
 
   public constructor(public token: VelocityToken) {
     super(token);
@@ -246,11 +343,18 @@ export class HtmlTagNode extends NodeWithChildren {
 
   public set tagName(tagName: string) {
     this._tagName = tagName;
-    this.isSelfClosing = this.selfClosingTags.includes(tagName);
+    this.isSelfClosing = this.selfClosingTags.includes(this.tagName);
+    this.isPreformatted = this.preformattedTags.includes(this.tagName);
+    this._isInlineRenderMode = !this.blockLevelElements.includes(this.tagName);
   }
 
   public get tagName(): string {
-    return this._tagName != null ? this._tagName : "";
+    if (this._tagName != null) {
+      return !officalHtmlTags.has(this._tagName.toLowerCase())
+        ? this._tagName
+        : this._tagName.toLowerCase();
+    }
+    return "";
   }
 
   public addAttribute(key: VelocityToken, value?: VelocityToken): void {
@@ -259,6 +363,9 @@ export class HtmlTagNode extends NodeWithChildren {
 }
 
 export class HtmlCommentNode extends ParserNode {
+  public getRenderMode(): RenderMode {
+    return RenderMode.BLOCK;
+  }
   public text: string;
 
   public constructor(token: VelocityToken) {
@@ -269,6 +376,9 @@ export class HtmlCommentNode extends ParserNode {
 }
 
 export class IeConditionalCommentNode extends NodeWithChildren {
+  public getRenderMode(): RenderMode {
+    return RenderMode.BLOCK;
+  }
   get text(): string {
     return this.token.textValue;
   }
@@ -279,6 +389,9 @@ export class IeConditionalCommentNode extends NodeWithChildren {
 }
 
 export class HtmlDocTypeNode extends ParserNode {
+  public getRenderMode(): RenderMode {
+    return RenderMode.BLOCK;
+  }
   public types: string[] = [];
 
   public constructor(token: VelocityToken) {

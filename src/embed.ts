@@ -7,17 +7,19 @@ import {
 } from "./parser/VelocityParserNodes";
 import { concatChildren, printClosingTag, printOpeningTag } from "./printer";
 
-const {
-  fill,
-  concat,
-  breakParent,
-  hardline,
-  softline,
-  join,
-  group,
-  indent,
-  line,
-} = doc.builders;
+const { concat, breakParent } = doc.builders;
+
+const CSS_PARSER_OPTIONS = {
+  parser: "css",
+  __isHTMLStyleAttribute: true,
+  __embeddedInHtml: true,
+};
+
+const JS_PARSER_OPTIONS = {
+  parser: "babel",
+  __embeddedInHtml: true,
+  __babelSourceType: "script",
+};
 
 export const embed = (
   path: FastPath<ParserNode>,
@@ -46,7 +48,7 @@ export const embed = (
       return concat([node.name, '="', concatChildren(doc), '"']);
     }
   } else if (node instanceof HtmlTagNode) {
-    if (node.tagName == "script") {
+    if (node.tagName == "script" || node.tagName === "style") {
       const scriptText = node.children
         .map((child) => {
           if (!(child instanceof HtmlTextNode)) {
@@ -62,9 +64,9 @@ export const embed = (
               scriptText,
               {
                 ...options,
-                parser: "babel",
-                __embeddedInHtml: true,
-                __babelSourceType: "script",
+                ...(node.tagName == "style"
+                  ? CSS_PARSER_OPTIONS
+                  : JS_PARSER_OPTIONS),
               } as any,
               // TODO Scheduled for removal
               { stripTrailingHardline: true }
