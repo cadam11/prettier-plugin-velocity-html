@@ -45,7 +45,7 @@ export const embed = (
       );
     }
     if (doc != null) {
-      return concat([node.name, '="', concatChildren(doc), '"']);
+      return concat([node.name, '="', concatChildren(node, doc), '"']);
     }
   } else if (node instanceof HtmlTagNode) {
     if (node.tagName == "script" || node.tagName === "style") {
@@ -75,7 +75,7 @@ export const embed = (
       return concat([
         breakParent,
         printOpeningTag(node, path, print),
-        concatChildren(doc),
+        concatChildren(node, doc),
         printClosingTag(node),
       ]);
     }

@@ -6,7 +6,6 @@ import {
   HtmlTagNode,
   HtmlTextNode,
   IeConditionalCommentNode,
-  NodeWithChildren,
   ParserNode,
   RootNode,
 } from "./parser/VelocityParserNodes";
@@ -57,33 +56,13 @@ export function printClosingTag(node: HtmlTagNode): Doc {
   }
 }
 
-export function concatChildren(children: Doc[] | Doc): Doc {
+export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
   if (children == "") {
     return "";
   }
-  return group(
-    // TODO softline and line if only one child
-    concat([
-      indent(
-        concat([
-          softline,
-          ...(children instanceof Array ? children : [children]),
-        ])
-      ),
-      softline,
-    ])
-  );
-}
-
-export function concatTagChildren(
-  node: NodeWithChildren,
-  children: Doc[]
-): Doc {
-  // Add no line if preformatted or we already have a line
   const noLeadingWhitespace = node.isSelfOrParentPreformatted;
   const noTrailingWhitespace = node.isSelfOrParentPreformatted;
   return group(
-    // TODO softline and line if only one child
     concat([
       indent(
         concat([
@@ -222,32 +201,6 @@ function printChildren(
   }, "children");
 }
 
-// function isLastChildTagOpen(node: HtmlTagNode) {
-//   const lastChild = node.lastChild;
-//   // return (
-//   //   lastChild != null &&
-//   //   lastChild.isTrailingSpaceSensitive() &&
-//   //   !lastChild.hasTrailingSpaces
-//   // );
-//   return (
-//     lastChild != null &&
-//     lastChild instanceof HtmlTagNode &&
-//     !shouldTagBeClosed(lastChild)
-//   );
-// }
-
-// function shouldTagBeClosed(node: HtmlTagNode) {
-//   return node.parent instanceof RootNode || node.next == null;
-// }
-
-// function isPreviousTagOpen(node: HtmlTagNode) {
-//   return (
-//     node.prev != null &&
-//     node.prev instanceof HtmlTagNode &&
-//     !shouldTagBeClosed(node.prev)
-//   );
-// }
-
 export default function (
   path: FastPath<ParserNode>,
   options: unknown,
@@ -262,7 +215,7 @@ export default function (
       concat([
         printOpeningTag(node, path, print),
         node.children.length > 0
-          ? concatTagChildren(node, printChildren(path, options, print))
+          ? concatChildren(node, printChildren(path, options, print))
           : "",
         printClosingTag(node),
       ])
