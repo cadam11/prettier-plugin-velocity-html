@@ -162,7 +162,10 @@ function printChildren(
         const prev = childNode.prev;
         let lineBreak: Doc = "";
 
-        if (prev.isPreformatted) {
+        if (
+          prev.isPreformatted ||
+          (prev instanceof HtmlTagNode && prev.forceBreak)
+        ) {
           // At least one hardline after preformatted text
           lineBreak = calculateDifferenceBetweenChildren(
             prev,
@@ -256,7 +259,7 @@ export default function (
         return concat([`${node.name}="${escapeDoubleQuote(node.value)}"`]);
       }
     } else {
-      return concat([node.nameToken.textValue]);
+      return concat([node.name]);
     }
   } else if (node instanceof HtmlTextNode) {
     if (node.isSelfOrParentPreformatted) {

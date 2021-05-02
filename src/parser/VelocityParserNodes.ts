@@ -129,11 +129,23 @@ export class AttributeNode extends ParserNode {
   public getRenderMode(): RenderMode {
     return RenderMode.INLINE;
   }
+  public knownAttributes = [
+    "id",
+    "name",
+    "class",
+    "async",
+    "defer",
+    "content",
+    "charset",
+  ];
   clone(): ParserNode {
     return new AttributeNode(this.nameToken, this.valueToken);
   }
   get name(): string {
-    return this.nameToken.textValue;
+    const attributeName = this.nameToken.textValue;
+    return this.knownAttributes.includes(attributeName.toLowerCase())
+      ? attributeName.toLowerCase()
+      : attributeName;
   }
   get value(): string | undefined {
     return this.valueToken != null ? this.valueToken.textValue : undefined;
@@ -272,6 +284,12 @@ export class HtmlTagNode extends NodeWithChildren {
   public getRenderMode(): RenderMode {
     return this._isInlineRenderMode ? RenderMode.INLINE : RenderMode.BLOCK;
   }
+  public get forceBreak(): boolean {
+    return this.forceBreakTags.includes(this.tagName);
+  }
+
+  private forceBreakTags = ["br"];
+
   // Taken from https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
 
   private selfClosingTags = [

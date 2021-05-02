@@ -60,6 +60,7 @@ for (const tag of [
   "head",
   "header",
   "hgroup",
+  "html",
   "hr",
   "i",
   "iframe",
