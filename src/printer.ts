@@ -106,7 +106,27 @@ function calculateDifferenceBetweenChildren(
  *   bar
  *   bar
  * </p>
- * This is achieved by pushing the linebreaks inside the children group and instead of next to it.
+ * This is achieved by pushing the linebreaks inside the children group and instead of next to it:
+ * [
+ *   group(fill("<span>Hello,World!</span>"))
+ *   group([
+ *     line,
+ *     group([
+ *       group(fill("<span>")),
+ *       group(fill("Hello, World!")
+ *     ])
+ *   ])
+ * ]
+ * vs
+ * [
+ *   group(fill("<span>Hello,World!</span>")),
+ *   line,
+ *   group([
+ *     group(fill("<span>")),
+ *     group(fill("Hello, World!")
+ *   ])
+ * ]
+ *
  *
  * This is loosely based on https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
  */
@@ -136,13 +156,14 @@ function printChildren(
       }
     } else {
       /**
-       * Look at previous node to determine check if line break is needed before child content.
+       * Look at previous node to determine if line break is needed before child content.
        */
       if (childNode.prev != null) {
         const prev = childNode.prev;
         let lineBreak: Doc = "";
 
         if (prev.isPreformatted) {
+          // At least one hardline after preformatted text
           lineBreak = calculateDifferenceBetweenChildren(
             prev,
             childNode,
@@ -169,24 +190,21 @@ function printChildren(
         parts.push(childParts);
       }
 
-      const next = childNode.next;
-      if (next != null) {
-        // Different treatment for mixed content. See above.
-        if (childNode instanceof HtmlTagNode && childNode.isPreformatted) {
-          // Always at least one hardline after preformatted text
-          // parts.push(
-          //   calculateDifferenceBetweenChildren(childNode, next, hardline)
-          // );
-        } else if (
+      /**
+       * Look at next node to determine if line break is needed after child content.
+       */
+      // Preformatted is handled in prev check of next node.
+      if (childNode.next != null && !childNode.isPreformatted) {
+        const next = childNode.next;
+        if (
           next.isInlineRenderMode &&
           !childNode.isInlineRenderMode &&
-          // childNode.isInlineRenderMode &&
           childNode.hasTrailingSpaces
         ) {
           parts[parts.length - 1] = group(
             concat([
               parts[parts.length - 1],
-              // Whitespace sensitive text or mixed content cannot use softline.
+              // In inline mode, use line instead of softline to seperate content.
               calculateDifferenceBetweenChildren(childNode, next, line),
             ])
           );
