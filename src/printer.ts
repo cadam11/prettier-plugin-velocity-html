@@ -100,8 +100,8 @@ function printChildren(
     const parts: Doc[] = [];
     const childParts = print(childPath);
     /*
-     * Text or mixed content should fill as much horizontal space as possible.
-     * In contrast, tag content should break uniformly.
+     * Inline content should fill as much horizontal space as possible.
+     * In contrast, block content should break uniformly.
      * <p>foo <strong>baz</strong> bar bar </p>
      * should break like
      * <p>
@@ -115,13 +115,15 @@ function printChildren(
      *   bar
      *   bar
      * </p>
-     * This is achieved by pushing the line inside the children group and instead of next to it.
+     * This is achieved by pushing the linebreaks inside the children group and instead of next to it.
+     *
+     * This is loosely based on https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
      */
-    // https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
-    if (childNode.isOnlyChild && childNode instanceof HtmlTextNode) {
+    if (childNode.isOnlyChild && childNode.isInlineRenderMode) {
       const isParentInlineRenderingMode =
         childNode.parent != null && childNode.parent.isInlineRenderMode;
-      // If only child and inline rendering mode, then output leading and trailing space.
+      // Preserve whitespace from input, but don't use linebreaks.
+      // Children are enclosed by line breaks in concatChildren()
       if (isParentInlineRenderingMode && childNode.hasLeadingSpaces) {
         parts.push(ifBreak("", " "));
       }
