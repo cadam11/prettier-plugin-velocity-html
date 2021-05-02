@@ -96,11 +96,21 @@
       "preLaunchTask": "npm: build"
     },
     {
+      "name": "testrig:print-doc",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "args": ["--require", "source-map-support/register", "dist/tools/TestRig.js", "print-doc", "--file", "dist/tools/LocalDebugDoc.js"],      
+      "console": "integratedTerminal",
+      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "preLaunchTask": "npm: build"
+    },
+    {
       "name": "testrig",
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
-      "args": ["--require", "source-map-support/register", "dist/tools/TestRig.js", "--file", "tools/local/local-debug.html", "--token", "--doc", "--format"],      
+      "args": ["--require", "source-map-support/register", "dist/tools/TestRig.js", "read-test-case", "--file", "tools/local/local-debug.html", "--token", "--doc", "--format"],      
       "console": "integratedTerminal",
       "outFiles": ["${workspaceFolder}/dist/**/*.js"],
       "preLaunchTask": "npm: build"

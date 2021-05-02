@@ -165,13 +165,23 @@ function printChildren(
       } else if (
         prev != null &&
         prev.isInlineRenderMode &&
-        childNode.isInlineRenderMode &&
-        childNode.hasLeadingSpaces
+        childNode.isInlineRenderMode
       ) {
         parts.push(
           group(
             concat([
-              calculateDifferenceBetweenChildren(prev, childNode, line),
+              childNode.hasLeadingSpaces
+                ? calculateDifferenceBetweenChildren(prev, childNode, line)
+                : /**
+                   * Allow the formatter insert a line break before the next tag:
+                   * <span> inline </span><span> inline </span> <span> inline </span>
+                   * <span> inline </span>
+                   * Instead of having to break the whole tag:
+                   * <span> inline </span><span> inline </span> <span>
+                   *  inline
+                   * </span> <span> inline </span>
+                   */
+                  ifBreak(softline, ""),
               childParts,
             ])
           )

@@ -51,7 +51,7 @@
     "gh-pages": "rimraf docs && npm run docs && gh-pages -d docs",
     "npm-publish": "npm publish",
     "lint": "eslint \"./**/*.ts\"",
-    "tools:testrig": "npm run build && ts-node tools/TestRig.ts"
+    "tools:testrig": "npm run build && node dist/tools/TestRig.js"
   },
   "version": "0.0.0",
   "name": "prettier-velocity-html-plugin",
