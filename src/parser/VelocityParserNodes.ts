@@ -38,6 +38,8 @@ export abstract class ParserNode {
       : this._endLocation;
   }
 
+  public isPreformatted = false;
+
   public get isInlineRenderMode(): boolean {
     return this.getRenderMode() == RenderMode.INLINE;
   }
@@ -334,7 +336,6 @@ export class HtmlTagNode extends NodeWithChildren {
   public isSelfClosing: boolean;
   public hasClosingTag: boolean;
   public attributes: AttributeNode[] = [];
-  public isPreformatted: boolean;
   public _isInlineRenderMode: boolean;
 
   public constructor(public token: VelocityToken) {

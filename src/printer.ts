@@ -90,6 +90,26 @@ function calculateDifferenceBetweenChildren(
   }
 }
 
+/*
+ * Inline content should fill as much horizontal space as possible.
+ * In contrast, block content should break uniformly.
+ * <p>foo <strong>baz</strong> bar bar </p>
+ * should break like
+ * <p>
+ *   foo <strong>baz</strong>
+ *   bar bar
+ * </p>
+ * and not like
+ * <p>
+ *   foo
+ *   <strong>baz</strong>
+ *   bar
+ *   bar
+ * </p>
+ * This is achieved by pushing the linebreaks inside the children group and instead of next to it.
+ *
+ * This is loosely based on https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
+ */
 function printChildren(
   path: FastPath<ParserNode>,
   options: unknown,
@@ -99,31 +119,14 @@ function printChildren(
     const childNode = childPath.getValue();
     const parts: Doc[] = [];
     const childParts = print(childPath);
-    /*
-     * Inline content should fill as much horizontal space as possible.
-     * In contrast, block content should break uniformly.
-     * <p>foo <strong>baz</strong> bar bar </p>
-     * should break like
-     * <p>
-     *   foo <strong>baz</strong>
-     *   bar bar
-     * </p>
-     * and not like
-     * <p>
-     *   foo
-     *   <strong>baz</strong>
-     *   bar
-     *   bar
-     * </p>
-     * This is achieved by pushing the linebreaks inside the children group and instead of next to it.
-     *
-     * This is loosely based on https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
-     */
+
     if (childNode.isOnlyChild && childNode.isInlineRenderMode) {
       const isParentInlineRenderingMode =
         childNode.parent != null && childNode.parent.isInlineRenderMode;
-      // Preserve whitespace from input, but don't use linebreaks.
-      // Children are enclosed by line breaks in concatChildren()
+      /**
+       * Preserve whitespace from input, but don't use linebreaks.
+       * Children are enclosed by line breaks in concatChildren()
+       */
       if (isParentInlineRenderingMode && childNode.hasLeadingSpaces) {
         parts.push(ifBreak("", " "));
       }
@@ -132,42 +135,37 @@ function printChildren(
         parts.push(ifBreak("", " "));
       }
     } else {
-      const prev = childNode.prev;
-      // Different treatment for mixed content. See above.
-      if (prev != null && prev instanceof HtmlTagNode && prev.isPreformatted) {
-        parts.push(
-          group(
-            concat([
-              calculateDifferenceBetweenChildren(prev, childNode, hardline),
-              childParts,
-            ])
-          )
-        );
-      } else if (
-        prev != null &&
-        prev.isInlineRenderMode &&
-        childNode.isInlineRenderMode
-      ) {
-        parts.push(
-          group(
-            concat([
-              childNode.hasLeadingSpaces
-                ? calculateDifferenceBetweenChildren(prev, childNode, line)
-                : /**
-                   * Allow the formatter insert a line break before the next tag:
-                   * <span> inline </span><span> inline </span> <span> inline </span>
-                   * <span> inline </span>
-                   * Instead of having to break the whole tag:
-                   * <span> inline </span><span> inline </span> <span>
-                   *  inline
-                   * </span> <span> inline </span>
-                   */
-                  ifBreak(softline, ""),
-              childParts,
-            ])
-          )
-        );
+      /**
+       * Look at previous node to determine check if line break is needed before child content.
+       */
+      if (childNode.prev != null) {
+        const prev = childNode.prev;
+        let lineBreak: Doc = "";
+
+        if (prev.isPreformatted) {
+          lineBreak = calculateDifferenceBetweenChildren(
+            prev,
+            childNode,
+            hardline
+          );
+        } else if (prev.isInlineRenderMode && childNode.isInlineRenderMode) {
+          // In inline mode, use line instead of softline to seperate content.
+          lineBreak = childNode.hasLeadingSpaces
+            ? calculateDifferenceBetweenChildren(prev, childNode, line)
+            : /**
+               * Allow the formatter insert a line break before the next tag:
+               * <span> inline </span><span> inline </span> <span> inline </span>
+               * <span> inline </span>
+               * Instead of having to break the whole tag:
+               * <span> inline </span><span> inline </span> <span>
+               *  inline
+               * </span> <span> inline </span>
+               */
+              ifBreak(softline, "");
+        }
+        parts.push(group(concat([lineBreak, childParts])));
       } else {
+        // Block Mode requires no linebreak, because there will be a linebreak at the end of the prev
         parts.push(childParts);
       }
 
