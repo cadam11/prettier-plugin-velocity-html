@@ -54,6 +54,8 @@ IE_COMMENT_CLOSE: '<![endif]-->';
 // Comment that is NOT an IE comment.
 COMMENT: '<!--' ~[[]*? '-->';
 
+CDATA: '<![CDATA['~[\]]*? ']]>';
+
 // doctype case-insensitive
 DOCTYPE_START: '<!' [dD] [oO] [cC] [tT] [yY] [pP] [eE] -> pushMode(DOCTYPE_MODE);
 

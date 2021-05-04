@@ -142,13 +142,13 @@ export class AttributeNode extends ParserNode {
     return new AttributeNode(this.nameToken, this.valueToken);
   }
   get name(): string {
-    const attributeName = this.nameToken.textValue;
+    const attributeName = this.nameToken.stringValue;
     return this.knownAttributes.includes(attributeName.toLowerCase())
       ? attributeName.toLowerCase()
       : attributeName;
   }
   get value(): string | undefined {
-    return this.valueToken != null ? this.valueToken.textValue : undefined;
+    return this.valueToken != null ? this.valueToken.stringValue : undefined;
   }
 
   public constructor(
@@ -415,5 +415,18 @@ export class HtmlDocTypeNode extends ParserNode {
 
   public constructor(token: VelocityToken) {
     super(token);
+  }
+}
+
+export class HtmlCdataNode extends ParserNode {
+  public getRenderMode(): RenderMode {
+    return RenderMode.INLINE;
+  }
+  public text: string;
+
+  public constructor(token: VelocityToken) {
+    super(token);
+    this.text = token.textValue;
+    this.endToken = token;
   }
 }

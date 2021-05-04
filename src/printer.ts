@@ -1,6 +1,7 @@
 import { Doc, doc, FastPath } from "prettier";
 import {
   AttributeNode,
+  HtmlCdataNode,
   HtmlCommentNode,
   HtmlDocTypeNode,
   HtmlTagNode,
@@ -196,8 +197,14 @@ function printChildren(
       /**
        * Look at next node to determine if line break is needed after child content.
        */
-      // Preformatted is handled in prev check of next node.
-      if (childNode.next != null && !childNode.isPreformatted) {
+      // Preformatted and force break is handled in prev check of next node.
+      if (
+        childNode.next != null &&
+        !(
+          childNode.isPreformatted ||
+          (childNode instanceof HtmlTagNode && childNode.forceBreak)
+        )
+      ) {
         const next = childNode.next;
         if (
           next.isInlineRenderMode &&
@@ -300,6 +307,8 @@ export default function (
 
     el.push(`<![endif]-->`);
     return group(concat(el));
+  } else if (node instanceof HtmlCdataNode) {
+    return concat([node.text]);
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

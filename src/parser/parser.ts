@@ -10,6 +10,7 @@ import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
 import { AST } from "prettier";
 import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
 import {
+  HtmlCdataNode,
   HtmlCommentNode,
   HtmlDocTypeNode,
   HtmlTagNode as HtmlStartTagNode,
@@ -188,6 +189,12 @@ export default function parse(
             parent.addChild(currentNode);
             break;
           }
+          case VelocityHtmlLexer.CDATA: {
+            const cdataNode = new HtmlCdataNode(token);
+            cdataNode.parent = parent;
+            parent.addChild(cdataNode);
+            break;
+          }
           default: {
             throw newParserException();
           }
@@ -199,8 +206,7 @@ export default function parse(
           throw newParserException();
         }
         switch (token.type) {
-          case VelocityHtmlLexer.HTML_NAME:
-          case VelocityHtmlLexer.HTML_STRING: {
+          case VelocityHtmlLexer.HTML_NAME: {
             currentNode.tagName = token.textValue;
             mode = "attributeLHS";
             break;
