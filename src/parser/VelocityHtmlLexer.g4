@@ -47,9 +47,9 @@ lexer grammar VelocityHtmlLexer;
 }
 
 
-IE_COMMENT_START: '<!--[' .*? ']>';
+IE_COMMENT_START: '<!--[' .*? ']' ('--')? '>' ('<!-->')?;
 
-IE_COMMENT_CLOSE: '<![endif]-->';
+IE_COMMENT_CLOSE: '<!' ('--<!')? '[endif]-->';
 
 // Comment that is NOT an IE comment.
 COMMENT: '<!--' ~[[]*? '-->';

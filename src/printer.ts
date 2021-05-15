@@ -2,6 +2,7 @@ import { Doc, doc, FastPath } from "prettier";
 import {
   AttributeNode,
   HtmlCdataNode,
+  HtmlCloseNode,
   HtmlCommentNode,
   HtmlDocTypeNode,
   HtmlTagNode,
@@ -9,6 +10,7 @@ import {
   IeConditionalCommentNode,
   ParserNode,
   RootNode,
+  VoidNode,
 } from "./parser/VelocityParserNodes";
 
 const {
@@ -50,10 +52,12 @@ export function printOpeningTag(
 }
 
 export function printClosingTag(node: HtmlTagNode): Doc {
-  if (node.isSelfClosing) {
+  if (node.forceCloseTag || node.hasClosingTag) {
+    return concat([`</${node.tagName}>`]);
+  } else if (node.isSelfClosing) {
     return concat([line, "/>"]);
   } else {
-    return concat([`</${node.tagName}>`]);
+    return "";
   }
 }
 
@@ -229,7 +233,7 @@ function printChildren(
   }, "children");
 }
 
-export default function (
+export default function print (
   path: FastPath<ParserNode>,
   options: unknown,
   print: (path: FastPath) => Doc
@@ -309,6 +313,10 @@ export default function (
     return group(concat(el));
   } else if (node instanceof HtmlCdataNode) {
     return concat([node.text]);
+  } else if (node instanceof VoidNode) {
+    return concatChildren(node, printChildren(path, options, print));
+  } else if (node instanceof HtmlCloseNode) {
+    return concat([`</${node.tagName}>`]);
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

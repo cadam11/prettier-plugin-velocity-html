@@ -26,7 +26,7 @@ export abstract class ParserNode {
   }
 
   public startLocation: SourceCodeLocation;
-  protected _endLocation: SourceCodeLocation | undefined;
+  public _endLocation: SourceCodeLocation | undefined;
   public get endLocation(): SourceCodeLocation | undefined {
     return this.endToken != null
       ? {
@@ -310,6 +310,8 @@ export class HtmlTagNode extends NodeWithChildren {
     "wbr",
   ];
 
+  private forceCloseTags = ["script"];
+
   private blockLevelElements = [
     "address",
     "article",
@@ -352,9 +354,10 @@ export class HtmlTagNode extends NodeWithChildren {
 
   private _tagName: string;
   public isSelfClosing: boolean;
-  public hasClosingTag: boolean;
+  public hasClosingTag = false;
   public attributes: AttributeNode[] = [];
   public _isInlineRenderMode: boolean;
+  public forceCloseTag: boolean;
 
   public constructor(public token: VelocityToken) {
     super(token);
@@ -365,6 +368,7 @@ export class HtmlTagNode extends NodeWithChildren {
     this.isSelfClosing = this.selfClosingTags.includes(this.tagName);
     this.isPreformatted = this.preformattedTags.includes(this.tagName);
     this._isInlineRenderMode = !this.blockLevelElements.includes(this.tagName);
+    this.forceCloseTag = this.forceCloseTags.includes(this.tagName);
   }
 
   public get tagName(): string {
@@ -429,4 +433,19 @@ export class HtmlCdataNode extends ParserNode {
     this.text = token.textValue;
     this.endToken = token;
   }
+}
+
+export class VoidNode extends NodeWithChildren {
+  public getRenderMode(): RenderMode {
+    return RenderMode.INLINE;
+  }
+}
+
+export class HtmlCloseNode extends ParserNode {
+  public getRenderMode(): RenderMode {
+    // throw new Error("Method not implemented.");
+    return RenderMode.INLINE;
+  }
+
+  public tagName: string;
 }

@@ -11,6 +11,7 @@ import { AST } from "prettier";
 import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
 import {
   HtmlCdataNode,
+  HtmlCloseNode,
   HtmlCommentNode,
   HtmlDocTypeNode,
   HtmlTagNode as HtmlStartTagNode,
@@ -20,6 +21,7 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
+  VoidNode,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -95,18 +97,29 @@ export default function parse(
 
   let mode: LexerMode = "outsideTag";
 
+  const openIeConditinalChildren: NodeWithChildren[] = [];
+
   for (let i = 0; i < tokens.length; i++) {
     const token: VelocityToken = tokens[i] as VelocityToken;
     const newParserException = () => new ParserException(token, mode, lexer);
     let nextToken: Token | undefined;
     // Not every node is a parent.
-    const parent = parentStack[0];
+    let parent = parentStack[0];
     if (i < tokens.length - 1) {
       nextToken = tokens[i + 1];
     }
 
+    const popOpenIeConditionalChild = (): void => {
+      const child = parentStack.shift();
+      if (child == null) {
+        throw new Error("Nothing to shift()");
+      }
+      openIeConditinalChildren.push(new VoidNode(child.startLocation));
+      currentNode = parentStack[0];
+    };
+
     const popParentStack = (): void => {
-      if (currentNode.endToken == null) {
+      if (currentNode.endLocation == null) {
         throw new Error("endToken of currentNode is null");
       }
       parentStack.shift();
@@ -134,12 +147,6 @@ export default function parse(
           return node;
         };
         switch (token.type) {
-          case VelocityHtmlLexer.IE_COMMENT_START: {
-            setNewCurrentNode(new IeConditionalCommentNode(token));
-            parentStack.unshift(currentNode);
-            mode = "outsideTag";
-            break;
-          }
           case VelocityHtmlLexer.TAG_START_OPEN: {
             setNewCurrentNode(new HtmlStartTagNode(token));
             mode = "tagOpen";
@@ -149,13 +156,41 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.TAG_END_OPEN: {
-            if (!(currentNode instanceof HtmlStartTagNode)) {
+            if (parent instanceof VoidNode) {
+              setNewCurrentNode(new HtmlCloseNode(token));
+            } else if (currentNode instanceof HtmlTagNode) {
+              currentNode.hasClosingTag = true;
+            } else {
               throw newParserException();
             }
+
             mode = "tagClose";
             break;
           }
+          case VelocityHtmlLexer.IE_COMMENT_START: {
+            setNewCurrentNode(new IeConditionalCommentNode(token));
+            parentStack.unshift(currentNode);
+            while (openIeConditinalChildren.length > 0) {
+              const child = openIeConditinalChildren.pop();
+              if (child == null) {
+                throw new Error("Nothing to pop()");
+              }
+              if (parent instanceof VoidNode) {
+                parent.addChild(child);
+              } else {
+                // IE comment node
+                currentNode.addChild(child);
+              }
+              parentStack.unshift(child);
+              parent = child;
+            }
+            mode = "outsideTag";
+            break;
+          }
           case VelocityHtmlLexer.IE_COMMENT_CLOSE: {
+            while (!(currentNode instanceof IeConditionalCommentNode)) {
+              popOpenIeConditionalChild();
+            }
             currentNode.endToken = token;
             popParentStack();
             break;
@@ -240,7 +275,7 @@ export default function parse(
           case VelocityHtmlLexer.TAG_CLOSE: {
             const isSelfClosing =
               currentNode.isSelfClosing ||
-              token.type == -VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE;
+              token.type == VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE;
             if (!isSelfClosing) {
               parentStack.unshift(currentNode);
             } else {
@@ -279,13 +314,29 @@ export default function parse(
         break;
       }
       case "tagClose": {
-        if (!(currentNode instanceof HtmlStartTagNode)) {
+        if (
+          !(
+            currentNode instanceof HtmlStartTagNode ||
+            currentNode instanceof HtmlCloseNode
+          )
+        ) {
           throw newParserException();
         }
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
-            currentNode.hasClosingTag = true;
+            if (currentNode instanceof HtmlTagNode) {
+              if (
+                currentNode.tagName.toLowerCase() !=
+                token.textValue.toLowerCase()
+              ) {
+                throw new Error(
+                  `Tag was opened with ${currentNode.tagName}, but closed with ${token.textValue}. Mixed tags not supported`
+                );
+              }
+            } else {
+              currentNode.tagName = token.textValue;
+            }
             break;
           }
           case VelocityHtmlLexer.TAG_CLOSE: {
