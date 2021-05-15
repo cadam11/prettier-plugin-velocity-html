@@ -1,6 +1,7 @@
 import { Doc, doc, FastPath } from "prettier";
 import {
   AttributeNode,
+  DecoratedNode,
   HtmlCdataNode,
   HtmlCloseNode,
   HtmlCommentNode,
@@ -12,6 +13,7 @@ import {
   RootNode,
   VoidNode,
 } from "./parser/VelocityParserNodes";
+import { VelocityToken } from "./parser/VelocityToken";
 
 const {
   literalline,
@@ -32,6 +34,22 @@ function escapeDoubleQuote(text: string): string {
   return text.replace(/"/g, "&quot;");
 }
 
+function printRevealedConditionalComment(token: VelocityToken) {
+  return token.textValue.trim().replace(/\s/g, " ").replace(/\s+]/, "]");
+}
+
+function decorate(doc: Doc | Doc[], node: DecoratedNode | undefined): Doc {
+  return concat([
+    node != null && node.revealedConditionalCommentStart != null
+      ? printRevealedConditionalComment(node.revealedConditionalCommentStart)
+      : "",
+    ...(doc instanceof Array ? doc : [doc]),
+    node != null && node.revealedConditionalCommentEnd != null
+      ? printRevealedConditionalComment(node.revealedConditionalCommentEnd)
+      : "",
+  ]);
+}
+
 export function printOpeningTag(
   node: HtmlTagNode,
   path: FastPath<ParserNode>,
@@ -48,12 +66,12 @@ export function printOpeningTag(
     tagOpenParts.push(softline, ">");
   }
 
-  return group(concat(tagOpenParts));
+  return decorate(group(concat(tagOpenParts)), node.startNode);
 }
 
 export function printClosingTag(node: HtmlTagNode): Doc {
-  if (node.forceCloseTag || node.hasClosingTag) {
-    return concat([`</${node.tagName}>`]);
+  if (node.forceCloseTag || node.endNode != null) {
+    return decorate(`</${node.tagName}>`, node.endNode);
   } else if (node.isSelfClosing) {
     return concat([line, "/>"]);
   } else {
@@ -198,6 +216,15 @@ function printChildren(
         parts.push(childParts);
       }
 
+      // Ensure forceBreak, even if there is no next node.
+      if (
+        childNode instanceof HtmlTagNode &&
+        childNode.forceBreak &&
+        childNode.next == null
+      ) {
+        parts.push(breakParent);
+      }
+
       /**
        * Look at next node to determine if line break is needed after child content.
        */
@@ -233,7 +260,7 @@ function printChildren(
   }, "children");
 }
 
-export default function print (
+export default function print(
   path: FastPath<ParserNode>,
   options: unknown,
   print: (path: FastPath) => Doc
@@ -282,7 +309,7 @@ export default function print (
           parts.push(literalline, breakParent);
         }
       });
-      return concat([dedentToRoot(softline), fill(parts)]);
+      return decorate(concat([dedentToRoot(softline), fill(parts)]), node);
     } else {
       const words = node.text.trim().split(/\s+/);
       const parts: Doc[] = [];
@@ -292,16 +319,19 @@ export default function print (
           parts.push(line);
         }
       });
-      return fill(parts);
+      return decorate(fill(parts), node);
     }
   } else if (node instanceof HtmlCommentNode) {
-    return concat([node.text]);
+    return decorate([node.text], node);
   } else if (node instanceof HtmlDocTypeNode) {
-    return group(
-      concat([group(concat([`<!DOCTYPE ${node.types.join(" ")}`])), ">"])
+    return decorate(
+      group(
+        concat([group(concat([`<!DOCTYPE ${node.types.join(" ")}`])), ">"])
+      ),
+      node
     );
   } else if (node instanceof IeConditionalCommentNode) {
-    const el: Doc[] = [node.text];
+    const el: Doc[] = [decorate(node.text, node.startNode)];
 
     if (node.children.length > 0) {
       const printedChildren = printChildren(path, options, print);
@@ -309,10 +339,10 @@ export default function print (
       el.push(softline);
     }
 
-    el.push(`<![endif]-->`);
+    el.push(decorate(`<![endif]-->`, node.endNode));
     return group(concat(el));
   } else if (node instanceof HtmlCdataNode) {
-    return concat([node.text]);
+    return decorate([node.text], node);
   } else if (node instanceof VoidNode) {
     return concatChildren(node, printChildren(path, options, print));
   } else if (node instanceof HtmlCloseNode) {

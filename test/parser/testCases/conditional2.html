@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<!--[if lt IE 9]><!-->    <!--<![endif]-->
+
+<!--[if lt IE 9]><!--><!--[if lt IE 9]><![endif]--><!--<![endif]-->
+<!--[if lt IE 9]><!--><![CDATA[fooo]]><![CDATA[bar]]> <!--<![endif]-->
+<!--[if lt IE 9]><!--><!---->foo<!--<![endif]-->
+<!--[if lt IE 9]><!-->
+  <html>
+<!--<![endif]--><span>
+<!--[if lt IE 9]><!-->  </span>  <!--<![endif]-->
+<!--[if lt IE 9]><!--><script>console.log("bar");</script><!--<![endif]-->
+<!--[if lt IE 9]><!--><!DOCTYPE html> <!--<![endif]-->
+<!--[if lt IE 9]><!-->foo<!--<![endif]--> foo foo
+  <div>
+    foo <!--[if lt IE 9]><!-->text text<!--<![endif]--><br/>
+    foo<!--[if lt IE 9]><!--> text text<!--<![endif]--><br/>
+    <!--[if lt IE 9]><!-->text text<!--<![endif]--> foo<br/>
+    <!--[if lt IE 9]><!-->text text <!--<![endif]-->foo
+  </div>
+  <head></head>
+  <body></body>
+</html>
+=====================================output=====================================
+<!DOCTYPE html>
+
+<!--[if lt IE 9]><!--><!--[if lt IE 9]><![endif]--><!--<![endif]-->
+<!--[if lt IE 9]><!--><![CDATA[fooo]]><![CDATA[bar]]><!--<![endif]-->
+<!--[if lt IE 9]><!--><!---->foo<!--<![endif]-->
+<!--[if lt IE 9]><!--><html><!--<![endif]-->
+  <span><!--[if lt IE 9]><!--></span><!--<![endif]-->
+  <!--[if lt IE 9]><!--><script>console.log("bar");</script><!--<![endif]-->
+  <!--[if lt IE 9]><!--><!DOCTYPE html><!--<![endif]-->
+  <!--[if lt IE 9]><!-->foo<!--<![endif]--> foo foo
+  <div>
+    foo <!--[if lt IE 9]><!-->text text<!--<![endif]--><br />
+    foo <!--[if lt IE 9]><!-->text text<!--<![endif]--><br />
+    <!--[if lt IE 9]><!-->text text<!--<![endif]--> foo
+  </div>
+  <head></head>
+  <body></body>
+</html>

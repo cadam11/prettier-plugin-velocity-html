@@ -3,7 +3,6 @@ import officalHtmlTags from "./officialHtmlTags";
 
 interface SourceCodeLocation {
   line: number;
-  column: number;
 }
 
 export enum RenderMode {
@@ -11,7 +10,38 @@ export enum RenderMode {
   INLINE,
 }
 
-export abstract class ParserNode {
+export class DecoratedNode {
+  public _revealedConditionalCommentStart: VelocityToken | null;
+
+  public get revealedConditionalCommentStart(): VelocityToken | null {
+    if (this instanceof NodeWithChildren) {
+      return this.startNode.revealedConditionalCommentStart;
+    } else {
+      return this._revealedConditionalCommentStart;
+    }
+  }
+  public set revealedConditionalCommentStart(token: VelocityToken | null) {
+    this._revealedConditionalCommentStart = token;
+  }
+
+  public _revealedConditionalCommentEnd: VelocityToken | null = null;
+
+  public get revealedConditionalCommentEnd(): VelocityToken | null {
+    if (this instanceof NodeWithChildren) {
+      return this.endNode != null
+        ? this.endNode.revealedConditionalCommentEnd
+        : null;
+    } else {
+      return this._revealedConditionalCommentEnd;
+    }
+  }
+
+  public set revealedConditionalCommentEnd(token: VelocityToken | null) {
+    this._revealedConditionalCommentEnd = token;
+  }
+}
+
+export abstract class ParserNode extends DecoratedNode {
   public _endToken: VelocityToken | undefined;
 
   public get endToken(): VelocityToken | undefined {
@@ -25,14 +55,25 @@ export abstract class ParserNode {
     this._endToken = token;
   }
 
-  public startLocation: SourceCodeLocation;
+  public _startLocation: SourceCodeLocation;
+  public get startLocation(): SourceCodeLocation {
+    if (this.revealedConditionalCommentStart != null) {
+      return {
+        line: this.revealedConditionalCommentStart.line,
+      };
+    } else {
+      return this._startLocation;
+    }
+  }
   public _endLocation: SourceCodeLocation | undefined;
   public get endLocation(): SourceCodeLocation | undefined {
+    if (this.revealedConditionalCommentEnd != null) {
+      return {
+        line: this.revealedConditionalCommentEnd.line,
+      };
+    }
     return this.endToken != null
       ? {
-          column:
-            this.endToken.charPositionInLine +
-            (this.endToken.text != null ? this.endToken.text.length : 0),
           line: this.endToken.line,
         }
       : this._endLocation;
@@ -49,17 +90,19 @@ export abstract class ParserNode {
   }
 
   constructor(startLocation: SourceCodeLocation | VelocityToken) {
+    super();
     if (startLocation instanceof VelocityToken) {
-      this.startLocation = {
-        column: startLocation.charPositionInLine,
+      this._startLocation = {
         line: startLocation.line,
       };
     } else {
-      this.startLocation = startLocation;
+      this._startLocation = startLocation;
     }
   }
 
-  public abstract getRenderMode(): RenderMode;
+  public getRenderMode(): RenderMode {
+    return RenderMode.INLINE;
+  }
 
   public get prev(): ParserNode | undefined {
     return this.index != null && this.parent != null
@@ -102,6 +145,12 @@ export abstract class ParserNode {
   }
 }
 
+export class NodeWithChildrenDecoration extends DecoratedNode {
+  constructor() {
+    super();
+  }
+}
+
 export abstract class NodeWithChildren extends ParserNode {
   public children: ParserNode[] = [];
 
@@ -119,6 +168,14 @@ export abstract class NodeWithChildren extends ParserNode {
     super.walk(fn);
   }
 
+  constructor(startLocation: SourceCodeLocation | VelocityToken) {
+    super(startLocation);
+    this.startNode = new NodeWithChildrenDecoration();
+  }
+
+  public startNode: NodeWithChildrenDecoration;
+  public endNode: NodeWithChildrenDecoration | undefined;
+
   public addChild(child: ParserNode): void {
     this.children.push(child);
     child.parent = this;
@@ -126,9 +183,6 @@ export abstract class NodeWithChildren extends ParserNode {
 }
 
 export class AttributeNode extends ParserNode {
-  public getRenderMode(): RenderMode {
-    return RenderMode.INLINE;
-  }
   public knownAttributes = [
     "id",
     "name",
@@ -167,14 +221,11 @@ export class RootNode extends NodeWithChildren {
     return new RootNode();
   }
   public constructor() {
-    super({ column: 0, line: 0 });
+    super({ line: 0 });
   }
 }
 
 export class HtmlTextNode extends ParserNode {
-  public getRenderMode(): RenderMode {
-    return RenderMode.INLINE;
-  }
   public tokens: VelocityToken[] = [];
 
   public constructor(token: VelocityToken) {
@@ -230,8 +281,17 @@ export class HtmlTextNode extends ParserNode {
       this.hasLeadingSpaces = true;
       this.hasTrailingSpaces = true;
     } else {
-      this.hasLeadingSpaces = this.removeLeadingWhitespace();
-      this.hasTrailingSpaces = this.removeTrailingWhitespaceTokens();
+      // Don't overwrite. May have been set be previous or next child. Must trim anyway.
+      this.hasLeadingSpaces =
+        this.removeLeadingWhitespace() ||
+        this.hasLeadingSpaces ||
+        (this.revealedConditionalCommentStart != null &&
+          /\s+$/.exec(this.revealedConditionalCommentStart.textValue) != null);
+      this.hasTrailingSpaces =
+        this.removeTrailingWhitespaceTokens() ||
+        this.hasTrailingSpaces ||
+        (this.revealedConditionalCommentEnd != null &&
+          /^\s+/.exec(this.revealedConditionalCommentEnd.textValue) != null);
     }
   }
 
@@ -272,8 +332,7 @@ export class HtmlTextNode extends ParserNode {
       numberOfTailingWhitespaceTokens
     );
     this._endToken = this.tokens[this.tokens.length - 1];
-    this.startLocation = {
-      column: this.tokens[0].charPositionInLine,
+    this._startLocation = {
       line: this.tokens[0].line,
     };
     return numberOfTailingWhitespaceTokens > 0;
@@ -354,7 +413,6 @@ export class HtmlTagNode extends NodeWithChildren {
 
   private _tagName: string;
   public isSelfClosing: boolean;
-  public hasClosingTag = false;
   public attributes: AttributeNode[] = [];
   public _isInlineRenderMode: boolean;
   public forceCloseTag: boolean;
@@ -423,9 +481,6 @@ export class HtmlDocTypeNode extends ParserNode {
 }
 
 export class HtmlCdataNode extends ParserNode {
-  public getRenderMode(): RenderMode {
-    return RenderMode.INLINE;
-  }
   public text: string;
 
   public constructor(token: VelocityToken) {
@@ -436,16 +491,11 @@ export class HtmlCdataNode extends ParserNode {
 }
 
 export class VoidNode extends NodeWithChildren {
-  public getRenderMode(): RenderMode {
-    return RenderMode.INLINE;
+  public get endLocation(): SourceCodeLocation | undefined {
+    return this.lastChild != null ? this.lastChild.endLocation : undefined;
   }
 }
 
 export class HtmlCloseNode extends ParserNode {
-  public getRenderMode(): RenderMode {
-    // throw new Error("Method not implemented.");
-    return RenderMode.INLINE;
-  }
-
   public tagName: string;
 }

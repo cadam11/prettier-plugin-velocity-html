@@ -51,7 +51,7 @@
     "gh-pages": "rimraf docs && npm run docs && gh-pages -d docs",
     "npm-publish": "npm publish",
     "lint": "eslint \"./**/*.ts\"",
-    "tools:testrig": "npm run build && node dist/tools/TestRig.js",
+    "tools:testrig": "npm run build && node --require source-map-support/register dist/tools/TestRig.js",
     "tools:testrig:html": "npm run tools:testrig -- read-test-case --file tools/local/local-debug.html --doc --format --token"
   },
   "version": "0.0.0",

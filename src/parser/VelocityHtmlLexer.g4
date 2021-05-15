@@ -47,9 +47,14 @@ lexer grammar VelocityHtmlLexer;
 }
 
 
-IE_COMMENT_START: '<!--[' .*? ']' ('--')? '>' ('<!-->')?;
+IE_COMMENT_START: '<!--[' ~[\]]+ ']>';
 
-IE_COMMENT_CLOSE: '<!' ('--<!')? '[endif]-->';
+IE_COMMENT_CLOSE: '<![endif]-->';
+
+IE_REVEALED_COMMENT_START: '<!--[' ~[\]]+ ']><!-->' DEFAULT_WS*;
+IE_REVEALED_COMMENT_CLOSE: DEFAULT_WS* '<!--<![endif]-->';
+
+fragment IE_COMMENT_OPERATORS: [ !()&|] | 'gt' | 'gte' |  'lt' | 'lte' | 'true' | 'false' | ;
 
 // Comment that is NOT an IE comment.
 COMMENT: '<!--' ~[[]*? '-->';
@@ -72,10 +77,10 @@ HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VE
 HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r\f<]+;
 
 WS
-   : DEFAULT_WS
+   : DEFAULT_WS +
    ;
 
-fragment DEFAULT_WS: [ \t\n\r\f] +;
+fragment DEFAULT_WS: [ \t\n\r\f] ;
 
 // handle characters which failed to match any other token
 ERROR_CHARACTER : . ;

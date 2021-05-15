@@ -1,11 +1,4 @@
-import {
-  CharStreams,
-  CommonTokenStream,
-  Lexer,
-  Parser,
-  Recognizer,
-  Token,
-} from "antlr4ts";
+import { CharStreams, CommonTokenStream, Recognizer, Token } from "antlr4ts";
 import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
 import { AST } from "prettier";
 import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
@@ -19,13 +12,24 @@ import {
   HtmlTextNode,
   IeConditionalCommentNode,
   NodeWithChildren,
+  NodeWithChildrenDecoration,
   ParserNode,
+  DecoratedNode,
   RootNode,
   VoidNode,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
 
+const interpolateErrorMsg = (msg: string, tokenName: string, mode: string) => {
+  const ctx = {
+    tokenName,
+    mode,
+  };
+  return Object.entries(ctx).reduce((interpolatedMsg, [key, value]) => {
+    return interpolatedMsg.replace(new RegExp(`{{\w*${key}\w*}}`, "g"), value);
+  }, msg);
+};
 export class ParserException extends Error {
   // loc is read by prettier error handler
   public loc: {
@@ -36,15 +40,20 @@ export class ParserException extends Error {
   };
   constructor(
     token: VelocityToken,
-    mode?: string,
-    recognizer?: Recognizer<unknown, ATNSimulator>
+    mode: string,
+    recognizer: Recognizer<unknown, ATNSimulator>,
+    msg?: string
   ) {
     const tokenName =
       recognizer != null
         ? recognizer.vocabulary.getDisplayName(token.type)
         : token.type;
     super(
-      `Unexpected token <${tokenName}> ${mode != null ? "in mode " + mode : ""}`
+      interpolateErrorMsg(
+        msg != null ? msg : `Unexpected token <{{tokenName}}> in mode {{mode}}`,
+        tokenName.toString(),
+        mode
+      )
     );
     this.loc = {
       start: {
@@ -99,9 +108,12 @@ export default function parse(
 
   const openIeConditinalChildren: NodeWithChildren[] = [];
 
+  let revealedConditionComment: VelocityToken | null = null;
+
   for (let i = 0; i < tokens.length; i++) {
     const token: VelocityToken = tokens[i] as VelocityToken;
-    const newParserException = () => new ParserException(token, mode, lexer);
+    const newParserException = (msg?: string) =>
+      new ParserException(token, mode, lexer, msg);
     let nextToken: Token | undefined;
     // Not every node is a parent.
     let parent = parentStack[0];
@@ -134,7 +146,12 @@ export default function parse(
         // Concatenate text to be able to use fill() later.
         const addTextNode = (token: VelocityToken) => {
           const lastChild = (currentNode as NodeWithChildren).lastChild;
-          if (lastChild != null && lastChild instanceof HtmlTextNode) {
+          if (
+            lastChild != null &&
+            lastChild instanceof HtmlTextNode &&
+            lastChild.revealedConditionalCommentEnd == null &&
+            revealedConditionComment == null
+          ) {
             lastChild.addText(token);
           } else {
             (currentNode as NodeWithChildren).addChild(new HtmlTextNode(token));
@@ -159,7 +176,7 @@ export default function parse(
             if (parent instanceof VoidNode) {
               setNewCurrentNode(new HtmlCloseNode(token));
             } else if (currentNode instanceof HtmlTagNode) {
-              currentNode.hasClosingTag = true;
+              currentNode.endNode = new NodeWithChildrenDecoration();
             } else {
               throw newParserException();
             }
@@ -191,6 +208,7 @@ export default function parse(
             while (!(currentNode instanceof IeConditionalCommentNode)) {
               popOpenIeConditionalChild();
             }
+            currentNode.endNode = new NodeWithChildrenDecoration();
             currentNode.endToken = token;
             popParentStack();
             break;
@@ -203,6 +221,7 @@ export default function parse(
           }
           case VelocityHtmlLexer.SCRIPT_END_TAG: {
             currentNode.endToken = token;
+            currentNode.endNode = new NodeWithChildrenDecoration();
             popParentStack();
             break;
           }
@@ -230,9 +249,57 @@ export default function parse(
             parent.addChild(cdataNode);
             break;
           }
+          case VelocityHtmlLexer.IE_REVEALED_COMMENT_START: {
+            revealedConditionComment = token;
+            break;
+          }
+          case VelocityHtmlLexer.IE_REVEALED_COMMENT_CLOSE: {
+            if (revealedConditionComment == null) {
+              // Attach to previous comment
+              // See below
+              revealedConditionComment = token;
+            } else {
+              // Remove empty conditional comment.
+              revealedConditionComment = null;
+            }
+            break;
+          }
           default: {
             throw newParserException();
           }
+        }
+
+        // Attach to next node.
+        if (
+          revealedConditionComment != null &&
+          token.type != VelocityHtmlLexer.IE_REVEALED_COMMENT_START
+        ) {
+          // Cannot attach to whitespace only nodes
+          let lastNode: DecoratedNode | undefined = parent.lastChild;
+          lastNode =
+            lastNode != null &&
+            !(lastNode instanceof HtmlTextNode && lastNode.isWhitespaceOnly)
+              ? lastNode
+              : currentNode;
+          if (lastNode == null) {
+            throw newParserException(
+              `Cannot attach conditional comment. No last child.`
+            );
+          }
+
+          if (lastNode instanceof NodeWithChildren) {
+            if (lastNode.endNode == null) {
+              lastNode = lastNode.startNode;
+            } else {
+              lastNode = lastNode.endNode;
+            }
+          }
+          if (token.type == VelocityHtmlLexer.IE_REVEALED_COMMENT_CLOSE) {
+            lastNode.revealedConditionalCommentEnd = revealedConditionComment;
+          } else {
+            lastNode.revealedConditionalCommentStart = revealedConditionComment;
+          }
+          revealedConditionComment = null;
         }
         break;
       }
