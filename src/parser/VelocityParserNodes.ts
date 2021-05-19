@@ -181,8 +181,6 @@ export abstract class NodeWithChildren extends ParserNode {
     this.children.push(child);
     child.parent = this;
   }
-
-  public openConditionalChildren: NodeWithChildren[] = [];
 }
 
 export class AttributeNode extends ParserNode {
@@ -498,12 +496,8 @@ export class HtmlCloseNode extends NodeWithChildren {
     return RenderMode.BLOCK;
   }
 
-  constructor(token: SourceCodeLocation) {
-    super(token);
+  constructor(startLocation: SourceCodeLocation | VelocityToken) {
+    super(startLocation);
     this.forceBreak = true;
   }
-
-  // public get endLocation(): SourceCodeLocation | undefined {
-  //   return this.lastChild != null ? this.lastChild.endLocation : undefined;
-  // }
 }

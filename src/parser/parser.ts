@@ -163,9 +163,29 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.TAG_END_OPEN: {
-            if (currentNode instanceof HtmlCloseNode) {
-            } else if (currentNode instanceof HtmlTagNode) {
+            if (currentNode instanceof HtmlTagNode) {
               currentNode.endNode = new NodeWithChildrenDecoration();
+            } else if (
+              currentNode instanceof HtmlCloseNode ||
+              currentNode instanceof IeConditionalCommentNode
+            ) {
+              const closeNode = new HtmlCloseNode(token);
+              /*
+               * This is an incomplete html snippet. Assemble the tree "bottom-up".
+               * </td><td></td></tr></table>
+               * should be parsed as
+               * Root
+               *  - /table
+               *    - /tr
+               *      - /td
+               *      - td
+               */
+              parent.children.forEach((child) => {
+                closeNode.addChild(child);
+              });
+              parent.children = [];
+              setNewCurrentNode(closeNode);
+              parentStack.unshift(currentNode);
             } else {
               throw newParserException();
             }
@@ -174,44 +194,22 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.IE_COMMENT_START: {
-            const openConditionalChildren = parent.openConditionalChildren;
             const conditionalNode = new IeConditionalCommentNode(token);
             setNewCurrentNode(conditionalNode);
             parentStack.unshift(currentNode);
-            while (openConditionalChildren.length > 0) {
-              const child = openConditionalChildren.pop();
-              if (child == null) {
-                throw new Error("Nothing to pop()");
-              }
-              if (parentStack[0] instanceof HtmlCloseNode) {
-                parentStack[0].addChild(child);
-              } else {
-                // IE comment node
-                currentNode.addChild(child);
-              }
-              parentStack.unshift(child);
-            }
-            currentNode = parentStack[0];
 
             mode = "outsideTag";
             break;
           }
           case VelocityHtmlLexer.IE_COMMENT_CLOSE: {
-            const openConditionalChildren: NodeWithChildren[] = [];
+            // Remove dangling nodes from parent stack
             while (!(currentNode instanceof IeConditionalCommentNode)) {
-              const child = parentStack.shift();
+              parentStack.shift();
               currentNode = parentStack[0];
-              if (child == null) {
-                throw new Error("Nothing to shift()");
-              }
-              openConditionalChildren.push(
-                new HtmlCloseNode(child.startLocation)
-              );
             }
             currentNode.endNode = new NodeWithChildrenDecoration();
             currentNode.endToken = token;
             popParentStack();
-            parentStack[0].openConditionalChildren = openConditionalChildren;
             break;
           }
           case VelocityHtmlLexer.SCRIPT_START_OPEN: {
