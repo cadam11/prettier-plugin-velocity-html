@@ -11,7 +11,6 @@ import {
   IeConditionalCommentNode,
   ParserNode,
   RootNode,
-  VoidNode,
 } from "./parser/VelocityParserNodes";
 import { VelocityToken } from "./parser/VelocityToken";
 
@@ -185,10 +184,7 @@ function printChildren(
         const prev = childNode.prev;
         let lineBreak: Doc = "";
 
-        if (
-          prev.isPreformatted ||
-          (prev instanceof HtmlTagNode && prev.forceBreak)
-        ) {
+        if (prev.isPreformatted || prev.forceBreak) {
           // At least one hardline after preformatted text
           lineBreak = calculateDifferenceBetweenChildren(
             prev,
@@ -217,11 +213,7 @@ function printChildren(
       }
 
       // Ensure forceBreak, even if there is no next node.
-      if (
-        childNode instanceof HtmlTagNode &&
-        childNode.forceBreak &&
-        childNode.next == null
-      ) {
+      if (childNode.forceBreak && childNode.next == null) {
         parts.push(breakParent);
       }
 
@@ -231,10 +223,7 @@ function printChildren(
       // Preformatted and force break is handled in prev check of next node.
       if (
         childNode.next != null &&
-        !(
-          childNode.isPreformatted ||
-          (childNode instanceof HtmlTagNode && childNode.forceBreak)
-        )
+        !(childNode.isPreformatted || childNode.forceBreak)
       ) {
         const next = childNode.next;
         if (
@@ -335,7 +324,15 @@ export default function print(
 
     if (node.children.length > 0) {
       const printedChildren = printChildren(path, options, print);
-      el.push(indent(concat([softline, ...printedChildren])));
+
+      el.push(
+        indent(
+          concat([
+            node.children[0] instanceof HtmlCloseNode ? "" : softline,
+            ...printedChildren,
+          ])
+        )
+      );
       el.push(softline);
     }
 
@@ -343,10 +340,14 @@ export default function print(
     return group(concat(el));
   } else if (node instanceof HtmlCdataNode) {
     return decorate([node.text], node);
-  } else if (node instanceof VoidNode) {
-    return concatChildren(node, printChildren(path, options, print));
   } else if (node instanceof HtmlCloseNode) {
-    return concat([`</${node.tagName}>`]);
+    return concat([
+      node.children.length > 0
+        ? indent(concat(printChildren(path, options, print)))
+        : "",
+      softline,
+      `</${node.tagName}>`,
+    ]);
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

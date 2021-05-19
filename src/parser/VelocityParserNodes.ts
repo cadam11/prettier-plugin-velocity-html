@@ -143,6 +143,8 @@ export abstract class ParserNode extends DecoratedNode {
     }
     return false;
   }
+
+  public forceBreak = false;
 }
 
 export class NodeWithChildrenDecoration extends DecoratedNode {
@@ -161,9 +163,8 @@ export abstract class NodeWithChildren extends ParserNode {
   public walk(
     fn: (node: ParserNode, index: number, array: ParserNode[]) => void
   ): void {
-    this.children = this.children.map((node) => {
+    this.children.forEach((node) => {
       node.walk(fn);
-      return node;
     });
     super.walk(fn);
   }
@@ -180,6 +181,8 @@ export abstract class NodeWithChildren extends ParserNode {
     this.children.push(child);
     child.parent = this;
   }
+
+  public openConditionalChildren: NodeWithChildren[] = [];
 }
 
 export class AttributeNode extends ParserNode {
@@ -343,9 +346,6 @@ export class HtmlTagNode extends NodeWithChildren {
   public getRenderMode(): RenderMode {
     return this._isInlineRenderMode ? RenderMode.INLINE : RenderMode.BLOCK;
   }
-  public get forceBreak(): boolean {
-    return this.forceBreakTags.includes(this.tagName);
-  }
 
   private forceBreakTags = ["br"];
 
@@ -427,6 +427,7 @@ export class HtmlTagNode extends NodeWithChildren {
     this.isPreformatted = this.preformattedTags.includes(this.tagName);
     this._isInlineRenderMode = !this.blockLevelElements.includes(this.tagName);
     this.forceCloseTag = this.forceCloseTags.includes(this.tagName);
+    this.forceBreak = this.forceBreakTags.includes(this.tagName);
   }
 
   public get tagName(): string {
@@ -490,12 +491,19 @@ export class HtmlCdataNode extends ParserNode {
   }
 }
 
-export class VoidNode extends NodeWithChildren {
-  public get endLocation(): SourceCodeLocation | undefined {
-    return this.lastChild != null ? this.lastChild.endLocation : undefined;
-  }
-}
-
-export class HtmlCloseNode extends ParserNode {
+export class HtmlCloseNode extends NodeWithChildren {
   public tagName: string;
+
+  public getRenderMode(): RenderMode {
+    return RenderMode.BLOCK;
+  }
+
+  constructor(token: SourceCodeLocation) {
+    super(token);
+    this.forceBreak = true;
+  }
+
+  // public get endLocation(): SourceCodeLocation | undefined {
+  //   return this.lastChild != null ? this.lastChild.endLocation : undefined;
+  // }
 }

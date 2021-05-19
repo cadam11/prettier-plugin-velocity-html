@@ -16,7 +16,6 @@ import {
   ParserNode,
   DecoratedNode,
   RootNode,
-  VoidNode,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -27,7 +26,10 @@ const interpolateErrorMsg = (msg: string, tokenName: string, mode: string) => {
     mode,
   };
   return Object.entries(ctx).reduce((interpolatedMsg, [key, value]) => {
-    return interpolatedMsg.replace(new RegExp(`{{\w*${key}\w*}}`, "g"), value);
+    return interpolatedMsg.replace(
+      new RegExp(`{{\\w*${key}\\w*}}`, "g"),
+      value
+    );
   }, msg);
 };
 export class ParserException extends Error {
@@ -106,8 +108,6 @@ export default function parse(
 
   let mode: LexerMode = "outsideTag";
 
-  const openIeConditinalChildren: NodeWithChildren[] = [];
-
   let revealedConditionComment: VelocityToken | null = null;
 
   for (let i = 0; i < tokens.length; i++) {
@@ -116,19 +116,10 @@ export default function parse(
       new ParserException(token, mode, lexer, msg);
     let nextToken: Token | undefined;
     // Not every node is a parent.
-    let parent = parentStack[0];
+    const parent = parentStack[0];
     if (i < tokens.length - 1) {
       nextToken = tokens[i + 1];
     }
-
-    const popOpenIeConditionalChild = (): void => {
-      const child = parentStack.shift();
-      if (child == null) {
-        throw new Error("Nothing to shift()");
-      }
-      openIeConditinalChildren.push(new VoidNode(child.startLocation));
-      currentNode = parentStack[0];
-    };
 
     const popParentStack = (): void => {
       if (currentNode.endLocation == null) {
@@ -159,7 +150,6 @@ export default function parse(
         };
         const setNewCurrentNode = (node: ParserNode): ParserNode => {
           currentNode = node;
-          currentNode.parent = parent;
           parent.addChild(currentNode);
           return node;
         };
@@ -173,8 +163,7 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.TAG_END_OPEN: {
-            if (parent instanceof VoidNode) {
-              setNewCurrentNode(new HtmlCloseNode(token));
+            if (currentNode instanceof HtmlCloseNode) {
             } else if (currentNode instanceof HtmlTagNode) {
               currentNode.endNode = new NodeWithChildrenDecoration();
             } else {
@@ -185,32 +174,44 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.IE_COMMENT_START: {
-            setNewCurrentNode(new IeConditionalCommentNode(token));
+            const openConditionalChildren = parent.openConditionalChildren;
+            const conditionalNode = new IeConditionalCommentNode(token);
+            setNewCurrentNode(conditionalNode);
             parentStack.unshift(currentNode);
-            while (openIeConditinalChildren.length > 0) {
-              const child = openIeConditinalChildren.pop();
+            while (openConditionalChildren.length > 0) {
+              const child = openConditionalChildren.pop();
               if (child == null) {
                 throw new Error("Nothing to pop()");
               }
-              if (parent instanceof VoidNode) {
-                parent.addChild(child);
+              if (parentStack[0] instanceof HtmlCloseNode) {
+                parentStack[0].addChild(child);
               } else {
                 // IE comment node
                 currentNode.addChild(child);
               }
               parentStack.unshift(child);
-              parent = child;
             }
+            currentNode = parentStack[0];
+
             mode = "outsideTag";
             break;
           }
           case VelocityHtmlLexer.IE_COMMENT_CLOSE: {
+            const openConditionalChildren: NodeWithChildren[] = [];
             while (!(currentNode instanceof IeConditionalCommentNode)) {
-              popOpenIeConditionalChild();
+              const child = parentStack.shift();
+              currentNode = parentStack[0];
+              if (child == null) {
+                throw new Error("Nothing to shift()");
+              }
+              openConditionalChildren.push(
+                new HtmlCloseNode(child.startLocation)
+              );
             }
             currentNode.endNode = new NodeWithChildrenDecoration();
             currentNode.endToken = token;
             popParentStack();
+            parentStack[0].openConditionalChildren = openConditionalChildren;
             break;
           }
           case VelocityHtmlLexer.SCRIPT_START_OPEN: {
