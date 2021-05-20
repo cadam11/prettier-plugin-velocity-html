@@ -69,14 +69,19 @@ export abstract class ParserNode extends DecoratedNode {
   public get endLocation(): SourceCodeLocation | undefined {
     if (this.revealedConditionalCommentEnd != null) {
       return {
-        line: this.revealedConditionalCommentEnd.line,
+        line: this.calculateEndLine(this.revealedConditionalCommentEnd),
       };
     }
     return this.endToken != null
       ? {
-          line: this.endToken.line,
+          line: this.calculateEndLine(this.endToken),
         }
       : this._endLocation;
+  }
+
+  private calculateEndLine(token: VelocityToken) {
+    const match = token.textValue.match(/\n/g);
+    return token.line + (match != null ? match.length : 0);
   }
 
   public isPreformatted = false;
@@ -144,6 +149,7 @@ export abstract class ParserNode extends DecoratedNode {
     return false;
   }
 
+  // TODO Should this also insert hardline?
   public forceBreak = false;
 }
 
@@ -373,6 +379,7 @@ export class HtmlTagNode extends NodeWithChildren {
     "address",
     "article",
     "aside",
+    "body",
     "blockquote",
     "details",
     "dialog",
@@ -393,15 +400,19 @@ export class HtmlTagNode extends NodeWithChildren {
     "h6",
     "html",
     "header",
+    "head",
     "hgroup",
     "hr",
     "li",
     "main",
+    "meta",
     "nav",
     "ol",
     "p",
     "pre",
     "section",
+    "script",
+    "style",
     "param",
     "table",
     "ul",
@@ -444,7 +455,7 @@ export class HtmlTagNode extends NodeWithChildren {
 
 export class HtmlCommentNode extends ParserNode {
   public getRenderMode(): RenderMode {
-    return RenderMode.BLOCK;
+    return RenderMode.INLINE;
   }
   public text: string;
 

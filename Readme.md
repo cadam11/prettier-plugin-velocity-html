@@ -3,5 +3,5 @@ Edge cases that I do not support at the moment. If you think that there are a va
 - https://github.com/prettier/prettier/pull/7865
 - Smart Quotes: Will always use double quotes for attributes
 - img.srcset attribute formatting
-- Closing tags are not collapsed ( `/></a>`)
 - HTML comments inside `<script>`
+- A forced break before and after every comment

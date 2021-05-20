@@ -13,6 +13,18 @@ lexer grammar VelocityHtmlLexer;
       return nextTwoCharacters !== '$\u007B';
    }
 
+   private isNotStartOfConditionalComment(): boolean {
+      const nextCharacters = this.getNextCharacters(4);
+      return nextCharacters !== '<!--[';
+   }
+
+   private getNextCharacters(numberOfCharacters:number, offset = 0) {
+     const currentPosition = this._tokenStartCharIndex + offset;
+     const nextCharacters = this.inputStream.getText(Interval.of(currentPosition, currentPosition + numberOfCharacters));
+     this.debug('nextCharacters', nextCharacters);
+     return nextCharacters;
+   }
+
    public isVtlReferenceInsideString = false;
 
    public nextTagCloseMode : number | null = null;
@@ -57,7 +69,8 @@ IE_REVEALED_COMMENT_CLOSE: DEFAULT_WS* '<!--<![endif]-->';
 fragment IE_COMMENT_OPERATORS: [ !()&|] | 'gt' | 'gte' |  'lt' | 'lte' | 'true' | 'false' | ;
 
 // Comment that is NOT an IE comment.
-COMMENT: '<!--' ~[[]*? '-->';
+// Using (~[[] .*?)? breaks non-greediness
+COMMENT: {this.isNotStartOfConditionalComment()}? '<!--' .*? '-->';
 
 CDATA: '<![CDATA['~[\]]*? ']]>';
 

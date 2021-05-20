@@ -9,6 +9,7 @@ import {
   HtmlTagNode,
   HtmlTextNode,
   IeConditionalCommentNode,
+  NodeWithChildren,
   ParserNode,
   RootNode,
 } from "./parser/VelocityParserNodes";
@@ -37,15 +38,23 @@ function printRevealedConditionalComment(token: VelocityToken) {
   return token.textValue.trim().replace(/\s/g, " ").replace(/\s+]/, "]");
 }
 
+function decorateStart(node: DecoratedNode | undefined): Doc {
+  return node != null && node.revealedConditionalCommentStart != null
+    ? printRevealedConditionalComment(node.revealedConditionalCommentStart)
+    : "";
+}
+
+function decorateEnd(node: DecoratedNode | undefined): Doc {
+  return node != null && node.revealedConditionalCommentEnd != null
+    ? printRevealedConditionalComment(node.revealedConditionalCommentEnd)
+    : "";
+}
+
 function decorate(doc: Doc | Doc[], node: DecoratedNode | undefined): Doc {
   return concat([
-    node != null && node.revealedConditionalCommentStart != null
-      ? printRevealedConditionalComment(node.revealedConditionalCommentStart)
-      : "",
+    decorateStart(node),
     ...(doc instanceof Array ? doc : [doc]),
-    node != null && node.revealedConditionalCommentEnd != null
-      ? printRevealedConditionalComment(node.revealedConditionalCommentEnd)
-      : "",
+    decorateEnd(node),
   ]);
 }
 
@@ -55,22 +64,27 @@ export function printOpeningTag(
   print: (path: FastPath) => Doc
 ): Doc {
   const printedAttributes: Doc[] = path.map(print, "attributes");
-  const tagOpenParts: Doc[] = [`<${node.tagName}`];
+  const tagOpenParts: Doc[] = [decorateStart(node), `<${node.tagName}`];
 
   if (printedAttributes.length > 0) {
     tagOpenParts.push(indent(concat([line, join(line, printedAttributes)])));
   }
 
-  if (!node.isSelfClosing) {
-    tagOpenParts.push(softline, ">");
+  if (!node.isSelfClosing && !breakOpeningTag(node)) {
+    tagOpenParts.push(softline, ">", decorateEnd(node));
   }
 
-  return decorate(group(concat(tagOpenParts)), node.startNode);
+  return group(concat(tagOpenParts));
 }
 
 export function printClosingTag(node: HtmlTagNode): Doc {
   if (node.forceCloseTag || node.endNode != null) {
-    return decorate(`</${node.tagName}>`, node.endNode);
+    const parts: Doc[] = [];
+    if (!breakClosingTag(node)) {
+      parts.push(decorateStart(node), `</${node.tagName}`);
+    }
+    parts.push(`>`, decorateEnd(node.endNode));
+    return concat(parts);
   } else if (node.isSelfClosing) {
     return concat([line, "/>"]);
   } else {
@@ -110,6 +124,26 @@ function calculateDifferenceBetweenChildren(
   } else {
     return concat([hardline, hardline]);
   }
+}
+
+function breakOpeningTag(parent: NodeWithChildren) {
+  return (
+    parent.isInlineRenderMode &&
+    parent.children.length > 0 &&
+    parent.children[0].isInlineRenderMode &&
+    !parent.children[0].hasLeadingSpaces
+  );
+}
+
+function breakClosingTag(parent: NodeWithChildren) {
+  // TODO Duplication
+  return (
+    parent.isInlineRenderMode &&
+    parent.endNode != null &&
+    parent.children.length > 0 &&
+    parent.children[parent.children.length - 1].isInlineRenderMode &&
+    !parent.children[parent.children.length - 1].hasTrailingSpaces
+  );
 }
 
 /*
@@ -162,10 +196,17 @@ function printChildren(
     const parts: Doc[] = [];
     const childParts = print(childPath);
 
-    if (childNode.isOnlyChild && childNode.isInlineRenderMode) {
+    const isFirstChild = childNode.index == 0;
+
+    if (isFirstChild && breakOpeningTag(childNode.parent!)) {
+      parts.push(">", decorateEnd(childNode.parent));
+    }
+
+    if (childNode.isOnlyChild) {
       const isParentInlineRenderingMode =
         childNode.parent != null && childNode.parent.isInlineRenderMode;
       /**
+       * TODO Kommentar stimmt nicht mehr.
        * Preserve whitespace from input, but don't use linebreaks.
        * Children are enclosed by line breaks in concatChildren()
        */
@@ -173,6 +214,10 @@ function printChildren(
         parts.push(ifBreak("", " "));
       }
       parts.push(childParts);
+      // Ensure forceBreak, even if there is no next node.
+      if (childNode.forceBreak) {
+        parts.push(breakParent);
+      }
       if (isParentInlineRenderingMode && childNode.hasTrailingSpaces) {
         parts.push(ifBreak("", " "));
       }
@@ -204,7 +249,8 @@ function printChildren(
                *  inline
                * </span> <span> inline </span>
                */
-              ifBreak(softline, "");
+              // ifBreak(softline, "");
+              "";
         }
         parts.push(group(concat([lineBreak, childParts])));
       } else {
@@ -245,6 +291,18 @@ function printChildren(
         }
       }
     }
+
+    const isLastChild =
+      childNode.index == childNode.parent!.children.length - 1;
+
+    if (isLastChild && breakClosingTag(childNode.parent!)) {
+      // TODO tagName
+      parts.push(
+        decorateStart(childNode.parent),
+        `</${(childNode.parent! as any).tagName}`
+      );
+    }
+
     return concat(parts);
   }, "children");
 }
@@ -326,14 +384,15 @@ export default function print(
       const printedChildren = printChildren(path, options, print);
 
       el.push(
+        softline,
         indent(
           concat([
             node.children[0] instanceof HtmlCloseNode ? "" : softline,
             ...printedChildren,
           ])
-        )
+        ),
+        softline
       );
-      el.push(softline);
     }
 
     el.push(decorate(`<![endif]-->`, node.endNode));
