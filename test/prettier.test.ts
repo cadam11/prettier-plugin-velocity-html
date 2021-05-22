@@ -33,7 +33,9 @@ describe("prettier", () => {
         "\n"
     );
     if (elements.length != 2) {
-      throw new Error(`File ${path} is not valid testcase`);
+      throw new Error(
+        `File ${path} is not valid testcase. It has ${elements.length} elements`
+      );
     }
     return [elements[0], elements[1]];
   };
@@ -132,7 +134,7 @@ describe("prettier", () => {
   });
 
   fs.readdirSync(__dirname + "/parser/invalid_html").forEach((testCaseName) => {
-    it.only(`should not process ${testCaseName}`, () => {
+    it(`should not process ${testCaseName}`, () => {
       const [input, expectedOutput] = readTestcaseFile(
         __dirname + "/parser/invalid_html/" + testCaseName
       );
@@ -156,7 +158,7 @@ describe("prettier", () => {
   fs.readdirSync(__dirname + "/parser/valid_html/").forEach((testCaseName) => {
     it(`should format ${testCaseName}`, async () => {
       const [input, expectedOutput] = readTestcaseFile(
-        __dirname + "/parser/testCases/" + testCaseName
+        __dirname + "/parser/valid_html/" + testCaseName
       );
       const formatted = format(input, {
         parser: "velocity-html",
