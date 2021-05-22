@@ -25,6 +25,19 @@ describe("prettier", () => {
     });
   });
 
+  const readTestcaseFile = (path: string): [string, string] => {
+    const testCaseContent = fs.readFileSync(path).toString();
+    const elements = testCaseContent.split(
+      "\n" +
+        "=====================================output=====================================" +
+        "\n"
+    );
+    if (elements.length != 2) {
+      throw new Error(`File ${path} is not valid testcase`);
+    }
+    return [elements[0], elements[1]];
+  };
+
   before(async () => {
     if (!fs.existsSync(SCREENSHOT_FOLDER)) {
       fs.mkdirSync(SCREENSHOT_FOLDER);
@@ -118,15 +131,32 @@ describe("prettier", () => {
     ).to.not.equal(0);
   });
 
-  fs.readdirSync(__dirname + "/parser/testCases/").forEach((testCaseName) => {
+  fs.readdirSync(__dirname + "/parser/invalid_html").forEach((testCaseName) => {
+    it.only(`should not process ${testCaseName}`, () => {
+      const [input, expectedOutput] = readTestcaseFile(
+        __dirname + "/parser/invalid_html/" + testCaseName
+      );
+
+      try {
+        format(input, {
+          parser: "velocity-html",
+          // pluginSearchDirs: ["./dir-with-plugins"],
+          plugins: ["./dist/src"],
+        });
+      } catch (e: unknown) {
+        if (typeof e === "string") {
+          expect(e).to.match(new RegExp(expectedOutput));
+        } else {
+          throw new Error(`Unknown error type ${typeof e}`);
+        }
+      }
+    });
+  });
+
+  fs.readdirSync(__dirname + "/parser/valid_html/").forEach((testCaseName) => {
     it(`should format ${testCaseName}`, async () => {
-      const testCaseContent = fs
-        .readFileSync(__dirname + "/parser/testCases/" + testCaseName)
-        .toString();
-      const [input, expectedOutput] = testCaseContent.split(
-        "\n" +
-          "=====================================output=====================================" +
-          "\n"
+      const [input, expectedOutput] = readTestcaseFile(
+        __dirname + "/parser/testCases/" + testCaseName
       );
       const formatted = format(input, {
         parser: "velocity-html",
