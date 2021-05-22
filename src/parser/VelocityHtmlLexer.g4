@@ -66,8 +66,6 @@ IE_COMMENT_CLOSE: '<![endif]-->';
 IE_REVEALED_COMMENT_START: '<!--[' ~[\]]+ ']><!-->' DEFAULT_WS*;
 IE_REVEALED_COMMENT_CLOSE: DEFAULT_WS* '<!--<![endif]-->';
 
-fragment IE_COMMENT_OPERATORS: [ !()&|] | 'gt' | 'gte' |  'lt' | 'lte' | 'true' | 'false' | ;
-
 // Comment that is NOT an IE comment.
 // Using (~[[] .*?)? breaks non-greediness
 COMMENT: {this.isNotStartOfConditionalComment()}? '<!--' .*? '-->';

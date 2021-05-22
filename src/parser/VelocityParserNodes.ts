@@ -186,6 +186,8 @@ export abstract class NodeWithChildren extends ParserNode {
   public startNode: NodeWithChildrenDecoration;
   public endNode: NodeWithChildrenDecoration | undefined;
 
+  public forceBreakChildren = false;
+
   public addChild(child: ParserNode): void {
     this.children.push(child);
     child.parent = this;
@@ -354,6 +356,8 @@ export class HtmlTagNode extends NodeWithChildren {
     return this._isInlineRenderMode ? RenderMode.INLINE : RenderMode.BLOCK;
   }
 
+  private forceBreakChildrenTags = ["body", "head", "ul", "ol"];
+
   private forceBreakTags = ["br"];
 
   // Taken from https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
@@ -440,6 +444,9 @@ export class HtmlTagNode extends NodeWithChildren {
     this._isInlineRenderMode = !this.blockLevelElements.includes(this.tagName);
     this.forceCloseTag = this.forceCloseTags.includes(this.tagName);
     this.forceBreak = this.forceBreakTags.includes(this.tagName);
+    this.forceBreakChildren = this.forceBreakChildrenTags.includes(
+      this.tagName
+    );
   }
 
   public get tagName(): string {
@@ -513,5 +520,15 @@ export class HtmlCloseNode extends NodeWithChildren {
   constructor(startLocation: SourceCodeLocation | VelocityToken) {
     super(startLocation);
     this.forceBreak = true;
+    /**
+     * Always break children of close nodes to improve readability:
+     * <!--[if lt IE 9]><td></td></td>
+     *        </tr>
+     * To break this, we have to force the break into the first children group:
+     * <!--[if lt IE 9]>
+     *          <td></td></td>
+     *        </tr>
+     */
+    this.forceBreakChildren = true;
   }
 }

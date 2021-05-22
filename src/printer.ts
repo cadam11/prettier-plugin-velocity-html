@@ -100,7 +100,6 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
     return "";
   }
   const firstChild = node instanceof NodeWithChildren ? node.children[0] : null;
-  // TODO selfOrParentPreformatted Auswirkungen
   /**
    * The close node is special, because it prints its children first (no start tag).
    * This will result in too many softlines (one per level) before the children content starts.
@@ -118,16 +117,9 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
            */
           doSoftline ? softline : "",
           ...(children instanceof Array ? children : [children]),
-          /**
-           * Always break children of close nodes to improve readability:
-           * <!--[if lt IE 9]><td></td></td>
-           *        </tr>
-           * To break this, we have to force the break into the first children group:
-           * <!--[if lt IE 9]>
-           *          <td></td></td>
-           *        </tr>
-           */
-          node instanceof HtmlCloseNode ? breakParent : "",
+          node instanceof NodeWithChildren && node.forceBreakChildren
+            ? breakParent
+            : "",
         ])
       ),
       !node.isSelfOrParentPreformatted ? softline : "",
@@ -402,10 +394,12 @@ export default function print(
   } else if (node instanceof HtmlCommentNode) {
     return decorate([node.text], node);
   } else if (node instanceof HtmlDocTypeNode) {
+    // Lowercase root element
+    const types = node.types
+      .map((type, index) => (index == 0 ? type.toLowerCase() : type))
+      .join(" ");
     return decorate(
-      group(
-        concat([group(concat([`<!DOCTYPE ${node.types.join(" ")}`])), ">"])
-      ),
+      group(concat([group(concat([`<!DOCTYPE ${types}`])), ">"])),
       node
     );
   } else if (node instanceof IeConditionalCommentNode) {
