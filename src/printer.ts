@@ -64,14 +64,17 @@ export function printOpeningTag(
   print: (path: FastPath) => Doc
 ): Doc {
   const printedAttributes: Doc[] = path.map(print, "attributes");
-  const tagOpenParts: Doc[] = [decorateStart(node), `<${node.tagName}`];
+  const tagOpenParts: Doc[] = [
+    decorateStart(node.startNode),
+    `<${node.tagName}`,
+  ];
 
   if (printedAttributes.length > 0) {
     tagOpenParts.push(indent(concat([line, join(line, printedAttributes)])));
   }
 
   if (!node.isSelfClosing && !breakOpeningTag(node)) {
-    tagOpenParts.push(softline, ">", decorateEnd(node));
+    tagOpenParts.push(softline, ">", decorateEnd(node.startNode));
   }
 
   return group(concat(tagOpenParts));
@@ -81,7 +84,7 @@ export function printClosingTag(node: HtmlTagNode): Doc {
   if (node.forceCloseTag || node.endNode != null) {
     const parts: Doc[] = [];
     if (!breakClosingTag(node)) {
-      parts.push(decorateStart(node), `</${node.tagName}`);
+      parts.push(decorateStart(node.endNode), `</${node.tagName}`);
     }
     parts.push(`>`, decorateEnd(node.endNode));
     return concat(parts);
@@ -96,17 +99,38 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
   if (children == "") {
     return "";
   }
-  const noLeadingWhitespace = node.isSelfOrParentPreformatted;
-  const noTrailingWhitespace = node.isSelfOrParentPreformatted;
+  const firstChild = node instanceof NodeWithChildren ? node.children[0] : null;
+  // TODO selfOrParentPreformatted Auswirkungen
+  /**
+   * The close node is special, because it prints its children first (no start tag).
+   * This will result in too many softlines (one per level) before the children content starts.
+   */
+  const doSoftline =
+    !node.isSelfOrParentPreformatted && !(firstChild instanceof HtmlCloseNode);
   return group(
     concat([
       indent(
         concat([
-          noLeadingWhitespace ? "" : softline,
+          /**
+           * An indent only works with a softline and it only indents to the level of the softline.
+           * Therefore we always must place softline inside the inner most indent.
+           * This seems to be a design decision by prettier.
+           */
+          doSoftline ? softline : "",
           ...(children instanceof Array ? children : [children]),
+          /**
+           * Always break children of close nodes to improve readability:
+           * <!--[if lt IE 9]><td></td></td>
+           *        </tr>
+           * To break this, we have to force the break into the first children group:
+           * <!--[if lt IE 9]>
+           *          <td></td></td>
+           *        </tr>
+           */
+          node instanceof HtmlCloseNode ? breakParent : "",
         ])
       ),
-      noTrailingWhitespace ? "" : softline,
+      !node.isSelfOrParentPreformatted ? softline : "",
     ])
   );
 }
@@ -126,7 +150,7 @@ function calculateDifferenceBetweenChildren(
   }
 }
 
-function breakOpeningTag(parent: NodeWithChildren) {
+function breakOpeningTag(parent: HtmlTagNode) {
   return (
     parent.isInlineRenderMode &&
     parent.children.length > 0 &&
@@ -135,7 +159,7 @@ function breakOpeningTag(parent: NodeWithChildren) {
   );
 }
 
-function breakClosingTag(parent: NodeWithChildren) {
+function breakClosingTag(parent: HtmlTagNode) {
   // TODO Duplication
   return (
     parent.isInlineRenderMode &&
@@ -196,15 +220,20 @@ function printChildren(
     const parts: Doc[] = [];
     const childParts = print(childPath);
 
-    const isFirstChild = childNode.index == 0;
-
-    if (isFirstChild && breakOpeningTag(childNode.parent!)) {
-      parts.push(">", decorateEnd(childNode.parent));
+    const parent = childNode.parent;
+    if (parent == null) {
+      throw new Error("parent cannot be null inside printChildren");
+    }
+    if (
+      childNode.isFirstChild &&
+      parent instanceof HtmlTagNode &&
+      breakOpeningTag(parent)
+    ) {
+      parts.push(">", decorateEnd(parent.startNode));
     }
 
     if (childNode.isOnlyChild) {
-      const isParentInlineRenderingMode =
-        childNode.parent != null && childNode.parent.isInlineRenderMode;
+      const isParentInlineRenderingMode = parent.isInlineRenderMode;
       /**
        * TODO Kommentar stimmt nicht mehr.
        * Preserve whitespace from input, but don't use linebreaks.
@@ -292,14 +321,16 @@ function printChildren(
       }
     }
 
-    const isLastChild =
-      childNode.index == childNode.parent!.children.length - 1;
+    const isLastChild = childNode.index == parent.children.length - 1;
 
-    if (isLastChild && breakClosingTag(childNode.parent!)) {
-      // TODO tagName
+    if (
+      isLastChild &&
+      parent instanceof HtmlTagNode &&
+      breakClosingTag(parent)
+    ) {
       parts.push(
-        decorateStart(childNode.parent),
-        `</${(childNode.parent! as any).tagName}`
+        decorateStart(childNode.parent?.endNode),
+        `</${parent.tagName}`
       );
     }
 
@@ -383,16 +414,7 @@ export default function print(
     if (node.children.length > 0) {
       const printedChildren = printChildren(path, options, print);
 
-      el.push(
-        softline,
-        indent(
-          concat([
-            node.children[0] instanceof HtmlCloseNode ? "" : softline,
-            ...printedChildren,
-          ])
-        ),
-        softline
-      );
+      el.push(concatChildren(node, printedChildren));
     }
 
     el.push(decorate(`<![endif]-->`, node.endNode));
@@ -402,9 +424,11 @@ export default function print(
   } else if (node instanceof HtmlCloseNode) {
     return concat([
       node.children.length > 0
-        ? indent(concat(printChildren(path, options, print)))
+        ? concatChildren(node, printChildren(path, options, print))
         : "",
-      softline,
+      breakParent,
+      // Children are always preceeded by softline to make indent work.
+      node.isFirstChild && node.children.length == 0 ? softline : "",
       `</${node.tagName}>`,
     ]);
   } else {

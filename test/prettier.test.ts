@@ -158,10 +158,6 @@ describe("prettier", () => {
         }`
       );
       expect(numberOfMismatchedPixels).to.equal(0);
-      // expect({ formatted, numberOfMismatchedPixels }).to.deep.equal({
-      //   formatted: expectedOutput,
-      //   numberOfMismatchedPixels: 0,
-      // });
     });
   });
 });
