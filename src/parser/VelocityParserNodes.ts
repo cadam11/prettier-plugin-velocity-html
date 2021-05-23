@@ -463,7 +463,6 @@ export class HtmlTagNode extends NodeWithChildren {
 
   public supportedScriptTypes: { [key: string]: (string | undefined)[] } = {
     babel: [
-      "module",
       "text/javascript",
       "text/babel",
       "application/javascript",

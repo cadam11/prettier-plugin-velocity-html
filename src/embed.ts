@@ -67,7 +67,6 @@ export const embed = (
           ? textToDoc(
               scriptText,
               {
-                ...options,
                 ...parserOptions,
               },
               // TODO Scheduled for removal
