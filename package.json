@@ -43,7 +43,7 @@
   },
   "scripts": {
     "build": "gulp build",
-    "test": "npm run build && node --require source-map-support/register node_modules/mocha/bin/mocha dist/**/*.test.js --reporter spec",
+    "test": "npm run build && node --require source-map-support/register node_modules/mocha/bin/mocha dist/**/*.test.js --reporter spec --timeout 10000",
     "docs": "typedoc --mode file --out docs src --exclude \"**/*+(index|.spec|.test|.e2e).ts\"",
     "gh-pages": "rimraf docs && npm run docs && gh-pages -d docs",
     "npm-publish": "npm publish",

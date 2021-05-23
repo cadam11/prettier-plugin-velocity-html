@@ -1,16 +1,16 @@
 <script>
-    document.write(/* HTML */ `
-      <script>
-        document.write(/* HTML */ \`
-          <!-- foo1 -->
-          <script>
-            document.write(/* HTML */ \\\`<!-- bar1 --> bar <!-- bar2 -->\\\`);
-          <\\/script>
-          <!-- foo2 -->
-        \`);
-      <\/script>
-    `);
-  </script>
+  document.write(/* HTML */ `
+    <script>
+      document.write(/* HTML */ \`
+        <!-- foo1 -->
+        <script>
+          document.write(/* HTML */ \\\`<!-- bar1 --> bar <!-- bar2 -->\\\`);
+        <\\/script>
+        <!-- foo2 -->
+      \`);
+    <\/script>
+  `);
+</script>
 =====================================output=====================================
 <script>
   document.write(/* HTML */ `
@@ -18,7 +18,11 @@
       document.write(/* HTML */ \`
         <!-- foo1 -->
         <script>
-          document.write(/* HTML */ \\\`<!-- bar1 --> bar <!-- bar2 -->\\\`);
+          document.write(
+            /* HTML */ \\\`<!-- bar1 -->
+              bar
+              <!-- bar2 -->\\\`
+          );
         <\\/script>
         <!-- foo2 -->
       \`);
