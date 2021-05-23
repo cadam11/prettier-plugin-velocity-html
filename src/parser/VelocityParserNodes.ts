@@ -1,5 +1,6 @@
 import { VelocityToken } from "./VelocityToken";
 import officalHtmlTags from "./officialHtmlTags";
+import selfClosingHtmlTags from "./selfClosingHtmlTags";
 
 interface SourceCodeLocation {
   line: number;
@@ -374,26 +375,6 @@ export class HtmlTagNode extends NodeWithChildren {
 
   private forceBreakTags = ["br"];
 
-  // Taken from https://developer.mozilla.org/en-US/docs/Glossary/Empty_element
-
-  private selfClosingTags = [
-    "area",
-    "base",
-    "br",
-    "col",
-    "embed",
-    "hr",
-    "img",
-    "input",
-    "keygen",
-    "link",
-    "meta",
-    "param",
-    "source",
-    "track",
-    "wbr",
-  ];
-
   private forceCloseTags = ["script"];
 
   private blockLevelElements = [
@@ -413,6 +394,7 @@ export class HtmlTagNode extends NodeWithChildren {
     "figure",
     "footer",
     "form",
+    "g",
     "h1",
     "h2",
     "h3",
@@ -480,7 +462,7 @@ export class HtmlTagNode extends NodeWithChildren {
 
   public set tagName(tagName: string) {
     this._tagName = tagName;
-    this.isSelfClosing = this.selfClosingTags.includes(this.tagName);
+    this.isSelfClosing = selfClosingHtmlTags.has(this.tagName);
     // this._isPreformatted = this.preformattedTags.includes(this.tagName);
     this._isInlineRenderMode = !this.blockLevelElements.includes(this.tagName);
     this.forceCloseTag = this.forceCloseTags.includes(this.tagName);

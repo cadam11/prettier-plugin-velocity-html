@@ -1,6 +1,6 @@
-const officalHtmlTags = new Set();
+import createSet from "./createSet";
 
-for (const tag of [
+export default createSet([
   "a",
   "abbr",
   "acronym",
@@ -147,11 +147,4 @@ for (const tag of [
   "video",
   "wbr",
   "xmp",
-]) {
-  if (officalHtmlTags.has(tag)) {
-    throw new Error(`${tag} appeared second time`);
-  }
-  officalHtmlTags.add(tag);
-}
-
-export default officalHtmlTags;
+]);
