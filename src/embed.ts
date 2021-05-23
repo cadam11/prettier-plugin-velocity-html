@@ -21,6 +21,8 @@ const JS_PARSER_OPTIONS = {
   __babelSourceType: "script",
 };
 
+// TODO Type for textToDocOptions
+
 export const embed = (
   path: FastPath<ParserNode>,
   print: (path: FastPath<ParserNode>) => Doc,
@@ -58,20 +60,21 @@ export const embed = (
         })
         .join(" ");
 
+      const parserOptions = inferParserOptions(node);
+
       const doc =
-        scriptText !== ""
+        scriptText != "" && parserOptions != null
           ? textToDoc(
               scriptText,
               {
                 ...options,
-                ...(node.tagName == "style"
-                  ? CSS_PARSER_OPTIONS
-                  : JS_PARSER_OPTIONS),
-              } as any,
+                ...parserOptions,
+              },
               // TODO Scheduled for removal
               { stripTrailingHardline: true }
             )
-          : "";
+          : scriptText;
+
       return concat([
         breakParent,
         printOpeningTag(node, path, print),
@@ -82,3 +85,15 @@ export const embed = (
   }
   return null;
 };
+
+function inferParserOptions(node: HtmlTagNode): any | null {
+  if (node.tagName === "style") {
+    return CSS_PARSER_OPTIONS;
+  } else {
+    if (node.scriptParser === "babel") {
+      return JS_PARSER_OPTIONS;
+    } else {
+      return null;
+    }
+  }
+}

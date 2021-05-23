@@ -250,7 +250,7 @@ function printChildren(
         const prev = childNode.prev;
         let lineBreak: Doc = "";
 
-        if (prev.isPreformatted || prev.forceBreak) {
+        if (prev.isPreformatted() || prev.forceBreak) {
           // At least one hardline after preformatted text
           lineBreak = calculateDifferenceBetweenChildren(
             prev,
@@ -290,7 +290,7 @@ function printChildren(
       // Preformatted and force break is handled in prev check of next node.
       if (
         childNode.next != null &&
-        !(childNode.isPreformatted || childNode.forceBreak)
+        !(childNode.isPreformatted() || childNode.forceBreak)
       ) {
         const next = childNode.next;
         if (

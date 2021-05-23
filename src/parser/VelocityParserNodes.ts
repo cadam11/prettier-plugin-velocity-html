@@ -84,7 +84,11 @@ export abstract class ParserNode extends DecoratedNode {
     return token.line + (match != null ? match.length : 0);
   }
 
-  public isPreformatted = false;
+  public _isPreformatted = false;
+
+  public isPreformatted(): boolean {
+    return this._isPreformatted;
+  }
 
   public get isInlineRenderMode(): boolean {
     return this.getRenderMode() == RenderMode.INLINE;
@@ -143,8 +147,11 @@ export abstract class ParserNode extends DecoratedNode {
   public get isSelfOrParentPreformatted(): boolean {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
     let parent: ParserNode | undefined = this;
+    if (this.isPreformatted()) {
+      return true;
+    }
     while (parent != null) {
-      if (parent instanceof HtmlTagNode && parent.isPreformatted) {
+      if (parent instanceof HtmlTagNode && parent.isPreformatted()) {
         return true;
       }
       parent = parent.parent;
@@ -356,7 +363,14 @@ export class HtmlTagNode extends NodeWithChildren {
     return this._isInlineRenderMode ? RenderMode.INLINE : RenderMode.BLOCK;
   }
 
-  private forceBreakChildrenTags = ["body", "head", "ul", "ol"];
+  private forceBreakChildrenTags = [
+    "body",
+    "head",
+    "ul",
+    "ol",
+    "script",
+    "style",
+  ];
 
   private forceBreakTags = ["br"];
 
@@ -437,10 +451,38 @@ export class HtmlTagNode extends NodeWithChildren {
     super(token);
   }
 
+  public get scriptParser(): string | undefined {
+    const typeAttribute = this.attributes.find(
+      (attribute) => attribute.name === "type"
+    );
+    const scriptType = typeAttribute != null ? typeAttribute.value : undefined;
+    return Object.keys(this.supportedScriptTypes).find((parser) =>
+      this.supportedScriptTypes[parser].includes(scriptType)
+    );
+  }
+
+  public supportedScriptTypes: { [key: string]: (string | undefined)[] } = {
+    babel: [
+      "module",
+      "text/javascript",
+      "text/babel",
+      "application/javascript",
+      "jsx",
+      undefined,
+    ],
+  };
+
+  public isPreformatted(): boolean {
+    return (
+      this.preformattedTags.includes(this.tagName) ||
+      (this.tagName === "script" && this.scriptParser == null)
+    );
+  }
+
   public set tagName(tagName: string) {
     this._tagName = tagName;
     this.isSelfClosing = this.selfClosingTags.includes(this.tagName);
-    this.isPreformatted = this.preformattedTags.includes(this.tagName);
+    // this._isPreformatted = this.preformattedTags.includes(this.tagName);
     this._isInlineRenderMode = !this.blockLevelElements.includes(this.tagName);
     this.forceCloseTag = this.forceCloseTags.includes(this.tagName);
     this.forceBreak = this.forceBreakTags.includes(this.tagName);
