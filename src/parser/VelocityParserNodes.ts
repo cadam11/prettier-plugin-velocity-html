@@ -200,6 +200,18 @@ export abstract class NodeWithChildren extends ParserNode {
     this.children.push(child);
     child.parent = this;
   }
+
+  public get maxDepth(): number {
+    return this.children.reduce((maxDepth, child) => {
+      if (child instanceof NodeWithChildren) {
+        const childDepth = child.maxDepth + 1;
+        return Math.max(childDepth, maxDepth);
+      } else {
+        // Text nodes and simliar should be considere "content" not depth.
+        return maxDepth;
+      }
+    }, 0);
+  }
 }
 
 export class AttributeNode extends ParserNode {
@@ -370,6 +382,10 @@ export class HtmlTagNode extends NodeWithChildren {
     "ul",
     "ol",
     "script",
+    "datalist",
+    "ol",
+    "ul",
+    "select",
     "style",
   ];
 
@@ -384,6 +400,7 @@ export class HtmlTagNode extends NodeWithChildren {
     "body",
     "blockquote",
     "details",
+    "datalist",
     "dialog",
     "dd",
     "div",
@@ -414,6 +431,9 @@ export class HtmlTagNode extends NodeWithChildren {
     "p",
     "pre",
     "section",
+    "select",
+    "optgroup",
+    "option",
     "script",
     "style",
     "param",

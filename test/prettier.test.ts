@@ -1,4 +1,4 @@
-import { format } from "prettier";
+import { format, Options } from "prettier";
 import { expect } from "chai";
 import * as fs from "fs";
 import { Browser, chromium } from "playwright";
@@ -25,8 +25,18 @@ describe("prettier", () => {
     });
   });
 
-  const readTestcaseFile = (path: string): [string, string] => {
-    const testCaseContent = fs.readFileSync(path).toString();
+  const readTestcaseFile = (path: string): [string, string, Options?] => {
+    let testCaseContent = fs.readFileSync(path).toString();
+    const configSegments = testCaseContent.split(
+      "\n" +
+        "=====================================input======================================" +
+        "\n"
+    );
+    let config: Options | undefined;
+    if (configSegments.length > 1) {
+      config = JSON.parse(configSegments[0]);
+      testCaseContent = configSegments[1];
+    }
     const elements = testCaseContent.split(
       "\n" +
         "=====================================output=====================================" +
@@ -37,7 +47,7 @@ describe("prettier", () => {
         `File ${path} is not valid testcase. It has ${elements.length} elements`
       );
     }
-    return [elements[0], elements[1]];
+    return [elements[0], elements[1], config];
   };
 
   before(async () => {
@@ -157,10 +167,11 @@ describe("prettier", () => {
 
   fs.readdirSync(__dirname + "/parser/valid_html/").forEach((testCaseName) => {
     it(`should format ${testCaseName}`, async () => {
-      const [input, expectedOutput] = readTestcaseFile(
+      const [input, expectedOutput, options] = readTestcaseFile(
         __dirname + "/parser/valid_html/" + testCaseName
       );
       const formatted = format(input, {
+        ...options,
         parser: "velocity-html",
         // pluginSearchDirs: ["./dir-with-plugins"],
         plugins: ["./dist/src"],

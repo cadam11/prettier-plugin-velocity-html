@@ -77,7 +77,14 @@ export function printOpeningTag(
     tagOpenParts.push(softline, ">", decorateEnd(node.startNode));
   }
 
-  return group(concat(tagOpenParts));
+  // if (node.maxDepth > 2) {
+  //   tagOpenParts.push(breakParent);
+  // }
+
+  return concat([
+    group(concat(tagOpenParts)),
+    node.maxDepth > 2 ? breakParent : "",
+  ]);
 }
 
 export function printClosingTag(node: HtmlTagNode): Doc {
@@ -104,8 +111,14 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
    * The close node is special, because it prints its children first (no start tag).
    * This will result in too many softlines (one per level) before the children content starts.
    */
-  const doSoftline =
+  const softlineBeforeChildren =
     !node.isSelfOrParentPreformatted && !(firstChild instanceof HtmlCloseNode);
+  /**
+   * Same as above, but for nodes missing the end tag.
+   */
+  const softlineAfterChildren =
+    !node.isSelfOrParentPreformatted &&
+    !(node instanceof HtmlTagNode && node.endNode == null);
   return group(
     concat([
       indent(
@@ -115,14 +128,19 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
            * Therefore we always must place softline inside the inner most indent.
            * This seems to be a design decision by prettier.
            */
-          doSoftline ? softline : "",
+          softlineBeforeChildren ? softline : "",
           ...(children instanceof Array ? children : [children]),
-          node instanceof NodeWithChildren && node.forceBreakChildren
+          /**
+           * Break up content that is too deeply nested.
+           * An indentation of 2 is considered too much by prettier, so I will do the same.
+           */
+          node instanceof NodeWithChildren &&
+          (node.forceBreakChildren || node.maxDepth >= 2)
             ? breakParent
             : "",
         ])
       ),
-      !node.isSelfOrParentPreformatted ? softline : "",
+      softlineAfterChildren ? softline : "",
     ])
   );
 }
