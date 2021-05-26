@@ -115,7 +115,6 @@ export default function parse(
       new ParserException(token, mode, lexer, msg);
     let nextToken: Token | undefined;
     // Not every node is a parent.
-    const parent = parentStack[0];
     if (i < tokens.length - 1) {
       nextToken = tokens[i + 1];
     }
@@ -149,7 +148,7 @@ export default function parse(
         };
         const setNewCurrentNode = (node: ParserNode): ParserNode => {
           currentNode = node;
-          parent.addChild(currentNode);
+          parentStack[0].addChild(currentNode);
           return node;
         };
         switch (token.type) {
@@ -188,10 +187,10 @@ export default function parse(
                *      - /td
                *      - td
                */
-              parent.children.forEach((child) => {
+              parentStack[0].children.forEach((child) => {
                 closeNode.addChild(child);
               });
-              parent.children = [];
+              parentStack[0].children = [];
               setNewCurrentNode(closeNode);
               parentStack.unshift(currentNode);
             } else {
@@ -236,8 +235,8 @@ export default function parse(
           }
           case VelocityHtmlLexer.COMMENT: {
             const commentNode = new HtmlCommentNode(token);
-            commentNode.parent = parent;
-            parent.addChild(commentNode);
+            commentNode.parent = parentStack[0];
+            parentStack[0].addChild(commentNode);
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT:
@@ -248,14 +247,14 @@ export default function parse(
           case VelocityHtmlLexer.DOCTYPE_START: {
             mode = "doctype";
             currentNode = new HtmlDocTypeNode(token);
-            currentNode.parent = parent;
-            parent.addChild(currentNode);
+            currentNode.parent = parentStack[0];
+            parentStack[0].addChild(currentNode);
             break;
           }
           case VelocityHtmlLexer.CDATA: {
             const cdataNode = new HtmlCdataNode(token);
-            cdataNode.parent = parent;
-            parent.addChild(cdataNode);
+            cdataNode.parent = parentStack[0];
+            parentStack[0].addChild(cdataNode);
             break;
           }
           case VelocityHtmlLexer.IE_REVEALED_COMMENT_START: {

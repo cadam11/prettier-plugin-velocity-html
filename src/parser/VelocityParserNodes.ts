@@ -255,6 +255,14 @@ export class RootNode extends NodeWithChildren {
   public constructor() {
     super({ line: 0 });
   }
+
+  public set revealedConditionalCommentStart(token: VelocityToken | null) {
+    throw new Error(`Cannot decorate root node.`);
+  }
+
+  public set revealedConditionalCommentEnd(token: VelocityToken | null) {
+    throw new Error(`Cannot decorate root node.`);
+  }
 }
 
 export class HtmlTextNode extends ParserNode {
