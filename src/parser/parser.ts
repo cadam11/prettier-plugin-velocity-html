@@ -153,8 +153,13 @@ export default function parse(
         };
         switch (token.type) {
           case VelocityHtmlLexer.TAG_START_OPEN: {
-            setNewCurrentNode(new HtmlTagNode(token));
-            mode = "tagOpen";
+            const tagName = token.textValue
+              .substring(1, token.textValue.length)
+              .trim();
+            const node = new HtmlTagNode(token);
+            node.tagName = tagName;
+            setNewCurrentNode(node);
+            mode = "attributeLHS";
             break;
           }
           case VelocityHtmlLexer.EOF: {
@@ -316,22 +321,6 @@ export default function parse(
             lastNode.revealedConditionalCommentStart = revealedConditionComment;
           }
           revealedConditionComment = null;
-        }
-        break;
-      }
-      case "tagOpen": {
-        if (!(currentNode instanceof HtmlTagNode)) {
-          throw newParserException();
-        }
-        switch (token.type) {
-          case VelocityHtmlLexer.HTML_NAME: {
-            currentNode.tagName = token.textValue;
-            mode = "attributeLHS";
-            break;
-          }
-          default: {
-            throw newParserException();
-          }
         }
         break;
       }

@@ -79,7 +79,7 @@ DOCTYPE_START: '<!' [dD] [oO] [cC] [tT] [yY] [pP] [eE] -> pushMode(DOCTYPE_MODE)
 // See SCRIPT_MODE for more information.
 SCRIPT_START_OPEN: '<script' { this.nextTagCloseMode = VelocityHtmlLexer.SCRIPT_MODE } -> pushMode(TAG_MODE);
 
-TAG_START_OPEN: '<' -> pushMode(TAG_MODE);
+TAG_START_OPEN: '<' HTML_LIBERAL_NAME -> pushMode(TAG_MODE);
 
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
