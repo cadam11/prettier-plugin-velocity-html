@@ -7,7 +7,6 @@ import {
   HtmlCloseNode,
   HtmlCommentNode,
   HtmlDocTypeNode,
-  HtmlTagNode as HtmlStartTagNode,
   HtmlTagNode,
   HtmlTextNode,
   IeConditionalCommentNode,
@@ -155,21 +154,30 @@ export default function parse(
         };
         switch (token.type) {
           case VelocityHtmlLexer.TAG_START_OPEN: {
-            setNewCurrentNode(new HtmlStartTagNode(token));
+            setNewCurrentNode(new HtmlTagNode(token));
             mode = "tagOpen";
             break;
           }
           case VelocityHtmlLexer.EOF: {
             break;
           }
-          case VelocityHtmlLexer.TAG_END_OPEN: {
+          case VelocityHtmlLexer.TAG_END: {
+            const tagName = token.textValue
+              .substring(2, token.textValue.length - 1)
+              .trim();
             if (currentNode instanceof HtmlTagNode) {
+              if (currentNode.tagName.toLowerCase() != tagName.toLowerCase()) {
+                throw new Error(
+                  `Tag was opened with ${currentNode.tagName}, but closed with ${tagName}. Mixed tags not supported`
+                );
+              }
               currentNode.endNode = new NodeWithChildrenDecoration();
             } else if (
               currentNode instanceof HtmlCloseNode ||
               currentNode instanceof IeConditionalCommentNode
             ) {
               const closeNode = new HtmlCloseNode(token);
+              closeNode.tagName = tagName;
               /*
                * This is an incomplete html snippet. Assemble the tree "bottom-up".
                * </td><td></td></tr></table>
@@ -190,7 +198,9 @@ export default function parse(
               throw newParserException();
             }
 
-            mode = "tagClose";
+            currentNode.endToken = token;
+            popParentStack();
+
             break;
           }
           case VelocityHtmlLexer.IE_COMMENT_START: {
@@ -213,8 +223,8 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.SCRIPT_START_OPEN: {
-            setNewCurrentNode(new HtmlStartTagNode(token));
-            (currentNode as HtmlStartTagNode).tagName = "script";
+            setNewCurrentNode(new HtmlTagNode(token));
+            (currentNode as HtmlTagNode).tagName = "script";
             mode = "attributeLHS";
             break;
           }
@@ -273,8 +283,16 @@ export default function parse(
           revealedConditionComment != null &&
           token.type != VelocityHtmlLexer.IE_REVEALED_COMMENT_START
         ) {
-          // Cannot attach to whitespace only nodes
-          let lastNode: DecoratedNode | undefined = parent.lastChild;
+          /**
+           * Attach to the last node:
+           * 1. The last child:
+           * <!--[if lt IE 9]><!-->
+           *  <html>
+           * 2. The current node:
+           *  <html>
+           * <!--<![endif]-->
+           */
+          let lastNode: DecoratedNode | undefined = parentStack[0].lastChild;
           lastNode =
             lastNode != null &&
             !(lastNode instanceof HtmlTextNode && lastNode.isWhitespaceOnly)
@@ -303,7 +321,7 @@ export default function parse(
         break;
       }
       case "tagOpen": {
-        if (!(currentNode instanceof HtmlStartTagNode)) {
+        if (!(currentNode instanceof HtmlTagNode)) {
           throw newParserException();
         }
         switch (token.type) {
@@ -359,7 +377,7 @@ export default function parse(
         break;
       }
       case "attributeRHS": {
-        if (!(currentNode instanceof HtmlStartTagNode)) {
+        if (!(currentNode instanceof HtmlTagNode)) {
           throw newParserException();
         }
         if (currentHtmlAttribute == null) {
@@ -371,44 +389,6 @@ export default function parse(
             currentNode.addAttribute(currentHtmlAttribute, token);
             currentHtmlAttribute = null;
             mode = "attributeLHS";
-            break;
-          }
-          default: {
-            throw newParserException();
-          }
-        }
-        break;
-      }
-      case "tagClose": {
-        if (
-          !(
-            currentNode instanceof HtmlStartTagNode ||
-            currentNode instanceof HtmlCloseNode
-          )
-        ) {
-          throw newParserException();
-        }
-        switch (token.type) {
-          case VelocityHtmlLexer.HTML_NAME:
-          case VelocityHtmlLexer.HTML_STRING: {
-            if (currentNode instanceof HtmlTagNode) {
-              if (
-                currentNode.tagName.toLowerCase() !=
-                token.textValue.toLowerCase()
-              ) {
-                throw new Error(
-                  `Tag was opened with ${currentNode.tagName}, but closed with ${token.textValue}. Mixed tags not supported`
-                );
-              }
-            } else {
-              currentNode.tagName = token.textValue;
-            }
-            break;
-          }
-          case VelocityHtmlLexer.TAG_CLOSE: {
-            currentNode.endToken = token;
-            popParentStack();
-            mode = "outsideTag";
             break;
           }
           default: {

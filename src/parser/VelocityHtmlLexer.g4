@@ -81,7 +81,7 @@ SCRIPT_START_OPEN: '<script' { this.nextTagCloseMode = VelocityHtmlLexer.SCRIPT_
 
 TAG_START_OPEN: '<' -> pushMode(TAG_MODE);
 
-TAG_END_OPEN: '<' '/' -> pushMode(TAG_MODE);
+TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
 HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
