@@ -74,12 +74,12 @@ export function printOpeningTag(
   }
 
   if (!node.isSelfClosing && !breakOpeningTag(node)) {
-    tagOpenParts.push(softline, ">", decorateEnd(node.startNode));
+    tagOpenParts.push(
+      node.attributes.length > 0 ? softline : "",
+      ">",
+      decorateEnd(node.startNode)
+    );
   }
-
-  // if (node.maxDepth > 2) {
-  //   tagOpenParts.push(breakParent);
-  // }
 
   return concat([
     group(concat(tagOpenParts)),
@@ -397,7 +397,7 @@ export default function print(
           parts.push(literalline, breakParent);
         }
       });
-      return decorate(concat([dedentToRoot(softline), fill(parts)]), node);
+      return decorate(dedentToRoot(fill(parts)), node);
     } else {
       const words = node.text.trim().split(/\s+/);
       const parts: Doc[] = [];
