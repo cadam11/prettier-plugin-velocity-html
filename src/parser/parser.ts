@@ -226,18 +226,6 @@ export default function parse(
             popParentStack();
             break;
           }
-          case VelocityHtmlLexer.SCRIPT_START_OPEN: {
-            setNewCurrentNode(new HtmlTagNode(token));
-            (currentNode as HtmlTagNode).tagName = "script";
-            mode = "attributeLHS";
-            break;
-          }
-          case VelocityHtmlLexer.SCRIPT_END_TAG: {
-            currentNode.endToken = token;
-            currentNode.endNode = new NodeWithChildrenDecoration();
-            popParentStack();
-            break;
-          }
           case VelocityHtmlLexer.COMMENT: {
             const commentNode = new HtmlCommentNode(token);
             commentNode.parent = parentStack[0];

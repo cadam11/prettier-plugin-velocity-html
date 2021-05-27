@@ -45,17 +45,32 @@ lexer grammar VelocityHtmlLexer;
     return `mode: ${this._mode}, modeStack: ${modeStack.length === 0? '<empty>' : modeStack}`;
   }
 
+  // TODO Add title, textarea, pre
+  private rcDataTags = ["script", "pre"];
+  private tagName: string | null = null;
 
-   private makeVtlReferenceInsideToken(): void {
-   }
+	public setNextTagCloseMode() {
+    this.tagName = this.text.substring(1);
+    this.nextTagCloseMode = this.rcDataTags.includes(this.tagName)? VelocityHtmlLexer.SCRIPT_MODE : VelocityHtmlLexer.DEFAULT_MODE;
+  }
 
-   public isDebugEnabled = false;
+  private makeVtlReferenceInsideToken(): void {
+  }
 
-   private debug(...something: any[]): void {
-     if (this.isDebugEnabled) {
-       console.log.apply(undefined, something);
-     }
-   }
+  public isDebugEnabled = false;
+
+  private debug(...something: any[]): void {
+    if (this.isDebugEnabled) {
+      console.log.apply(undefined, something);
+    }
+  }
+
+  public isCurrentTagName(): boolean {
+  const tagName = this.text
+      .substring(2, this.text.length - 1)
+      .trim();
+    return tagName === this.tagName;
+  }
 }
 
 
@@ -77,9 +92,9 @@ DOCTYPE_START: '<!' [dD] [oO] [cC] [tT] [yY] [pP] [eE] -> pushMode(DOCTYPE_MODE)
 
 // Text inside a script tag cannot be tokenized with the DEFAULT_MODE, because tags behave differently.
 // See SCRIPT_MODE for more information.
-SCRIPT_START_OPEN: '<script' { this.nextTagCloseMode = VelocityHtmlLexer.SCRIPT_MODE } -> pushMode(TAG_MODE);
+// SCRIPT_START_OPEN: '<script' { this.nextTagCloseMode = VelocityHtmlLexer.SCRIPT_MODE } -> pushMode(TAG_MODE);
 
-TAG_START_OPEN: '<' HTML_LIBERAL_NAME -> pushMode(TAG_MODE);
+TAG_START_OPEN: '<' HTML_LIBERAL_NAME  { this.setNextTagCloseMode() } -> pushMode(TAG_MODE);
 
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
@@ -181,7 +196,7 @@ mode SCRIPT_MODE;
 
 // Script state only changes on closing script tag: https://html.spec.whatwg.org/#script-data-less-than-sign-state
 // TODO Space after t possible?
-SCRIPT_END_TAG: '</'[sS] [cC] [rR] [iI] [pP] [tT] '>' -> mode(DEFAULT_MODE);
+SCRIPT_END_TAG:  '</'HTML_LIBERAL_NAME '>' {this.isCurrentTagName()}? -> mode(DEFAULT_MODE), type(TAG_END);
 
 // All other valid tags (ASCII alpha: https://html.spec.whatwg.org/#script-data-end-tag-open-state)
 SCRIPT_OTHER_CLOSING_TAG: '<' '/'? HTML_LIBERAL_NAME -> type(HTML_TEXT);
