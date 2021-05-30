@@ -27,3 +27,25 @@ Edge cases that I do not support at the moment. If you think that there are a va
 - `<!-- prettier-ignore -->`
 - `<!-- display: block -->` and similar
 - `<script>` only supports JS (and not JSON, TS, Markdown, etc...). Unsupported script types are left as is.
+- <div>
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, "<strong
+  >seddoeiusmod</strong>".
+</div>
+
+<span
+  ><span><input type="checkbox" /></span></span
+>
+
+<div>
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, "<strong
+    >seddoeiusmod</strong
+  >".
+</div>
+
+
+<div>
+  before<object data="horse.wav">
+    <param name="autoplay" value="true" />
+    <param name="autoplay" value="true" /></object
+  >after
+</div>

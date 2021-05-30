@@ -7,7 +7,7 @@ import {
 } from "./parser/VelocityParserNodes";
 import { concatChildren, printClosingTag, printOpeningTag } from "./printer";
 
-const { concat, breakParent } = doc.builders;
+const { concat, breakParent, group } = doc.builders;
 
 const CSS_PARSER_OPTIONS = {
   parser: "css",
@@ -47,7 +47,7 @@ export const embed = (
       );
     }
     if (doc != null) {
-      return concat([node.name, '="', concatChildren(node, doc), '"']);
+      return group(concat([node.name, '="', concatChildren(node, doc), '"']));
     }
   } else if (node instanceof HtmlTagNode) {
     if (node.tagName == "script" || node.tagName === "style") {

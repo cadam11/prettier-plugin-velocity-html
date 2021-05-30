@@ -336,6 +336,7 @@ export default function parse(
             const isSelfClosing =
               currentNode.isSelfClosing ||
               token.type == VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE;
+            currentNode.isSelfClosing = isSelfClosing;
             if (!isSelfClosing) {
               parentStack.unshift(currentNode);
             } else {

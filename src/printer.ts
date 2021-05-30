@@ -119,30 +119,31 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
   const softlineAfterChildren =
     !node.isSelfOrParentPreformatted &&
     !(node instanceof HtmlTagNode && node.endNode == null);
-  return group(
-    concat([
-      indent(
-        concat([
-          /**
-           * An indent only works with a softline and it only indents to the level of the softline.
-           * Therefore we always must place softline inside the inner most indent.
-           * This seems to be a design decision by prettier.
-           */
-          softlineBeforeChildren ? softline : "",
-          ...(children instanceof Array ? children : [children]),
-          /**
-           * Break up content that is too deeply nested.
-           * An indentation of 2 is considered too much by prettier, so I will do the same.
-           */
-          node instanceof NodeWithChildren &&
-          (node.forceBreakChildren || node.maxDepth >= 2)
-            ? breakParent
-            : "",
-        ])
-      ),
-      softlineAfterChildren ? softline : "",
-    ])
-  );
+  const forceBreakChildren =
+    (node instanceof NodeWithChildren &&
+      (node.forceBreakChildren || node.maxDepth >= 2)) ||
+    (firstChild instanceof HtmlTagNode &&
+      firstChild.isBlockRenderMode &&
+      firstChild.startLocation.line > node.startLocation.line);
+  return concat([
+    indent(
+      concat([
+        /**
+         * An indent only works with a softline and it only indents to the level of the softline.
+         * Therefore we always must place softline inside the inner most indent.
+         * This seems to be a design decision by prettier.
+         */
+        softlineBeforeChildren ? softline : "",
+        ...(children instanceof Array ? children : [children]),
+        /**
+         * Break up content that is too deeply nested.
+         * An indentation of 2 is considered too much by prettier, so I will do the same.
+         */
+        forceBreakChildren ? breakParent : "",
+      ])
+    ),
+    softlineAfterChildren ? softline : "",
+  ]);
 }
 
 function calculateDifferenceBetweenChildren(
@@ -268,7 +269,11 @@ function printChildren(
         const prev = childNode.prev;
         let lineBreak: Doc = "";
 
-        if (prev.isPreformatted() || prev.forceBreak) {
+        if (
+          prev.isPreformatted() ||
+          // TODO This should be renamed because its logic is only made for <br/> tags.
+          (prev.forceBreak && prev.hasTrailingSpaces)
+        ) {
           // At least one hardline after preformatted text
           lineBreak = calculateDifferenceBetweenChildren(
             prev,
@@ -297,11 +302,6 @@ function printChildren(
         parts.push(childParts);
       }
 
-      // Ensure forceBreak, even if there is no next node.
-      if (childNode.forceBreak && childNode.next == null) {
-        parts.push(breakParent);
-      }
-
       /**
        * Look at next node to determine if line break is needed after child content.
        */
@@ -311,22 +311,17 @@ function printChildren(
         !(childNode.isPreformatted() || childNode.forceBreak)
       ) {
         const next = childNode.next;
-        if (
-          next.isInlineRenderMode &&
-          !childNode.isInlineRenderMode &&
-          childNode.hasTrailingSpaces
-        ) {
+        const seperator = calculateDifferenceBetweenChildren(
+          childNode,
+          next,
+          hardline
+        );
+        if (next.isInlineRenderMode && childNode.isBlockRenderMode) {
           parts[parts.length - 1] = group(
-            concat([
-              parts[parts.length - 1],
-              // In inline mode, use line instead of softline to seperate content.
-              calculateDifferenceBetweenChildren(childNode, next, line),
-            ])
+            concat([parts[parts.length - 1], seperator])
           );
         } else if (next.isBlockRenderMode) {
-          parts.push(
-            calculateDifferenceBetweenChildren(childNode, next, softline)
-          );
+          parts.push(seperator, breakParent);
         }
       }
     }

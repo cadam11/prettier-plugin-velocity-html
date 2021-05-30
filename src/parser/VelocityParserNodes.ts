@@ -391,6 +391,8 @@ export class HtmlTagNode extends NodeWithChildren {
     "ol",
     "script",
     "datalist",
+    "details",
+    "table",
     "ol",
     "ul",
     "select",
@@ -407,6 +409,7 @@ export class HtmlTagNode extends NodeWithChildren {
     "aside",
     "body",
     "blockquote",
+    "button",
     "details",
     "datalist",
     "dialog",
@@ -433,7 +436,6 @@ export class HtmlTagNode extends NodeWithChildren {
     "hr",
     "li",
     "main",
-    "meta",
     "nav",
     "ol",
     "p",
@@ -442,6 +444,7 @@ export class HtmlTagNode extends NodeWithChildren {
     "select",
     "optgroup",
     "option",
+    "summary",
     "script",
     "style",
     "param",
@@ -570,7 +573,6 @@ export class HtmlCloseNode extends NodeWithChildren {
 
   constructor(startLocation: SourceCodeLocation | VelocityToken) {
     super(startLocation);
-    this.forceBreak = true;
     /**
      * Always break children of close nodes to improve readability:
      * <!--[if lt IE 9]><td></td></td>
