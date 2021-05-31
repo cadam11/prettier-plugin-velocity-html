@@ -103,7 +103,7 @@ export function printClosingTag(node: HtmlTagNode): Doc {
 }
 
 export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
-  if (children == "") {
+  if (children == "" || (children instanceof Array && children.length == 0)) {
     return "";
   }
   const firstChild = node instanceof NodeWithChildren ? node.children[0] : null;
@@ -164,20 +164,19 @@ function calculateDifferenceBetweenChildren(
 function breakOpeningTag(parent: HtmlTagNode) {
   return (
     parent.isInlineRenderMode &&
-    parent.children.length > 0 &&
-    parent.children[0].isInlineRenderMode &&
-    !parent.children[0].hasLeadingSpaces
+    parent.firstChild != null &&
+    parent.firstChild.isInlineRenderMode &&
+    !parent.firstChild.hasLeadingSpaces
   );
 }
 
 function breakClosingTag(parent: HtmlTagNode) {
-  // TODO Duplication
   return (
     parent.isInlineRenderMode &&
     parent.endNode != null &&
-    parent.children.length > 0 &&
-    parent.children[parent.children.length - 1].isInlineRenderMode &&
-    !parent.children[parent.children.length - 1].hasTrailingSpaces
+    parent.lastChild != null &&
+    parent.lastChild.isInlineRenderMode &&
+    !parent.lastChild.hasTrailingSpaces
   );
 }
 
@@ -246,7 +245,6 @@ function printChildren(
     if (childNode.isOnlyChild) {
       const isParentInlineRenderingMode = parent.isInlineRenderMode;
       /**
-       * TODO Kommentar stimmt nicht mehr.
        * Preserve whitespace from input, but don't use linebreaks.
        * Children are enclosed by line breaks in concatChildren()
        */
@@ -254,10 +252,6 @@ function printChildren(
         parts.push(ifBreak("", " "));
       }
       parts.push(childParts);
-      // Ensure forceBreak, even if there is no next node.
-      if (childNode.forceBreak) {
-        parts.push(breakParent);
-      }
       if (isParentInlineRenderingMode && childNode.hasTrailingSpaces) {
         parts.push(ifBreak("", " "));
       }
@@ -284,17 +278,7 @@ function printChildren(
           // In inline mode, use line instead of softline to seperate content.
           lineBreak = childNode.hasLeadingSpaces
             ? calculateDifferenceBetweenChildren(prev, childNode, line)
-            : /**
-               * Allow the formatter insert a line break before the next tag:
-               * <span> inline </span><span> inline </span> <span> inline </span>
-               * <span> inline </span>
-               * Instead of having to break the whole tag:
-               * <span> inline </span><span> inline </span> <span>
-               *  inline
-               * </span> <span> inline </span>
-               */
-              // ifBreak(softline, "");
-              "";
+            : "";
         }
         parts.push(group(concat([lineBreak, childParts])));
       } else {
@@ -356,9 +340,7 @@ export default function print(
     return group(
       concat([
         printOpeningTag(node, path, print),
-        node.children.length > 0
-          ? concatChildren(node, printChildren(path, options, print))
-          : "",
+        concatChildren(node, printChildren(path, options, print)),
         printClosingTag(node),
       ])
     );
@@ -416,23 +398,18 @@ export default function print(
       node
     );
   } else if (node instanceof IeConditionalCommentNode) {
-    const el: Doc[] = [decorate(node.text, node.startNode)];
-
-    if (node.children.length > 0) {
-      const printedChildren = printChildren(path, options, print);
-
-      el.push(concatChildren(node, printedChildren));
-    }
-
-    el.push(decorate(`<![endif]-->`, node.endNode));
-    return group(concat(el));
+    return group(
+      concat([
+        decorate(node.text, node.startNode),
+        concatChildren(node, printChildren(path, options, print)),
+        decorate(`<![endif]-->`, node.endNode),
+      ])
+    );
   } else if (node instanceof HtmlCdataNode) {
     return decorate([node.text], node);
   } else if (node instanceof HtmlCloseNode) {
     return concat([
-      node.children.length > 0
-        ? concatChildren(node, printChildren(path, options, print))
-        : "",
+      concatChildren(node, printChildren(path, options, print)),
       breakParent,
       // Children are always preceeded by softline to make indent work.
       node.isFirstChild && node.children.length == 0 ? softline : "",

@@ -45,8 +45,7 @@ lexer grammar VelocityHtmlLexer;
     return `mode: ${this._mode}, modeStack: ${modeStack.length === 0? '<empty>' : modeStack}`;
   }
 
-  // TODO Add title, textarea, pre
-  private rcDataTags = ["script", "pre"];
+  private rcDataTags = ["script", "pre", "textarea", "title"];
   private tagName: string | null = null;
 
 	public setNextTagCloseMode() {

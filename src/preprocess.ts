@@ -20,19 +20,6 @@ export function preprocess(ast: RootNode, options: Options): RootNode {
   return ast;
 }
 
-// function cleanVoidNodes(ast: RootNode): void {
-//   ast.walk((node) => {
-//     if (node instanceof VoidNode) {
-//       if (node.children.length == 1) {
-//         const index = node.index;
-//         const onlyChild = node.children[0];
-//         node.parent!.children[index!] = onlyChild;
-//         onlyChild.parent = node.parent;
-//       }
-//     }
-//   });
-// }
-
 function extractWhitespaces(ast: RootNode): void {
   ast.walk((node, index, nodes) => {
     if (node instanceof NodeWithChildren) {

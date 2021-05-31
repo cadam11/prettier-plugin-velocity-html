@@ -212,6 +212,10 @@ export abstract class NodeWithChildren extends ParserNode {
       }
     }, 0);
   }
+
+  public get firstChild(): ParserNode | undefined {
+    return this.children[0];
+  }
 }
 
 export class AttributeNode extends ParserNode {
