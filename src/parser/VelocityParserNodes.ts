@@ -413,7 +413,6 @@ export class HtmlTagNode extends NodeWithChildren {
     "aside",
     "body",
     "blockquote",
-    "button",
     "details",
     "datalist",
     "dialog",
@@ -454,6 +453,7 @@ export class HtmlTagNode extends NodeWithChildren {
     "param",
     "table",
     "ul",
+    "track",
   ];
 
   private preformattedTags = ["pre", "textarea"];

@@ -88,6 +88,7 @@ function main(): void {
         parser: "velocity-html",
         // pluginSearchDirs: ["./dir-with-plugins"],
         plugins: ["./dist/src"],
+        printWidth: 80,
       };
 
       if (options.ast) {
