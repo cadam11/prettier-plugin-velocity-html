@@ -1,14 +1,8 @@
 import { VelocityToken } from "./VelocityToken";
-import officalHtmlTags from "./officialHtmlTags";
-import selfClosingHtmlTags from "./selfClosingHtmlTags";
+import { RenderDefinition, RenderMode, tagRegistry } from "./tagRegistry";
 
 interface SourceCodeLocation {
   line: number;
-}
-
-export enum RenderMode {
-  BLOCK,
-  INLINE,
 }
 
 export class DecoratedNode {
@@ -287,23 +281,8 @@ export class HtmlTextNode extends ParserNode {
   }
 
   public addText(token: VelocityToken): void {
-    // TODO Fix this in a different way
-    // if (this.isWhitespaceOnly && !token.isWhitespaceOnly) {
-    //   this.text = text;
-    //   // Discard leading spaces. It will be trimmed later and then the startLocation is wrong.
-    //   this.startLocation = {
-    //     column: token.charPositionInLine,
-    //     line: token.line,
-    //   };
-    //   // Bypass check
-    //   this._endToken = token;
-    // } else {
-
-    // this.text += text;
     this.tokens.push(token);
-    // Bypass check
     this._endToken = token;
-    // }
   }
 
   public get isWhitespaceOnly(): boolean {
@@ -388,83 +367,13 @@ export class HtmlTextNode extends ParserNode {
 
 export class HtmlTagNode extends NodeWithChildren {
   public getRenderMode(): RenderMode {
-    return this._isInlineRenderMode ? RenderMode.INLINE : RenderMode.BLOCK;
+    return this.renderDefinition.mode;
   }
 
-  private forceBreakChildrenTags = [
-    "body",
-    "head",
-    "ul",
-    "ol",
-    "script",
-    "datalist",
-    "details",
-    "table",
-    "ol",
-    "ul",
-    "select",
-    "style",
-  ];
-
-  private forceBreakTags = ["br"];
-
-  private forceCloseTags = ["script"];
-
-  private blockLevelElements = [
-    "address",
-    "article",
-    "aside",
-    "body",
-    "blockquote",
-    "details",
-    "datalist",
-    "dialog",
-    "dd",
-    "div",
-    "dl",
-    "dt",
-    "fieldset",
-    "figcaption",
-    "figure",
-    "footer",
-    "form",
-    "g",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "html",
-    "header",
-    "head",
-    "hgroup",
-    "hr",
-    "li",
-    "main",
-    "nav",
-    "ol",
-    "p",
-    "pre",
-    "section",
-    "select",
-    "optgroup",
-    "option",
-    "summary",
-    "script",
-    "style",
-    "param",
-    "table",
-    "ul",
-    "track",
-  ];
-
-  private preformattedTags = ["pre", "textarea"];
-
+  private renderDefinition: Required<RenderDefinition>;
   private _tagName: string;
   public isSelfClosing: boolean;
   public attributes: AttributeNode[] = [];
-  public _isInlineRenderMode: boolean;
   public forceCloseTag: boolean;
 
   public constructor(public token: VelocityToken) {
@@ -493,26 +402,57 @@ export class HtmlTagNode extends NodeWithChildren {
 
   public isPreformatted(): boolean {
     return (
-      this.preformattedTags.includes(this.tagName) ||
+      this.renderDefinition.preformatted ||
       (this.tagName === "script" && this.scriptParser == null)
     );
   }
 
   public set tagName(tagName: string) {
     this._tagName = tagName;
-    this.isSelfClosing = selfClosingHtmlTags.has(this.tagName);
-    // this._isPreformatted = this.preformattedTags.includes(this.tagName);
-    this._isInlineRenderMode = !this.blockLevelElements.includes(this.tagName);
-    this.forceCloseTag = this.forceCloseTags.includes(this.tagName);
-    this.forceBreak = this.forceBreakTags.includes(this.tagName);
-    this.forceBreakChildren = this.forceBreakChildrenTags.includes(
-      this.tagName
-    );
+    const renderDefinition = tagRegistry.get(this.tagName);
+    if (renderDefinition == null) {
+      this.renderDefinition = {
+        mode: RenderMode.INLINE,
+        forceBreak: false,
+        forceBreakChildren: false,
+        forceClose: false,
+        preformatted: false,
+        selfClosing: false,
+      };
+    } else {
+      this.renderDefinition = {
+        mode: renderDefinition.mode,
+        forceBreak:
+          renderDefinition.forceBreak != null
+            ? renderDefinition.forceBreak
+            : false,
+        forceBreakChildren:
+          renderDefinition.forceBreakChildren != null
+            ? renderDefinition.forceBreakChildren
+            : false,
+        forceClose:
+          renderDefinition.forceClose != null
+            ? renderDefinition.forceClose
+            : false,
+        preformatted:
+          renderDefinition.preformatted != null
+            ? renderDefinition.preformatted
+            : false,
+        selfClosing:
+          renderDefinition.selfClosing != null
+            ? renderDefinition.selfClosing
+            : false,
+      };
+    }
+    this.forceCloseTag = this.renderDefinition.forceClose;
+    this.forceBreak = this.renderDefinition.forceBreak;
+    this.forceBreakChildren = this.renderDefinition.forceBreakChildren;
+    this.isSelfClosing = this.renderDefinition.selfClosing;
   }
 
   public get tagName(): string {
     if (this._tagName != null) {
-      return !officalHtmlTags.has(this._tagName.toLowerCase())
+      return !tagRegistry.has(this._tagName.toLowerCase())
         ? this._tagName
         : this._tagName.toLowerCase();
     }
