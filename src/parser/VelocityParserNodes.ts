@@ -130,6 +130,9 @@ export abstract class ParserNode extends DecoratedNode {
   public get isFirstChild(): boolean {
     return this.index == 0;
   }
+  public get isLastChild(): boolean {
+    return this.index == this.parent!.children.length - 1;
+  }
   public parent: NodeWithChildren | undefined;
 
   public get isOnlyChild(): boolean {

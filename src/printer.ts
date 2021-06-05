@@ -310,10 +310,9 @@ function printChildren(
       }
     }
 
-    const isLastChild = childNode.index == parent.children.length - 1;
-
     if (
-      isLastChild &&
+      childNode.isLastChild &&
+      !(childNode instanceof HtmlTextNode) &&
       parent instanceof HtmlTagNode &&
       breakClosingTag(parent)
     ) {
@@ -365,27 +364,36 @@ export default function print(
       return concat([node.name]);
     }
   } else if (node instanceof HtmlTextNode) {
-    if (node.isSelfOrParentPreformatted) {
+    const parts: Doc[] = [];
+    const isPreformatted = node.isSelfOrParentPreformatted;
+    if (isPreformatted) {
       const textLines = node.text.split("\n");
-      const parts: Doc[] = [];
       textLines.forEach((textLine, index) => {
         parts.push(textLine);
         if (index < textLines.length - 1) {
           parts.push(literalline, breakParent);
         }
       });
-      return decorate(dedentToRoot(fill(parts)), node);
     } else {
       const words = node.text.trim().split(/\s+/);
-      const parts: Doc[] = [];
       words.forEach((word, index) => {
         parts.push(word);
         if (index < words.length - 1) {
           parts.push(line);
         }
       });
-      return decorate(fill(parts), node);
     }
+    if (node.isLastChild && breakClosingTag(node.parent as HtmlTagNode)) {
+      parts[parts.length - 1] = concat([
+        parts[parts.length - 1],
+        decorateStart(node.parent?.endNode),
+        `</${(node.parent as HtmlTagNode).tagName}`,
+      ]);
+    }
+    return decorate(
+      isPreformatted ? dedentToRoot(fill(parts)) : fill(parts),
+      node
+    );
   } else if (node instanceof HtmlCommentNode) {
     return decorate([node.text], node);
   } else if (node instanceof HtmlDocTypeNode) {
