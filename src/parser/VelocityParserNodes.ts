@@ -86,11 +86,11 @@ export abstract class ParserNode extends DecoratedNode {
   }
 
   public get isInlineRenderMode(): boolean {
-    return this.getRenderMode() == RenderMode.INLINE;
+    return this.getSiblingsRenderMode() == RenderMode.INLINE;
   }
 
   public get isBlockRenderMode(): boolean {
-    return this.getRenderMode() == RenderMode.BLOCK;
+    return this.getSiblingsRenderMode() == RenderMode.BLOCK;
   }
 
   constructor(startLocation: SourceCodeLocation | VelocityToken) {
@@ -104,7 +104,7 @@ export abstract class ParserNode extends DecoratedNode {
     }
   }
 
-  public getRenderMode(): RenderMode {
+  public getSiblingsRenderMode(): RenderMode {
     return RenderMode.INLINE;
   }
 
@@ -247,7 +247,7 @@ export class AttributeNode extends ParserNode {
 }
 
 export class RootNode extends NodeWithChildren {
-  public getRenderMode(): RenderMode {
+  public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
   clone(): ParserNode {
@@ -366,8 +366,12 @@ export class HtmlTextNode extends ParserNode {
 }
 
 export class HtmlTagNode extends NodeWithChildren {
-  public getRenderMode(): RenderMode {
-    return this.renderDefinition.mode;
+  public getSiblingsRenderMode(): RenderMode {
+    return this.renderDefinition.siblingsMode;
+  }
+
+  public getChildrenRenderMode(): RenderMode {
+    return this.renderDefinition.childrenMode;
   }
 
   private renderDefinition: Required<RenderDefinition>;
@@ -412,7 +416,8 @@ export class HtmlTagNode extends NodeWithChildren {
     const renderDefinition = tagRegistry.get(this.tagName);
     if (renderDefinition == null) {
       this.renderDefinition = {
-        mode: RenderMode.INLINE,
+        siblingsMode: RenderMode.INLINE,
+        childrenMode: RenderMode.INLINE,
         forceBreak: false,
         forceBreakChildren: false,
         forceClose: false,
@@ -421,7 +426,11 @@ export class HtmlTagNode extends NodeWithChildren {
       };
     } else {
       this.renderDefinition = {
-        mode: renderDefinition.mode,
+        siblingsMode: renderDefinition.siblingsMode,
+        childrenMode:
+          renderDefinition.childrenMode != null
+            ? renderDefinition.childrenMode
+            : renderDefinition.siblingsMode,
         forceBreak:
           renderDefinition.forceBreak != null
             ? renderDefinition.forceBreak
@@ -465,7 +474,7 @@ export class HtmlTagNode extends NodeWithChildren {
 }
 
 export class HtmlCommentNode extends ParserNode {
-  public getRenderMode(): RenderMode {
+  public getSiblingsRenderMode(): RenderMode {
     return RenderMode.INLINE;
   }
   public text: string;
@@ -478,7 +487,7 @@ export class HtmlCommentNode extends ParserNode {
 }
 
 export class IeConditionalCommentNode extends NodeWithChildren {
-  public getRenderMode(): RenderMode {
+  public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
   get text(): string {
@@ -491,7 +500,7 @@ export class IeConditionalCommentNode extends NodeWithChildren {
 }
 
 export class HtmlDocTypeNode extends ParserNode {
-  public getRenderMode(): RenderMode {
+  public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
   public types: string[] = [];
@@ -514,7 +523,7 @@ export class HtmlCdataNode extends ParserNode {
 export class HtmlCloseNode extends NodeWithChildren {
   public tagName: string;
 
-  public getRenderMode(): RenderMode {
+  public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
 

@@ -1,4 +1,5 @@
 import { Doc, doc, FastPath } from "prettier";
+import { RenderMode } from "./parser/tagRegistry";
 import {
   AttributeNode,
   DecoratedNode,
@@ -161,18 +162,22 @@ function calculateDifferenceBetweenChildren(
   }
 }
 
-function breakOpeningTag(parent: HtmlTagNode) {
+function breakOpeningTag(parent: NodeWithChildren) {
   return (
-    parent.isInlineRenderMode &&
+    (parent instanceof HtmlTagNode
+      ? parent.getChildrenRenderMode() == RenderMode.INLINE
+      : parent.isInlineRenderMode) &&
     parent.firstChild != null &&
     parent.firstChild.isInlineRenderMode &&
     !parent.firstChild.hasLeadingSpaces
   );
 }
 
-function breakClosingTag(parent: HtmlTagNode) {
+function breakClosingTag(parent: NodeWithChildren) {
   return (
-    parent.isInlineRenderMode &&
+    (parent instanceof HtmlTagNode
+      ? parent.getChildrenRenderMode() == RenderMode.INLINE
+      : parent.isInlineRenderMode) &&
     parent.endNode != null &&
     parent.lastChild != null &&
     parent.lastChild.isInlineRenderMode &&
