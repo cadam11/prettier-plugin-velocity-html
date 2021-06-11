@@ -13,8 +13,8 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
+  WhitespaceToken,
 } from "./parser/VelocityParserNodes";
-import { VelocityToken } from "./parser/VelocityToken";
 
 const {
   literalline,
@@ -35,19 +35,28 @@ function escapeDoubleQuote(text: string): string {
   return text.replace(/"/g, "&quot;");
 }
 
-function printRevealedConditionalComment(token: VelocityToken) {
-  return token.textValue.trim().replace(/\s/g, " ").replace(/\s+]/, "]");
+function printRevealedConditionalComment(
+  text: string,
+  trimWhitespace = true
+): string {
+  return (trimWhitespace ? text.trim() : text)
+    .replace(/\s+/g, " ")
+    .replace(/\s+]/, "]");
 }
 
 function decorateStart(node: DecoratedNode | undefined): Doc {
   return node != null && node.revealedConditionalCommentStart != null
-    ? printRevealedConditionalComment(node.revealedConditionalCommentStart)
+    ? printRevealedConditionalComment(
+        node.revealedConditionalCommentStart.textValue
+      )
     : "";
 }
 
 function decorateEnd(node: DecoratedNode | undefined): Doc {
   return node != null && node.revealedConditionalCommentEnd != null
-    ? printRevealedConditionalComment(node.revealedConditionalCommentEnd)
+    ? printRevealedConditionalComment(
+        node.revealedConditionalCommentEnd.textValue
+      )
     : "";
 }
 
@@ -279,7 +288,11 @@ function printChildren(
             childNode,
             hardline
           );
-        } else if (prev.isInlineRenderMode && childNode.isInlineRenderMode) {
+        } else if (
+          prev.isInlineRenderMode &&
+          childNode.isInlineRenderMode &&
+          !(childNode instanceof HtmlTextNode)
+        ) {
           // In inline mode, use line instead of softline to seperate content.
           lineBreak = childNode.hasLeadingSpaces
             ? calculateDifferenceBetweenChildren(prev, childNode, line)
@@ -311,6 +324,20 @@ function printChildren(
           );
         } else if (next.isBlockRenderMode) {
           parts.push(seperator, breakParent);
+        } else if (
+          // Push line breaks to node surrounding text nodes.
+          // Prettier can only work well with fill(...) if it is not grouped with linebreaks.
+          next.isInlineRenderMode &&
+          childNode.isInlineRenderMode &&
+          next instanceof HtmlTextNode &&
+          childNode.hasTrailingSpaces
+        ) {
+          parts[parts.length - 1] = group(
+            concat([
+              parts[parts.length - 1],
+              calculateDifferenceBetweenChildren(childNode, next, line),
+            ])
+          );
         }
       }
     }
@@ -380,19 +407,31 @@ export default function print(
         }
       });
     } else {
-      const words = node.text.trim().split(/\s+/);
-      words.forEach((word, index) => {
-        parts.push(word);
-        if (index < words.length - 1) {
-          parts.push(line);
+      node.tokens.forEach((token: WhitespaceToken, index: number) => {
+        let doc: Doc;
+        if (token.isWhitespaceOnly && index < node.tokens.length - 1) {
+          doc = line;
+        } else if (token.type === "text") {
+          doc = token.text;
+        } else if (token.type === "conditionalComment") {
+          // Cannot trim whitespace inside text
+          doc = printRevealedConditionalComment(token.text, false);
+        } else {
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          throw new Error(`Unknown whitespace token type ${token.type}`);
         }
+        parts.push(doc);
       });
     }
-    if (node.isLastChild && breakClosingTag(node.parent as HtmlTagNode)) {
+    if (
+      node.isLastChild &&
+      node.parent instanceof HtmlTagNode &&
+      breakClosingTag(node.parent)
+    ) {
       parts[parts.length - 1] = concat([
         parts[parts.length - 1],
         decorateStart(node.parent?.endNode),
-        `</${(node.parent as HtmlTagNode).tagName}`,
+        `</${node.parent.tagName}`,
       ]);
     }
     return decorate(

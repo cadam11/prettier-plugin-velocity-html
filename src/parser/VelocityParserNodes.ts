@@ -266,23 +266,36 @@ export class RootNode extends NodeWithChildren {
   }
 }
 
+export class WhitespaceToken {
+  public text: string;
+  public type: "text" | "conditionalComment";
+  public isWhitespaceOnly: boolean;
+  public line: number;
+  constructor(
+    token: VelocityToken,
+    type: "text" | "conditionalComment" = "text"
+  ) {
+    this.text = token.textValue;
+    this.isWhitespaceOnly = token.isWhitespaceOnly;
+    this.line = token.line;
+    this.type = type;
+  }
+}
+
 export class HtmlTextNode extends ParserNode {
-  public tokens: VelocityToken[] = [];
+  public tokens: WhitespaceToken[] = [];
 
   public constructor(token: VelocityToken) {
     super(token);
-    // Bypass check
-    this._endToken = token;
-    this.tokens.push(token);
+    this.tokens.push(new WhitespaceToken(token));
   }
 
   public get text(): string {
-    return this.tokens.map((token) => token.textValue).join("");
+    return this.tokens.map((token) => token.text).join("");
   }
 
   public addText(token: VelocityToken): void {
-    this.tokens.push(token);
-    this._endToken = token;
+    this.tokens.push(new WhitespaceToken(token));
   }
 
   public get isWhitespaceOnly(): boolean {
@@ -334,7 +347,7 @@ export class HtmlTextNode extends ParserNode {
   }
 
   private removeWhitespaceTokens(
-    iterator: Generator<VelocityToken>,
+    iterator: Generator<WhitespaceToken>,
     startIndexFn: (numberOfWhitespaceTokens: number) => number
   ): boolean {
     if (this.isWhitespaceOnly) {
@@ -357,11 +370,31 @@ export class HtmlTextNode extends ParserNode {
       startIndexFn(numberOfTailingWhitespaceTokens),
       numberOfTailingWhitespaceTokens
     );
-    this._endToken = this.tokens[this.tokens.length - 1];
+    this._endLocation = this.tokens[this.tokens.length - 1];
     this._startLocation = {
       line: this.tokens[0].line,
     };
     return numberOfTailingWhitespaceTokens > 0;
+  }
+
+  /**
+   * Integrate node decoration into text to avoid a text node followed by another text node.
+   */
+  public set revealedConditionalCommentStart(token: VelocityToken | null) {
+    if (token != null) {
+      // Insert before the text node that is "annotated"
+      this.tokens.splice(
+        this.tokens.length - 1,
+        0,
+        new WhitespaceToken(token, "conditionalComment")
+      );
+    }
+  }
+
+  public set revealedConditionalCommentEnd(token: VelocityToken | null) {
+    if (token != null) {
+      this.tokens.push(new WhitespaceToken(token, "conditionalComment"));
+    }
   }
 }
 

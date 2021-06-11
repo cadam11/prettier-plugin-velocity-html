@@ -135,12 +135,7 @@ export default function parse(
         // Concatenate text to be able to use fill() later.
         const addTextNode = (token: VelocityToken) => {
           const lastChild = (currentNode as NodeWithChildren).lastChild;
-          if (
-            lastChild != null &&
-            lastChild instanceof HtmlTextNode &&
-            lastChild.revealedConditionalCommentEnd == null &&
-            revealedConditionComment == null
-          ) {
+          if (lastChild != null && lastChild instanceof HtmlTextNode) {
             lastChild.addText(token);
           } else {
             (currentNode as NodeWithChildren).addChild(new HtmlTextNode(token));
