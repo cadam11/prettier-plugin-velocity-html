@@ -299,7 +299,9 @@ export class HtmlTextNode extends ParserNode {
   }
 
   public get isWhitespaceOnly(): boolean {
-    return /^\s+$/.exec(this.text) != null;
+    // There are many whitespace characters that we don't want to collapse.
+    // See https://en.wikipedia.org/wiki/Whitespace_character
+    return /^[ \t\n\r\f]+$/.exec(this.text) != null;
   }
 
   public removeTrailingWhitespaceTokens(): boolean {
@@ -316,9 +318,26 @@ export class HtmlTextNode extends ParserNode {
 
   public trimWhitespace(): void {
     if (this.isWhitespaceOnly) {
-      this.tokens = [];
-      this.hasLeadingSpaces = true;
-      this.hasTrailingSpaces = true;
+      // Collapse space to single space (inline elements only).
+      if (
+        this.isOnlyChild &&
+        this.parent != null &&
+        this.parent.isInlineRenderMode
+      ) {
+        this.tokens = [
+          {
+            line: this.startLocation.line,
+            isWhitespaceOnly: true,
+            text: " ",
+            type: "text",
+          },
+        ];
+      } else {
+        // Spaces are attached to siblings if there are any.
+        this.tokens = [];
+        this.hasLeadingSpaces = true;
+        this.hasTrailingSpaces = true;
+      }
     } else {
       // Don't overwrite. May have been set be previous or next child. Must trim anyway.
       this.hasLeadingSpaces =

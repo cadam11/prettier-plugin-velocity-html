@@ -93,7 +93,7 @@ const renderDefinitions: [string, RenderDefinition][] = [
   ["thead",             { siblingsMode: RenderMode.INLINE }],
   ["time",              { siblingsMode: RenderMode.INLINE }],
   ["title",             { siblingsMode: RenderMode.BLOCK }],
-  ["tr",                { siblingsMode: RenderMode.INLINE }],
+  ["tr",                { siblingsMode: RenderMode.BLOCK }],
   ["tt",                { siblingsMode: RenderMode.INLINE }],
   ["u",                 { siblingsMode: RenderMode.INLINE }],
   ["var",               { siblingsMode: RenderMode.INLINE }],
