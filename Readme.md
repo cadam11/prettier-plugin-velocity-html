@@ -14,15 +14,14 @@ block
   <option>Green</option>
 </datalist>
 ```
-The decision to treat one element one way or the other is made based on the name of an attribute (based on a likely incomplete list). 
+The decision to treat one element one way or the other is made based on the element name. 
 Block and inline refer to the way elements will be laid out in source code not necessarily how they are rendered in a browser. Most elements that are not treated by browsers as inline elements are treated as block elements (although a browser does not think of them as block elements). This can be done because in the elements context, whitespace has no meaning and it can be used to improve readabiliy. `<select>` would be an example of a element that this formatter treats a block, but a browser renders as `display: inline-block`.
 
 TODO
 - `<!-- prettier-ignore -->`
 
 Edge cases that I do not support at the moment. If you think that there are a valid use after all, then please open an issue.
-- Dangling spaces are ignored: `foo<span>  </span>bar` will be formatted as `foo<span></span>bar`, prettier-html will format as `foo<span> </span>bar`.
-- https://github.com/prettier/prettier/pull/7865
+- No smart formatting of classnames
 - No smart quotes for attributes: Will always use double quotes for attributes
 - img.srcset attribute formatting
 - HTML comments inside `<script>`
@@ -55,13 +54,13 @@ Prettier:
 </div>
 ```
 
-Prettier Velocity:
+Prettier Velocity (notice the `</object>`):
 ```
 <div>
   before<object data="horse.wav">
     <param name="autoplay" value="true" />
-    <param name="autoplay" value="true" /></object
-  >after
+    <param name="autoplay" value="true" />
+  </object>after
 </div>
 ```
 

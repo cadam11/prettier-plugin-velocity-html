@@ -133,7 +133,12 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
     (node instanceof NodeWithChildren &&
       (node.forceBreakChildren || node.maxDepth >= 2)) ||
     (firstChild instanceof HtmlTagNode &&
-      firstChild.isBlockRenderMode &&
+      node instanceof NodeWithChildren &&
+      // Try to keep nodes with text on one line to improve readability.
+      node.children.reduce(
+        (acc, child) => acc && !(child instanceof HtmlTextNode),
+        true
+      ) &&
       firstChild.startLocation.line > node.startLocation.line);
   return concat([
     indent(
