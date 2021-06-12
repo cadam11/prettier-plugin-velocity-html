@@ -1,4 +1,4 @@
-import { VelocityToken } from "./VelocityToken";
+import { isCollapsbileWhitespaceOnly, VelocityToken } from "./VelocityToken";
 import { RenderDefinition, RenderMode, tagRegistry } from "./tagRegistry";
 
 interface SourceCodeLocation {
@@ -299,9 +299,7 @@ export class HtmlTextNode extends ParserNode {
   }
 
   public get isWhitespaceOnly(): boolean {
-    // There are many whitespace characters that we don't want to collapse.
-    // See https://en.wikipedia.org/wiki/Whitespace_character
-    return /^[ \t\n\r\f]+$/.exec(this.text) != null;
+    return isCollapsbileWhitespaceOnly(this.text);
   }
 
   public removeTrailingWhitespaceTokens(): boolean {
