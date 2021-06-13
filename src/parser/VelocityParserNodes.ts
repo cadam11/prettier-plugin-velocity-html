@@ -37,17 +37,13 @@ export class DecoratedNode {
 }
 
 export abstract class ParserNode extends DecoratedNode {
-  public _endToken: VelocityToken | undefined;
-
-  public get endToken(): VelocityToken | undefined {
-    return this._endToken;
-  }
-
-  public set endToken(token: VelocityToken | undefined) {
+  public set endToken(token: VelocityToken) {
     if (this.endToken != null) {
       throw new Error("Cannot set endToken more than once.");
     }
-    this._endToken = token;
+    this._endLocation = {
+      line: this.calculateEndLine(token),
+    };
   }
 
   public _startLocation: SourceCodeLocation;
@@ -67,11 +63,7 @@ export abstract class ParserNode extends DecoratedNode {
         line: this.calculateEndLine(this.revealedConditionalCommentEnd),
       };
     }
-    return this.endToken != null
-      ? {
-          line: this.calculateEndLine(this.endToken),
-        }
-      : this._endLocation;
+    return this._endLocation;
   }
 
   private calculateEndLine(token: VelocityToken) {
@@ -102,6 +94,7 @@ export abstract class ParserNode extends DecoratedNode {
     } else {
       this._startLocation = startLocation;
     }
+    this._endLocation = this._startLocation;
   }
 
   public getSiblingsRenderMode(): RenderMode {

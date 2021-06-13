@@ -395,10 +395,10 @@ export default function print(
           ),
         ]);
       } else {
-        return concat([`${node.name}="${escapeDoubleQuote(node.value)}"`]);
+        return `${node.name}="${escapeDoubleQuote(node.value)}"`;
       }
     } else {
-      return concat([node.name]);
+      return node.name;
     }
   } else if (node instanceof HtmlTextNode) {
     const parts: Doc[] = [];
