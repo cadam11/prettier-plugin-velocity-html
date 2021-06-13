@@ -102,28 +102,32 @@ export abstract class ParserNode extends DecoratedNode {
   }
 
   public get prev(): ParserNode | undefined {
-    return this.index != null && this.parent != null
-      ? this.parent.children[this.index - 1]
-      : undefined;
+    return this.parent.children[this.index - 1];
   }
   public get next(): ParserNode | undefined {
-    return this.index != null && this.parent != null
-      ? this.parent.children[this.index + 1]
-      : undefined;
+    return this.parent.children[this.index + 1];
   }
-  public get index(): number | undefined {
-    return this.parent != null ? this.parent.children.indexOf(this) : undefined;
+  public get index(): number {
+    return this.parent.children.indexOf(this);
   }
   public get isFirstChild(): boolean {
     return this.index == 0;
   }
   public get isLastChild(): boolean {
-    return this.index == this.parent!.children.length - 1;
+    return this.index == this.parent.children.length - 1;
   }
-  public parent: NodeWithChildren | undefined;
+  private _parent: NodeWithChildren;
+
+  public get parent(): NodeWithChildren {
+    return this._parent;
+  }
+
+  public set parent(parent: NodeWithChildren) {
+    this._parent = parent;
+  }
 
   public get isOnlyChild(): boolean {
-    return this.parent != null && this.parent.children.length == 1;
+    return this.parent.children.length == 1;
   }
 
   public walk(
@@ -141,7 +145,7 @@ export abstract class ParserNode extends DecoratedNode {
     if (this.isPreformatted()) {
       return true;
     }
-    while (parent != null) {
+    while (!(parent instanceof RootNode)) {
       if (parent instanceof HtmlTagNode && parent.isPreformatted()) {
         return true;
       }
@@ -150,7 +154,6 @@ export abstract class ParserNode extends DecoratedNode {
     return false;
   }
 
-  // TODO Should this also insert hardline?
   public forceBreak = false;
 }
 
@@ -197,7 +200,7 @@ export abstract class NodeWithChildren extends ParserNode {
         const childDepth = child.maxDepth + 1;
         return Math.max(childDepth, maxDepth);
       } else {
-        // Text nodes and simliar should be considere "content" not depth.
+        // Text nodes and simliar should be considered "content" not depth.
         return maxDepth;
       }
     }, 0);
@@ -218,9 +221,6 @@ export class AttributeNode extends ParserNode {
     "content",
     "charset",
   ];
-  clone(): ParserNode {
-    return new AttributeNode(this.nameToken, this.valueToken);
-  }
   get name(): string {
     const attributeName = this.nameToken.stringValue;
     return this.knownAttributes.includes(attributeName.toLowerCase())
@@ -237,17 +237,34 @@ export class AttributeNode extends ParserNode {
   ) {
     super(nameToken);
   }
+
+  public get isSelfOrParentPreformatted(): boolean {
+    return false;
+  }
+
+  public get parent(): NodeWithChildren {
+    throw new Error("Root node has no parent");
+  }
+
+  public set parent(parent: NodeWithChildren) {
+    throw new Error("Root node has no parent");
+  }
 }
 
 export class RootNode extends NodeWithChildren {
   public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
-  clone(): ParserNode {
-    return new RootNode();
-  }
   public constructor() {
     super({ line: 0 });
+  }
+
+  public get parent(): NodeWithChildren {
+    throw new Error("Root node has no parent");
+  }
+
+  public set parent(parent: NodeWithChildren) {
+    throw new Error("Root node has no parent");
   }
 
   public set revealedConditionalCommentStart(token: VelocityToken | null) {
@@ -310,11 +327,7 @@ export class HtmlTextNode extends ParserNode {
   public trimWhitespace(): void {
     if (this.isWhitespaceOnly) {
       // Collapse space to single space (inline elements only).
-      if (
-        this.isOnlyChild &&
-        this.parent != null &&
-        this.parent.isInlineRenderMode
-      ) {
+      if (this.isOnlyChild && this.parent.isInlineRenderMode) {
         this.tokens = [
           {
             line: this.startLocation.line,
