@@ -58,8 +58,8 @@ export class ParserException extends Error {
     );
     this.loc = {
       start: {
-        column: token.charPositionInLine,
-        line: token.line,
+        column: token.startLocation.column,
+        line: token.startLocation.line,
       },
     };
   }
@@ -75,8 +75,10 @@ type LexerMode =
 
 export default function parse(
   text: string,
-  parsers: object,
-  options: object
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  parsers: unknown,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  options: unknown
 ): AST {
   const inputStream = CharStreams.fromString(text);
   const lexer = new VelocityHtmlLexer(inputStream);
@@ -91,6 +93,7 @@ export default function parse(
       line,
       charPositionInLine,
       msg,
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       e
     ) {
       errors.push(new Error(msg));
@@ -107,7 +110,8 @@ export default function parse(
 
   let mode: LexerMode = "outsideTag";
 
-  let revealedConditionComment: VelocityToken | null = null;
+  let revealedConditionalComment: VelocityToken | null = null;
+  let prettierIgnore: VelocityToken | null = null;
 
   for (let i = 0; i < tokens.length; i++) {
     const token: VelocityToken = tokens[i] as VelocityToken;
@@ -121,7 +125,7 @@ export default function parse(
 
     const popParentStack = (): void => {
       if (currentNode.endLocation == null) {
-        throw new Error("endToken of currentNode is null");
+        throw newParserException("endToken of currentNode is null");
       }
       parentStack.shift();
       currentNode = parentStack[0];
@@ -166,8 +170,8 @@ export default function parse(
               .trim();
             if (currentNode instanceof HtmlTagNode) {
               if (currentNode.tagName.toLowerCase() != tagName.toLowerCase()) {
-                throw new Error(
-                  `Tag was opened with ${currentNode.tagName}, but closed with ${tagName}. Mixed tags not supported`
+                throw newParserException(
+                  `Tag was opened with ${currentNode.tagName}, but closed with ${tagName}. Mixed tags are not supported.`
                 );
               }
               currentNode.endNode = new NodeWithChildrenDecoration();
@@ -203,8 +207,8 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.IE_COMMENT_START: {
-            const conditionalNode = new IeConditionalCommentNode(token);
-            setNewCurrentNode(conditionalNode);
+            const conditionalCommentNode = new IeConditionalCommentNode(token);
+            setNewCurrentNode(conditionalCommentNode);
             parentStack.unshift(currentNode);
 
             mode = "outsideTag";
@@ -246,18 +250,22 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.IE_REVEALED_COMMENT_START: {
-            revealedConditionComment = token;
+            revealedConditionalComment = token;
             break;
           }
           case VelocityHtmlLexer.IE_REVEALED_COMMENT_CLOSE: {
-            if (revealedConditionComment == null) {
+            if (revealedConditionalComment == null) {
               // Attach to previous comment
               // See below
-              revealedConditionComment = token;
+              revealedConditionalComment = token;
             } else {
               // Remove empty conditional comment.
-              revealedConditionComment = null;
+              revealedConditionalComment = null;
             }
+            break;
+          }
+          case VelocityHtmlLexer.PRETTIER_IGNORE: {
+            prettierIgnore = token;
             break;
           }
           default: {
@@ -265,9 +273,31 @@ export default function parse(
           }
         }
 
-        // Attach to next node.
         if (
-          revealedConditionComment != null &&
+          prettierIgnore != null &&
+          token.type != VelocityHtmlLexer.PRETTIER_IGNORE
+        ) {
+          let lastNode: ParserNode | undefined = parentStack[0].lastChild;
+          lastNode =
+            lastNode != null &&
+            // TODO Was wenn es kein WS gibt?
+            !(lastNode instanceof HtmlTextNode && lastNode.isWhitespaceOnly)
+              ? lastNode
+              : currentNode;
+
+          if (lastNode == null) {
+            // TODO Add as normal comment node?
+            throw newParserException(
+              `Cannot attach prettier ignore. No last child.`
+            );
+          }
+
+          lastNode.prettierIgnore = prettierIgnore;
+          prettierIgnore = null;
+        }
+
+        if (
+          revealedConditionalComment != null &&
           token.type != VelocityHtmlLexer.IE_REVEALED_COMMENT_START
         ) {
           /**
@@ -282,6 +312,7 @@ export default function parse(
           let lastNode: DecoratedNode | undefined = parentStack[0].lastChild;
           lastNode =
             lastNode != null &&
+            // TODO Preserve newlines after <!--[if lt IE 9]><!-->
             !(lastNode instanceof HtmlTextNode && lastNode.isWhitespaceOnly)
               ? lastNode
               : currentNode;
@@ -299,11 +330,12 @@ export default function parse(
             }
           }
           if (token.type == VelocityHtmlLexer.IE_REVEALED_COMMENT_CLOSE) {
-            lastNode.revealedConditionalCommentEnd = revealedConditionComment;
+            lastNode.revealedConditionalCommentEnd = revealedConditionalComment;
           } else {
-            lastNode.revealedConditionalCommentStart = revealedConditionComment;
+            lastNode.revealedConditionalCommentStart =
+              revealedConditionalComment;
           }
-          revealedConditionComment = null;
+          revealedConditionalComment = null;
         }
         break;
       }

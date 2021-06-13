@@ -1,9 +1,9 @@
-import { isCollapsbileWhitespaceOnly, VelocityToken } from "./VelocityToken";
+import {
+  isCollapsbileWhitespaceOnly,
+  SourceCodeLocation,
+  VelocityToken,
+} from "./VelocityToken";
 import { RenderDefinition, RenderMode, tagRegistry } from "./tagRegistry";
-
-interface SourceCodeLocation {
-  line: number;
-}
 
 export class DecoratedNode {
   public _revealedConditionalCommentStart: VelocityToken | null;
@@ -41,34 +41,23 @@ export abstract class ParserNode extends DecoratedNode {
     if (this.endToken != null) {
       throw new Error("Cannot set endToken more than once.");
     }
-    this._endLocation = {
-      line: this.calculateEndLine(token),
-    };
+    this._endLocation = token.endLocation;
   }
 
   public _startLocation: SourceCodeLocation;
   public get startLocation(): SourceCodeLocation {
     if (this.revealedConditionalCommentStart != null) {
-      return {
-        line: this.revealedConditionalCommentStart.line,
-      };
+      return this.revealedConditionalCommentStart.startLocation;
     } else {
       return this._startLocation;
     }
   }
-  public _endLocation: SourceCodeLocation | undefined;
-  public get endLocation(): SourceCodeLocation | undefined {
+  public _endLocation: SourceCodeLocation;
+  public get endLocation(): SourceCodeLocation {
     if (this.revealedConditionalCommentEnd != null) {
-      return {
-        line: this.calculateEndLine(this.revealedConditionalCommentEnd),
-      };
+      return this.revealedConditionalCommentEnd.endLocation;
     }
     return this._endLocation;
-  }
-
-  private calculateEndLine(token: VelocityToken) {
-    const match = token.textValue.match(/\n/g);
-    return token.line + (match != null ? match.length : 0);
   }
 
   public _isPreformatted = false;
@@ -88,9 +77,7 @@ export abstract class ParserNode extends DecoratedNode {
   constructor(startLocation: SourceCodeLocation | VelocityToken) {
     super();
     if (startLocation instanceof VelocityToken) {
-      this._startLocation = {
-        line: startLocation.line,
-      };
+      this._startLocation = startLocation.startLocation;
     } else {
       this._startLocation = startLocation;
     }
@@ -155,6 +142,16 @@ export abstract class ParserNode extends DecoratedNode {
   }
 
   public forceBreak = false;
+
+  public _prettierIgnore: VelocityToken | null;
+
+  public set prettierIgnore(prettierIgnore: VelocityToken | null) {
+    this._prettierIgnore = prettierIgnore;
+  }
+
+  public get prettierIgnore(): VelocityToken | null {
+    return this._prettierIgnore;
+  }
 }
 
 export class NodeWithChildrenDecoration extends DecoratedNode {
@@ -256,7 +253,7 @@ export class RootNode extends NodeWithChildren {
     return RenderMode.BLOCK;
   }
   public constructor() {
-    super({ line: 0 });
+    super({ line: 1, column: 1 });
   }
 
   public get parent(): NodeWithChildren {
@@ -276,15 +273,17 @@ export class RootNode extends NodeWithChildren {
   }
 }
 
+export type WhitespaceTokenType =
+  | "text"
+  | "conditionalComment"
+  | "prettierIgnore";
 export class WhitespaceToken {
   public text: string;
-  public type: "text" | "conditionalComment";
+  public type: WhitespaceTokenType;
   public isWhitespaceOnly: boolean;
   public line: number;
-  constructor(
-    token: VelocityToken,
-    type: "text" | "conditionalComment" = "text"
-  ) {
+  public column: number;
+  constructor(token: VelocityToken, type: WhitespaceTokenType = "text") {
     this.text = token.textValue;
     this.isWhitespaceOnly = token.isWhitespaceOnly;
     this.line = token.line;
@@ -331,6 +330,7 @@ export class HtmlTextNode extends ParserNode {
         this.tokens = [
           {
             line: this.startLocation.line,
+            column: this.startLocation.column,
             isWhitespaceOnly: true,
             text: " ",
             type: "text",
@@ -396,6 +396,7 @@ export class HtmlTextNode extends ParserNode {
     this._endLocation = this.tokens[this.tokens.length - 1];
     this._startLocation = {
       line: this.tokens[0].line,
+      column: this.tokens[0].column,
     };
     return numberOfTailingWhitespaceTokens > 0;
   }
@@ -417,6 +418,17 @@ export class HtmlTextNode extends ParserNode {
   public set revealedConditionalCommentEnd(token: VelocityToken | null) {
     if (token != null) {
       this.tokens.push(new WhitespaceToken(token, "conditionalComment"));
+    }
+  }
+
+  public set prettierIgnore(token: VelocityToken | null) {
+    if (token != null) {
+      // Insert before the text node that is "annotated"
+      this.tokens.splice(
+        this.tokens.length - 1,
+        0,
+        new WhitespaceToken(token, "prettierIgnore")
+      );
     }
   }
 }

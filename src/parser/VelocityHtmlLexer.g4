@@ -78,8 +78,13 @@ IE_COMMENT_START: '<!--[' ~[\]]+ ']>';
 
 IE_COMMENT_CLOSE: '<![endif]-->';
 
+// Slurp whitespace after comment to avoid handling of whitespace between comment and node that it should attach to.
 IE_REVEALED_COMMENT_START: '<!--[' ~[\]]+ ']><!-->' DEFAULT_WS*;
+// Same as above
 IE_REVEALED_COMMENT_CLOSE: DEFAULT_WS* '<!--<![endif]-->';
+
+// See revealed comment
+PRETTIER_IGNORE: '<!--' DEFAULT_WS* 'prettier-ignore' DEFAULT_WS* '-->' DEFAULT_WS*;
 
 // Comment that is NOT an IE comment.
 // Using (~[[] .*?)? breaks non-greediness

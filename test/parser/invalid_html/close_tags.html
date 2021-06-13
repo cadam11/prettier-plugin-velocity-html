@@ -4,4 +4,10 @@
   </head>
 </html>
 =====================================output=====================================
-Tag was opened with head, but closed with meta\.
+Tag was opened with head, but closed with meta. Mixed tags are not supported.
+  1 | <html>
+  2 |   <head>
+> 3 |   </meta>
+    |   ^
+  4 |   </head>
+  5 | </html>

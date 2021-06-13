@@ -15,6 +15,7 @@ import {
   RootNode,
   WhitespaceToken,
 } from "./parser/VelocityParserNodes";
+import { NEWLINE_REGEX } from "./parser/VelocityToken";
 
 const {
   literalline,
@@ -166,7 +167,7 @@ function calculateDifferenceBetweenChildren(
   next: ParserNode,
   sameLineDoc: Doc
 ): Doc {
-  const lineDifference = next.startLocation.line - prev.endLocation!.line;
+  const lineDifference = next.startLocation.line - prev.endLocation.line;
   if (lineDifference == 0) {
     return sameLineDoc;
   } else if (lineDifference == 1) {
@@ -365,12 +366,36 @@ function printChildren(
 
 export default function print(
   path: FastPath<ParserNode>,
-  options: unknown,
+  options: {
+    originalText: string;
+  },
   print: (path: FastPath) => Doc
 ): Doc {
   const node: ParserNode = path.getValue();
 
-  if (node instanceof RootNode) {
+  if (node.prettierIgnore != null) {
+    const lines = options.originalText.split(NEWLINE_REGEX);
+    const textLines = lines.slice(
+      node.prettierIgnore.startLocation.line - 1,
+      node.endLocation.line
+    );
+    textLines[0] = textLines[0].substr(
+      node.prettierIgnore.startLocation.column - 1
+    );
+    textLines[textLines.length - 1] = textLines[textLines.length - 1].substr(
+      0,
+      node.endLocation.column
+    );
+    return concat(
+      textLines.reduce((parts, text, index) => {
+        parts.push(text);
+        if (index < textLines.length - 1) {
+          parts.push(literalline);
+        }
+        return parts;
+      }, [] as Doc[])
+    );
+  } else if (node instanceof RootNode) {
     return concat(printChildren(path, options, print));
   } else if (node instanceof HtmlTagNode) {
     return group(
@@ -404,7 +429,7 @@ export default function print(
     const parts: Doc[] = [];
     const isPreformatted = node.isSelfOrParentPreformatted;
     if (isPreformatted) {
-      const textLines = node.text.split("\n");
+      const textLines = node.text.split(NEWLINE_REGEX);
       textLines.forEach((textLine, index) => {
         parts.push(textLine);
         if (index < textLines.length - 1) {
@@ -412,15 +437,21 @@ export default function print(
         }
       });
     } else {
+      let prettierIgnoreMode = false;
       node.tokens.forEach((token: WhitespaceToken, index: number) => {
         let doc: Doc;
-        if (token.isWhitespaceOnly && index < node.tokens.length - 1) {
+        if (prettierIgnoreMode) {
+          doc = token.text;
+        } else if (token.isWhitespaceOnly && index < node.tokens.length - 1) {
           doc = line;
         } else if (token.type === "text") {
           doc = token.text;
         } else if (token.type === "conditionalComment") {
           // Cannot trim whitespace inside text
           doc = printRevealedConditionalComment(token.text, false);
+        } else if (token.type == "prettierIgnore") {
+          prettierIgnoreMode = true;
+          doc = token.text;
         } else {
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           throw new Error(`Unknown whitespace token type ${token.type}`);

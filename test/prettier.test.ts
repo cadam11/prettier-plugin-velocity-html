@@ -156,8 +156,11 @@ describe("prettier", () => {
           plugins: ["./dist/src"],
         });
       } catch (e: unknown) {
-        if (typeof e === "string") {
-          expect(e).to.match(new RegExp(expectedOutput));
+        if (e instanceof Error) {
+          // eslint-disable-next-line no-control-regex
+          expect(e.message.replace(/\u001b\[.*?m/g, "")).to.equal(
+            expectedOutput
+          );
         } else {
           throw new Error(`Unknown error type ${typeof e}`);
         }

@@ -6,6 +6,15 @@ export function isCollapsbileWhitespaceOnly(text: string): boolean {
   // See https://en.wikipedia.org/wiki/Whitespace_character
   return /^[ \t\n\r\f]+$/.exec(text) != null;
 }
+
+export const NEWLINE_REGEX = /\r\n|\r|\n/;
+
+// Both are 1-based
+export interface SourceCodeLocation {
+  line: number;
+  column: number;
+}
+
 export class VelocityToken extends CommonToken {
   public isInsideString = false;
 
@@ -32,6 +41,28 @@ export class VelocityToken extends CommonToken {
         ? this.text.substring(1, this.text.length - 1)
         : this.text
       : "";
+  }
+
+  get startLocation(): SourceCodeLocation {
+    return {
+      line: this.line,
+      column: this.charPositionInLine + 1,
+    };
+  }
+
+  get endLocation(): SourceCodeLocation {
+    const lines = this.textValue.split(NEWLINE_REGEX);
+    if (lines.length == 1) {
+      return {
+        line: this.line,
+        column: this.charPositionInLine + this.textValue.length + 1,
+      };
+    } else {
+      return {
+        line: this.line + (lines.length - 1),
+        column: this.charPositionInLine + lines[lines.length - 1].length + 1,
+      };
+    }
   }
 
   get textValue(): string {
