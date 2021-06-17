@@ -111,7 +111,7 @@ export default function parse(
   let mode: LexerMode = "outsideTag";
 
   let revealedConditionalComment: VelocityToken | null = null;
-  let prettierIgnore: VelocityToken | null = null;
+  let prettierIgnore: VelocityToken[] = [];
 
   for (let i = 0; i < tokens.length; i++) {
     const token: VelocityToken = tokens[i] as VelocityToken;
@@ -265,7 +265,7 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.PRETTIER_IGNORE: {
-            prettierIgnore = token;
+            prettierIgnore.push(token);
             break;
           }
           default: {
@@ -274,7 +274,7 @@ export default function parse(
         }
 
         if (
-          prettierIgnore != null &&
+          prettierIgnore.length > 0 &&
           token.type != VelocityHtmlLexer.PRETTIER_IGNORE
         ) {
           let lastNode: ParserNode | undefined = parentStack[0].lastChild;
@@ -293,7 +293,7 @@ export default function parse(
           }
 
           lastNode.prettierIgnore = prettierIgnore;
-          prettierIgnore = null;
+          prettierIgnore = [];
         }
 
         if (

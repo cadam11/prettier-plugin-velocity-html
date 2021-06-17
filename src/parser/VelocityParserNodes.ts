@@ -1,10 +1,11 @@
 import {
-  isCollapsbileWhitespaceOnly,
+  isCollapsibleWhitespaceOnly,
   SourceCodeLocation,
   VelocityToken,
 } from "./VelocityToken";
 import { RenderDefinition, RenderMode, tagRegistry } from "./tagRegistry";
 
+// TODO Nested conditional comment
 export class DecoratedNode {
   public _revealedConditionalCommentStart: VelocityToken | null;
 
@@ -143,13 +144,17 @@ export abstract class ParserNode extends DecoratedNode {
 
   public forceBreak = false;
 
-  public _prettierIgnore: VelocityToken | null;
+  public _prettierIgnore: VelocityToken[] = [];
 
-  public set prettierIgnore(prettierIgnore: VelocityToken | null) {
+  /**
+   * This is an array, because <!--prettier-ignore--> is allowed to appear multiple times in succession.
+   * It has no effect, but we don't want to remove code.
+   */
+  public set prettierIgnore(prettierIgnore: VelocityToken[]) {
     this._prettierIgnore = prettierIgnore;
   }
 
-  public get prettierIgnore(): VelocityToken | null {
+  public get prettierIgnore(): VelocityToken[] {
     return this._prettierIgnore;
   }
 }
@@ -308,7 +313,7 @@ export class HtmlTextNode extends ParserNode {
   }
 
   public get isWhitespaceOnly(): boolean {
-    return isCollapsbileWhitespaceOnly(this.text);
+    return isCollapsibleWhitespaceOnly(this.text);
   }
 
   public removeTrailingWhitespaceTokens(): boolean {
@@ -421,15 +426,17 @@ export class HtmlTextNode extends ParserNode {
     }
   }
 
-  public set prettierIgnore(token: VelocityToken | null) {
-    if (token != null) {
-      // Insert before the text node that is "annotated"
-      this.tokens.splice(
-        this.tokens.length - 1,
-        0,
-        new WhitespaceToken(token, "prettierIgnore")
-      );
-    }
+  public get prettierIgnore(): VelocityToken[] {
+    return [];
+  }
+
+  public set prettierIgnore(tokens: VelocityToken[]) {
+    // Insert before the text node that is "annotated"
+    this.tokens.splice(
+      this.tokens.length - 1,
+      0,
+      ...tokens.map((token) => new WhitespaceToken(token, "prettierIgnore"))
+    );
   }
 }
 

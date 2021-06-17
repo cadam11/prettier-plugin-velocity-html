@@ -373,25 +373,35 @@ export default function print(
 ): Doc {
   const node: ParserNode = path.getValue();
 
-  if (node.prettierIgnore != null) {
+  if (node.prettierIgnore.length > 0) {
     const lines = options.originalText.split(NEWLINE_REGEX);
     const textLines = lines.slice(
-      node.prettierIgnore.startLocation.line - 1,
+      node.prettierIgnore[0].startLocation.line - 1,
       node.endLocation.line
     );
     textLines[0] = textLines[0].substr(
-      node.prettierIgnore.startLocation.column - 1
+      node.prettierIgnore[0].startLocation.column - 1
     );
     textLines[textLines.length - 1] = textLines[textLines.length - 1].substr(
       0,
       node.endLocation.column
     );
+
     return concat(
+      /**
+       * Replicate prettiers algorithm:
+       * Intend <!--prettier-ignore--> and starting tag with the current indentation.
+       */
       textLines.reduce((parts, text, index) => {
-        parts.push(text);
-        if (index < textLines.length - 1) {
-          parts.push(literalline);
+        const removeIntendation = index <= node.prettierIgnore.length;
+        /**
+         * Either use hardline and remove left whitespace or use literalline and keep whitespace.
+         * Whatever follows hardline is intended, whatever follows a literalline is not.
+         */
+        if (index > 0) {
+          parts.push(removeIntendation ? hardline : literalline);
         }
+        parts.push(removeIntendation ? text.trimLeft() : text);
         return parts;
       }, [] as Doc[])
     );
@@ -440,7 +450,21 @@ export default function print(
       let prettierIgnoreMode = false;
       node.tokens.forEach((token: WhitespaceToken, index: number) => {
         let doc: Doc;
-        if (prettierIgnoreMode) {
+        if (token.type == "prettierIgnore") {
+          prettierIgnoreMode = true;
+          doc = concat([
+            token.text.trimRight(),
+            /**
+             * This is similar to calculateDifferenceBetweenLines.
+             * Use linebreak for spaces or one linebreak, otherwise use most two linebreaks.
+             */
+            ...(token.text.endsWith("-->")
+              ? []
+              : token.text.split(NEWLINE_REGEX).length > 2
+              ? [hardline, hardline]
+              : [hardline]),
+          ]);
+        } else if (prettierIgnoreMode) {
           doc = token.text;
         } else if (token.isWhitespaceOnly && index < node.tokens.length - 1) {
           doc = line;
@@ -449,9 +473,6 @@ export default function print(
         } else if (token.type === "conditionalComment") {
           // Cannot trim whitespace inside text
           doc = printRevealedConditionalComment(token.text, false);
-        } else if (token.type == "prettierIgnore") {
-          prettierIgnoreMode = true;
-          doc = token.text;
         } else {
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           throw new Error(`Unknown whitespace token type ${token.type}`);

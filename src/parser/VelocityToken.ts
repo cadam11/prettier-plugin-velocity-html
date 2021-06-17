@@ -1,7 +1,7 @@
 import { CommonToken, Recognizer } from "antlr4ts";
 import { ATNSimulator } from "antlr4ts/atn/ATNSimulator";
 
-export function isCollapsbileWhitespaceOnly(text: string): boolean {
+export function isCollapsibleWhitespaceOnly(text: string): boolean {
   // There are many whitespace characters that we don't want to collapse.
   // See https://en.wikipedia.org/wiki/Whitespace_character
   return /^[ \t\n\r\f]+$/.exec(text) != null;
@@ -32,7 +32,7 @@ export class VelocityToken extends CommonToken {
   }
 
   get isWhitespaceOnly(): boolean {
-    return isCollapsbileWhitespaceOnly(this.textValue);
+    return isCollapsibleWhitespaceOnly(this.textValue);
   }
 
   get stringValue(): string {
