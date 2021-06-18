@@ -168,42 +168,44 @@ describe("prettier", () => {
     });
   });
 
-  fs.readdirSync(__dirname + "/parser/valid_html/").forEach((testCaseName) => {
-    it(`should format ${testCaseName}`, async () => {
-      const [input, expectedOutput, options] = readTestcaseFile(
-        __dirname + "/parser/valid_html/" + testCaseName
-      );
-      const formatted = format(input, {
-        ...options,
-        parser: "velocity-html",
-        // pluginSearchDirs: ["./dir-with-plugins"],
-        plugins: ["./dist/src"],
+  ["/parser/valid_html/", "/parser/valid_velocity/"].forEach((dir) => {
+    fs.readdirSync(__dirname + dir).forEach((testCaseName) => {
+      it(`should format ${testCaseName}`, async () => {
+        const [input, expectedOutput, options] = readTestcaseFile(
+          __dirname + dir + testCaseName
+        );
+        const formatted = format(input, {
+          ...options,
+          parser: "velocity-html",
+          // pluginSearchDirs: ["./dir-with-plugins"],
+          plugins: ["./dist/src"],
+        });
+
+        const pathWithoutExtension = path.join(SCREENSHOT_FOLDER, testCaseName);
+
+        const prettierFormatted = format(input, {
+          parser: "html",
+        });
+
+        const numberOfMismatchedPixels = compareScreenshots(
+          await takeScreenshot(`${pathWithoutExtension}_velocity`, formatted),
+          await takeScreenshot(
+            `${pathWithoutExtension}_prettier`,
+            prettierFormatted
+          ),
+          `${pathWithoutExtension}_diff.png`
+        );
+
+        // Comparing strings prints a very good diff.
+        expect(formatted).to.equal(
+          expectedOutput,
+          `Expected does not match actual. Rendered output is equal to prettier? ${
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+            numberOfMismatchedPixels === 0
+          }`
+        );
+        expect(numberOfMismatchedPixels).to.equal(0);
       });
-
-      const pathWithoutExtension = path.join(SCREENSHOT_FOLDER, testCaseName);
-
-      const prettierFormatted = format(input, {
-        parser: "html",
-      });
-
-      const numberOfMismatchedPixels = compareScreenshots(
-        await takeScreenshot(`${pathWithoutExtension}_velocity`, formatted),
-        await takeScreenshot(
-          `${pathWithoutExtension}_prettier`,
-          prettierFormatted
-        ),
-        `${pathWithoutExtension}_diff.png`
-      );
-
-      // Comparing strings prints a very good diff.
-      expect(formatted).to.equal(
-        expectedOutput,
-        `Expected does not match actual. Rendered output is equal to prettier? ${
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          numberOfMismatchedPixels === 0
-        }`
-      );
-      expect(numberOfMismatchedPixels).to.equal(0);
     });
   });
 });

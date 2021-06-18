@@ -616,3 +616,18 @@ export class HtmlCloseNode extends NodeWithChildren {
     this.forceBreakChildren = true;
   }
 }
+
+export class VelocityDirectiveNode extends NodeWithChildren {
+  public directive: string;
+
+  public tokens: VelocityToken[] = [];
+
+  getSiblingsRenderMode(): RenderMode {
+    return RenderMode.BLOCK;
+  }
+
+  constructor(startLocation: VelocityToken) {
+    super(startLocation);
+    this.directive = startLocation.textValue;
+  }
+}

@@ -5,13 +5,23 @@ lexer grammar VelocityHtmlLexer;
 } 
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
-   private isNotStartOfVtlReference(offset: number = 0): boolean {
-      const currentPosition = this._tokenStartCharIndex + offset;
-      const nextTwoCharacters = this.inputStream.getText(Interval.of(currentPosition, currentPosition + 1));
-      this.debug('nextCharacters', nextTwoCharacters);
-      // Curly braces break formatting of antlr4 plugin
-      return nextTwoCharacters !== '$\u007B';
-   }
+
+  private vtlPrefixes = ['#if', '#foreach', '#end'];
+  private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
+    return Math.max(maxLength, vtlPrefix.length);
+  }, 0);
+
+  // $\u007B
+  private isNotStartOfVtlReference(offset: number = 0): boolean {
+    const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength);
+    // TODO Optimize
+    for (let vtlPrefix of this.vtlPrefixes) {
+      if (nextCharacters.startsWith(vtlPrefix)) {
+        return false;
+      }
+    }
+    return true;
+  }
 
    private isNotStartOfConditionalComment(): boolean {
       const nextCharacters = this.getNextCharacters(4);
@@ -101,7 +111,7 @@ TAG_START_OPEN: '<' HTML_LIBERAL_NAME  { this.setNextTagCloseMode() } -> pushMod
 
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
-HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
+// HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
 HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r\f<]+;
 
@@ -109,43 +119,47 @@ WS
    : DEFAULT_WS +
    ;
 
-fragment DEFAULT_WS: [ \t\n\r\f] ;
+VTL_DIRECTIVE_START : '#' ('foreach'|'if') VTL_WS* '(' -> pushMode(VELOCITY_MODE);
+
+VTL_DIRECTIVE_END: '#end';
+
+fragment DEFAULT_WS: [ \t\n\r\f] ; 
 
 // handle characters which failed to match any other token
 ERROR_CHARACTER : . ;
 
 fragment VTL_REFERENCE_START: '$' '{';
 
-mode INSIDE_VELOCITY_REFERENCE;
+mode VELOCITY_MODE;
 
-VTL_IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]* { this.makeVtlReferenceInsideToken() };
+VTL_KEYWORD: 'in';
 
 VTL_DOT: '.';
 
-VTL_METHOD_OPEN: '(';
+VTL_IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]* { this.makeVtlReferenceInsideToken() };
 
-VTL_METHOD_CLOSE: ')';
 
-VTL_INSIDE_REFERENCE: '$' VTL_IDENTIFIER;
+VTL_PARENS_OPEN: '(' -> pushMode(VELOCITY_MODE);
 
-VTL_VALUE
-   : VTL_STRING
-   | VTL_NUMBER
-   | VTL_INSIDE_REFERENCE;
+VTL_PARENS_CLOSE: (')' | '}') -> popMode;
 
-VTL_STRING
-   : '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
-   | '\'' (('\\' ~[\\\u0000-\u001F]) |  ~ ['\\\u0000-\u001F])* '\''
-   ;
+VTL_REFERENCE: '$' VTL_IDENTIFIER;
 
-VTL_NUMBER
-   : [1-9][0-9]*;
+// VTL_VALUE
+//    : VTL_STRING
+//    | VTL_NUMBER
+//    | VTL_REFERENCE;
 
-VTL_CLOSE
-   : '}' '"'? -> skip, popMode;
+// VTL_STRING
+//    : '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
+//    | '\'' (('\\' ~[\\\u0000-\u001F]) |  ~ ['\\\u0000-\u001F])* '\''
+//    ;
+
+// VTL_NUMBER
+//    : [1-9][0-9]*;
 
 VTL_WS
-   : [ ] + 
+   : [ ] +  -> type(WS)
    ;
 
 VTL_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
@@ -171,12 +185,12 @@ HTML_STRING
 // TODO Does this make sense?
 fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
 
-HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
+// HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
 TAG_CLOSE: '>' { this.popModeForCurrentTag() };
 SELF_CLOSING_TAG_CLOSE :'/' '>' -> popMode;
 
-HTML_TAG_VTL:  VTL_REFERENCE_START -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
+// HTML_TAG_VTL:  VTL_REFERENCE_START -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
 HTML_WS
    : DEFAULT_WS -> skip

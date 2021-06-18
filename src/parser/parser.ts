@@ -15,6 +15,7 @@ import {
   ParserNode,
   DecoratedNode,
   RootNode,
+  VelocityDirectiveNode,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -65,13 +66,15 @@ export class ParserException extends Error {
   }
 }
 
+// TODO Rename mode
 type LexerMode =
   | "tagOpen"
   | "attributeLHS"
   | "attributeRHS"
   | "outsideTag"
   | "tagClose"
-  | "doctype";
+  | "doctype"
+  | "velocity";
 
 export default function parse(
   text: string,
@@ -112,6 +115,7 @@ export default function parse(
 
   let revealedConditionalComment: VelocityToken | null = null;
   let prettierIgnore: VelocityToken[] = [];
+  let velocityModeStack: LexerMode[] = [];
 
   for (let i = 0; i < tokens.length; i++) {
     const token: VelocityToken = tokens[i] as VelocityToken;
@@ -268,6 +272,18 @@ export default function parse(
             prettierIgnore.push(token);
             break;
           }
+          case VelocityHtmlLexer.VTL_DIRECTIVE_START: {
+            const node = new VelocityDirectiveNode(token);
+            setNewCurrentNode(node);
+            parentStack.unshift(currentNode);
+            velocityModeStack = ["outsideTag"];
+            mode = "velocity";
+            break;
+          }
+          case VelocityHtmlLexer.VTL_DIRECTIVE_END: {
+            popParentStack();
+            break;
+          }
           default: {
             throw newParserException();
           }
@@ -415,6 +431,38 @@ export default function parse(
             // TODO Duplicated logic
             currentNode = parentStack[0];
             mode = "outsideTag";
+            break;
+          }
+          default: {
+            throw newParserException();
+          }
+        }
+        break;
+      }
+      case "velocity": {
+        if (!(currentNode instanceof VelocityDirectiveNode)) {
+          throw newParserException();
+        }
+        switch (token.type) {
+          case VelocityHtmlLexer.WS:
+          case VelocityHtmlLexer.VTL_REFERENCE:
+          case VelocityHtmlLexer.VTL_KEYWORD:
+          case VelocityHtmlLexer.VTL_DOT:
+          case VelocityHtmlLexer.VTL_IDENTIFIER: {
+            currentNode.tokens.push(token);
+            break;
+          }
+          case VelocityHtmlLexer.VTL_PARENS_OPEN: {
+            currentNode.tokens.push(token);
+            velocityModeStack.push("velocity");
+            break;
+          }
+          case VelocityHtmlLexer.VTL_PARENS_CLOSE: {
+            if (velocityModeStack.length == 0) {
+              throw newParserException("Velocity mode stack is empty");
+            }
+            currentNode.tokens.push(token);
+            mode = velocityModeStack.pop()!;
             break;
           }
           default: {

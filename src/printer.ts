@@ -13,6 +13,7 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
+  VelocityDirectiveNode,
   WhitespaceToken,
 } from "./parser/VelocityParserNodes";
 import { NEWLINE_REGEX } from "./parser/VelocityToken";
@@ -524,6 +525,17 @@ export default function print(
       node.isFirstChild && node.children.length == 0 ? softline : "",
       `</${node.tagName}>`,
     ]);
+  } else if (node instanceof VelocityDirectiveNode) {
+    return decorate(
+      [
+        `${node.directive}${node.tokens
+          .map((token) => token.textValue)
+          .join("")}`,
+        concatChildren(node, printChildren(path, options, print)),
+        "#end",
+      ],
+      node
+    );
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }
