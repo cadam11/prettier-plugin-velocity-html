@@ -5,6 +5,8 @@ import { Browser, chromium } from "playwright";
 import * as path from "path";
 import { PNG } from "pngjs";
 import pixelmatch from "pixelmatch";
+import { openSync } from "temp";
+import { execSync } from "child_process";
 
 const sleep = async (time: number) => {
   return new Promise((resolve) => {
@@ -12,15 +14,45 @@ const sleep = async (time: number) => {
   });
 };
 
+const formatHtml = (input: string): string => {
+  return format(input, {
+    parser: "html",
+  });
+};
+
+const formatVelocity = (
+  input: string,
+  options: Options | undefined
+): string => {
+  return format(input, {
+    parser: "velocity-html",
+    // pluginSearchDirs: ["./dir-with-plugins"],
+    plugins: ["./dist/src"],
+    ...options,
+  });
+};
+
+const renderVelocity = (
+  testCaseName: string,
+  formattedTemplate: string
+): string => {
+  const velocityTemplate = openSync("prettier-velocity");
+  fs.writeFileSync(velocityTemplate.path, formattedTemplate);
+  return execSync(
+    `java -jar ${__dirname}/../../test/velocity-java/target/prettier-velocity-1.0-SNAPSHOT.jar ` +
+      `${velocityTemplate.path} ` +
+      `${__dirname}/parser/valid_velocity/${testCaseName.replace(
+        ".vm",
+        ".groovy"
+      )}`
+  ).toString();
+};
+
 describe("prettier", () => {
   let browser: Browser;
   ([] as [string, string][]).forEach(([input, expectedOutput]) => {
     it(`should format ${input}`, () => {
-      const formatted = format(input, {
-        parser: "velocity-html",
-        // pluginSearchDirs: ["./dir-with-plugins"],
-        plugins: ["./dist/src"],
-      });
+      const formatted = format(input);
       expect(formatted).to.equal(expectedOutput);
     });
   });
@@ -145,17 +177,16 @@ describe("prettier", () => {
 
   fs.readdirSync(__dirname + "/parser/invalid_html").forEach((testCaseName) => {
     it(`should not process ${testCaseName}`, () => {
-      const [input, expectedOutput] = readTestcaseFile(
+      const [input, expectedOutput, options] = readTestcaseFile(
         __dirname + "/parser/invalid_html/" + testCaseName
       );
 
+      let hasError = false;
+
       try {
-        format(input, {
-          parser: "velocity-html",
-          // pluginSearchDirs: ["./dir-with-plugins"],
-          plugins: ["./dist/src"],
-        });
+        formatVelocity(input, options);
       } catch (e: unknown) {
+        hasError = true;
         if (e instanceof Error) {
           // eslint-disable-next-line no-control-regex
           expect(e.message.replace(/\u001b\[.*?m/g, "")).to.equal(
@@ -165,39 +196,71 @@ describe("prettier", () => {
           throw new Error(`Unknown error type ${typeof e}`);
         }
       }
+
+      expect(hasError).to.be.true;
     });
   });
 
-  ["/parser/valid_html/", "/parser/valid_velocity/"].forEach((dir) => {
-    fs.readdirSync(__dirname + dir).forEach((testCaseName) => {
+  fs.readdirSync(__dirname + "/parser/valid_html/").forEach((testCaseName) => {
+    it(`should format ${testCaseName}`, async () => {
+      const [input, expectedOutput, options] = readTestcaseFile(
+        __dirname + "/parser/valid_html/" + testCaseName
+      );
+      const formatted = formatVelocity(input, options);
+
+      const testCasePath = path.join(SCREENSHOT_FOLDER, testCaseName);
+
+      const prettierFormatted = formatHtml(input);
+
+      const numberOfMismatchedPixels = compareScreenshots(
+        await takeScreenshot(`${testCasePath}_velocity`, formatted),
+        await takeScreenshot(`${testCasePath}_prettier`, prettierFormatted),
+        `${testCasePath}_diff.png`
+      );
+
+      // Comparing strings prints a very good diff.
+      expect(formatted).to.equal(
+        expectedOutput,
+        `Expected does not match actual. Rendered output is equal to prettier? ${
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          numberOfMismatchedPixels === 0
+        }`
+      );
+      expect(numberOfMismatchedPixels).to.equal(0);
+    });
+  });
+
+  fs.readdirSync(__dirname + "/parser/valid_velocity/").forEach(
+    (testCaseName) => {
+      if (testCaseName.endsWith(".groovy")) {
+        return;
+      }
+      if (!testCaseName.endsWith(".vm")) {
+        throw new Error(`${testCaseName} must end with .groovy or .vm`);
+      }
       it(`should format ${testCaseName}`, async () => {
-        const [input, expectedOutput, options] = readTestcaseFile(
-          __dirname + dir + testCaseName
+        const [template, expectedOutput, options] = readTestcaseFile(
+          __dirname + "/parser/valid_velocity/" + testCaseName
         );
-        const formatted = format(input, {
-          ...options,
-          parser: "velocity-html",
-          // pluginSearchDirs: ["./dir-with-plugins"],
-          plugins: ["./dist/src"],
-        });
 
-        const pathWithoutExtension = path.join(SCREENSHOT_FOLDER, testCaseName);
+        const formattedTemplate = formatVelocity(template, options);
 
-        const prettierFormatted = format(input, {
-          parser: "html",
-        });
+        const testCasePath = path.join(SCREENSHOT_FOLDER, testCaseName);
 
         const numberOfMismatchedPixels = compareScreenshots(
-          await takeScreenshot(`${pathWithoutExtension}_velocity`, formatted),
           await takeScreenshot(
-            `${pathWithoutExtension}_prettier`,
-            prettierFormatted
+            `${testCasePath}_velocity`,
+            renderVelocity(testCaseName, formattedTemplate)
           ),
-          `${pathWithoutExtension}_diff.png`
+          await takeScreenshot(
+            `${testCasePath}`,
+            renderVelocity(testCaseName, template)
+          ),
+          `${testCasePath}_diff.png`
         );
 
         // Comparing strings prints a very good diff.
-        expect(formatted).to.equal(
+        expect(formatVelocity(template, options)).to.equal(
           expectedOutput,
           `Expected does not match actual. Rendered output is equal to prettier? ${
             // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
@@ -206,6 +269,6 @@ describe("prettier", () => {
         );
         expect(numberOfMismatchedPixels).to.equal(0);
       });
-    });
-  });
+    }
+  );
 });

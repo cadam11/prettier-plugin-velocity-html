@@ -2,6 +2,14 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "type": "java",
+      "name": "Launch App",
+      "request": "launch",
+      "mainClass": "velocity.App",
+      "projectName": "prettier-velocity",
+      "args": "${workspaceRoot}/test/parser/valid_velocity/document.html ${workspaceRoot}/test/parser/valid_velocity/document.groovy"
+    },
+    {
       "name": "test",
       "type": "node",
       "request": "launch",
@@ -13,7 +21,9 @@
         "dist/**/*.test.js"
       ],
       "console": "integratedTerminal",
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
       "preLaunchTask": "npm: build"
     },
     {
@@ -21,9 +31,18 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
-      "args": ["--require", "source-map-support/register", "dist/tools/TestRig.js", "print-doc", "--file", "dist/tools/LocalDebugDoc.js"],      
+      "args": [
+        "--require",
+        "source-map-support/register",
+        "dist/tools/TestRig.js",
+        "print-doc",
+        "--file",
+        "dist/tools/LocalDebugDoc.js"
+      ],
       "console": "integratedTerminal",
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
       "preLaunchTask": "npm: build"
     },
     {
@@ -31,9 +50,21 @@
       "type": "node",
       "request": "launch",
       "runtimeExecutable": "node",
-      "args": ["--require", "source-map-support/register", "dist/tools/TestRig.js", "read-test-case", "--file", "tools/local/local-debug.html", "--token", "--doc", "--format"],      
+      "args": [
+        "--require",
+        "source-map-support/register",
+        "dist/tools/TestRig.js",
+        "read-test-case",
+        "--file",
+        "tools/local/local-debug.html",
+        "--token",
+        "--doc",
+        "--format"
+      ],
       "console": "integratedTerminal",
-      "outFiles": ["${workspaceFolder}/dist/**/*.js"],
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
       "preLaunchTask": "npm: build"
     }
   ]

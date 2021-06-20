@@ -4,21 +4,18 @@ import * as sourcemaps from "gulp-sourcemaps";
 import del from "del";
 import exec from "child_process";
 import logger from "fancy-log";
-import * as fs from "fs";
 import * as path from "path";
 
 const TARGET_PATH = "dist";
 const SOURCE_PATH = "src";
-const TS_SOURCE_FILES = SOURCE_PATH + "/**/*.ts";
 const GENERATED_PARSER_FILES = SOURCE_PATH + "/parser/generated";
 
 function execWithPromise(cmd: string): Promise<unknown> {
   logger(`Executing "${cmd}"`);
   return new Promise((resolve, reject) => {
     exec.exec(cmd, (error, stdout, stderr) => {
-      const isError = error || stderr;
-      if (isError) {
-        reject(error || stderr);
+      if (error != null || stderr != "") {
+        reject(error != null ? error : stderr);
       } else {
         resolve(stdout);
       }
@@ -66,12 +63,8 @@ function buildTools(): NodeJS.ReadWriteStream {
 
 function copyTestArtifacts() {
   return gulp
-    .src("test/**/*.html")
+    .src("test/**/*.{html,vm,groovy}")
     .pipe(gulp.dest(path.join(TARGET_PATH, "test")));
-}
-
-function watch(): fs.FSWatcher {
-  return gulp.watch([TS_SOURCE_FILES], gulp.series("build-compile"));
 }
 
 const allGenerateParser = gulp.series(clean, generateParser);
