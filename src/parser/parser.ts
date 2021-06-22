@@ -275,7 +275,9 @@ export default function parse(
           case VelocityHtmlLexer.VTL_DIRECTIVE_START: {
             const node = new VelocityDirectiveNode(token);
             setNewCurrentNode(node);
-            parentStack.unshift(currentNode);
+            if (node.hasChildren) {
+              parentStack.unshift(currentNode);
+            }
             velocityModeStack = ["outsideTag"];
             mode = "velocity";
             break;
@@ -448,7 +450,8 @@ export default function parse(
           case VelocityHtmlLexer.VTL_REFERENCE:
           case VelocityHtmlLexer.VTL_KEYWORD:
           case VelocityHtmlLexer.VTL_DOT:
-          case VelocityHtmlLexer.VTL_IDENTIFIER: {
+          case VelocityHtmlLexer.VTL_IDENTIFIER:
+          case VelocityHtmlLexer.VTL_STRING: {
             currentNode.tokens.push(token);
             break;
           }
@@ -463,6 +466,9 @@ export default function parse(
             }
             currentNode.tokens.push(token);
             mode = velocityModeStack.pop()!;
+            if (velocityModeStack.length == 0 && !currentNode.hasChildren) {
+              currentNode = parentStack[0];
+            }
             break;
           }
           default: {

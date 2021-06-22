@@ -1,0 +1,13 @@
+<html>
+  <body>
+  #set( $foo = "Velocity" )
+  Hello $foo World!
+  </body>
+</html>
+=====================================output=====================================
+<html>
+  <body>
+    #set( $foo = "Velocity" )
+    Hello $foo World!
+  </body>
+</html>

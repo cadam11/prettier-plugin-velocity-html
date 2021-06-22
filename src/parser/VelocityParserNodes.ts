@@ -1,5 +1,6 @@
 import {
   isCollapsibleWhitespaceOnly,
+  NEWLINE_REGEX,
   SourceCodeLocation,
   VelocityToken,
 } from "./VelocityToken";
@@ -617,17 +618,45 @@ export class HtmlCloseNode extends NodeWithChildren {
   }
 }
 
+interface VelocityRenderDefinition extends Partial<RenderDefinition> {
+  hasChildren: boolean;
+}
+
 export class VelocityDirectiveNode extends NodeWithChildren {
   public directive: string;
 
   public tokens: VelocityToken[] = [];
 
+  private directiveToRenderDefinition: Map<string, VelocityRenderDefinition> =
+    new Map([["set", { hasChildren: false }]]);
+
+  private renderDefinition: VelocityRenderDefinition;
+
   getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
 
+  get hasChildren(): boolean {
+    return this.renderDefinition.hasChildren;
+  }
+
   constructor(startLocation: VelocityToken) {
     super(startLocation);
-    this.directive = startLocation.textValue;
+    const directiveWithoutSpaces = startLocation.textValue.replace(/ \t/g, "");
+    // TODO #set with space and tab.
+    this.directive = directiveWithoutSpaces.substring(
+      1,
+      directiveWithoutSpaces.length - 1
+    );
+    const renderDefinition = this.directiveToRenderDefinition.get(
+      this.directive
+    );
+    if (renderDefinition != null) {
+      this.renderDefinition = renderDefinition;
+    } else {
+      this.renderDefinition = {
+        hasChildren: true,
+      };
+    }
   }
 }

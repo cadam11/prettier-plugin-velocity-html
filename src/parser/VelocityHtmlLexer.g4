@@ -111,17 +111,16 @@ TAG_START_OPEN: '<' HTML_LIBERAL_NAME  { this.setNextTagCloseMode() } -> pushMod
 
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
-// HTML_OUTSIDE_TAG_VTL_REFERENCE: VTL_REFERENCE_START  -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
+VTL_DIRECTIVE_START : '#' ('foreach'|'if'|'set') VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
-HTML_TEXT        : {this.isNotStartOfVtlReference()}? ~[ \t\n\r\f<]+;
+VTL_DIRECTIVE_END: '#end';
+
+HTML_TEXT: {this.isNotStartOfVtlReference()}? ~[ \t\n\r\f<]+;
 
 WS
    : DEFAULT_WS +
    ;
 
-VTL_DIRECTIVE_START : '#' ('foreach'|'if') VTL_WS* '(' -> pushMode(VELOCITY_MODE);
-
-VTL_DIRECTIVE_END: '#end';
 
 fragment DEFAULT_WS: [ \t\n\r\f] ; 
 
@@ -132,7 +131,7 @@ fragment VTL_REFERENCE_START: '$' '{';
 
 mode VELOCITY_MODE;
 
-VTL_KEYWORD: 'in';
+VTL_KEYWORD: 'in' | '=';
 
 VTL_DOT: '.';
 
@@ -150,16 +149,17 @@ VTL_REFERENCE: '$' VTL_IDENTIFIER;
 //    | VTL_NUMBER
 //    | VTL_REFERENCE;
 
-// VTL_STRING
-//    : '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
-//    | '\'' (('\\' ~[\\\u0000-\u001F]) |  ~ ['\\\u0000-\u001F])* '\''
-//    ;
+VTL_STRING
+   : '"' (('\\' ~[\\\u0000-\u001F]) |  ~ ["\\\u0000-\u001F])* '"'
+   | '\'' (('\\' ~[\\\u0000-\u001F]) |  ~ ['\\\u0000-\u001F])* '\''
+   ;
 
+// TODO Test Number
 // VTL_NUMBER
 //    : [1-9][0-9]*;
 
 VTL_WS
-   : [ ] +  -> type(WS)
+   : [ \t] +  -> type(WS)
    ;
 
 VTL_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);

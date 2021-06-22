@@ -1,7 +1,7 @@
 import { format } from "prettier";
 import { expect } from "chai";
 import * as fs from "fs";
-import { Browser, chromium } from "playwright";
+import { Browser, chromium, Page } from "playwright";
 
 import {
   takeScreenshot,
@@ -14,6 +14,7 @@ import {
 
 describe("prettier", () => {
   let browser: Browser;
+  let page: Page;
   ([] as [string, string][]).forEach(([input, expectedOutput]) => {
     it(`should format ${input}`, () => {
       const formatted = format(input);
@@ -24,6 +25,7 @@ describe("prettier", () => {
   before(async () => {
     prepareScreenshotFolder();
     browser = await chromium.launch({ headless: true });
+    page = await browser.newPage();
   });
 
   after(async () => {
@@ -37,12 +39,12 @@ describe("prettier", () => {
     expect(
       compareScreenshots(
         await takeScreenshot(
-          browser,
+          page,
           `${testCaseName}_velocity`,
           "<p>foo<span>bar</span></p>"
         ),
         await takeScreenshot(
-          browser,
+          page,
           `${testCaseName}_prettier`,
           "<p>foo <span>bar</span></p>"
         ),
@@ -87,9 +89,9 @@ describe("prettier", () => {
       const prettierFormatted = formatHtml(input);
 
       const numberOfMismatchedPixels = compareScreenshots(
-        await takeScreenshot(browser, `${testCaseName}_velocity`, formatted),
+        await takeScreenshot(page, `${testCaseName}_velocity`, formatted),
         await takeScreenshot(
-          browser,
+          page,
           `${testCaseName}_prettier`,
           prettierFormatted
         ),

@@ -4,7 +4,7 @@ import * as process from "process";
 import * as path from "path";
 import { PNG } from "pngjs";
 import pixelmatch from "pixelmatch";
-import { Browser } from "playwright";
+import { Page } from "playwright";
 
 export const SCREENSHOT_FOLDER = path.join(
   process.cwd(),
@@ -97,13 +97,12 @@ export const compareScreenshots = (
 };
 
 export const takeScreenshot = async (
-  browser: Browser,
+  page: Page,
   prefix: string,
   html: string
 ): Promise<string> => {
   const htmlPath = path.join(SCREENSHOT_FOLDER, `${prefix}.html`);
   fs.writeFileSync(htmlPath, html);
-  const page = await browser.newPage();
   await page.goto(`file://${htmlPath}`);
   // Chrome shows a short loading spinner inside video elements. It cannot be paused() (only thing I have tried), therefore we wait until it is hopefully done.
   // If we don't wait the screenshot comparision won't work.
@@ -112,6 +111,5 @@ export const takeScreenshot = async (
   }
   const screenshotPath = path.join(SCREENSHOT_FOLDER, `${prefix}.png`);
   await page.screenshot({ path: screenshotPath });
-  await page.close();
   return screenshotPath;
 };

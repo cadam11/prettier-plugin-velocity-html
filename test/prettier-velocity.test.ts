@@ -1,4 +1,5 @@
 import * as fs from "fs";
+
 import { ChildProcess, spawn } from "child_process";
 import { createConnection, Socket } from "net";
 import {
@@ -9,7 +10,7 @@ import {
   takeScreenshot,
 } from "./testUtils";
 import { expect } from "chai";
-import { Browser, chromium } from "playwright";
+import { Browser, chromium, Page } from "playwright";
 
 const openSocket = (): Promise<Socket> => {
   return new Promise((resolve, reject) => {
@@ -55,6 +56,7 @@ describe("prettier-velocity", () => {
   let velocityServer: ChildProcess;
   let velocityClient: Socket;
   let browser: Browser;
+  let page: Page;
 
   const renderVelocity = (
     testCaseName: string,
@@ -78,13 +80,17 @@ describe("prettier-velocity", () => {
       velocityClient.on("close", closeHandler);
       const endHandler = () => console.log("end");
       velocityClient.on("end", endHandler);
+      const contextScriptPath = `${__dirname}/parser/valid_velocity/${testCaseName.replace(
+        ".vm",
+        ".groovy"
+      )}`;
+
       velocityClient.write(
         JSON.stringify({
           template,
-          contextScriptPath: `${__dirname}/parser/valid_velocity/${testCaseName.replace(
-            ".vm",
-            ".groovy"
-          )}`,
+          contextScriptPath: fs.existsSync(contextScriptPath)
+            ? contextScriptPath
+            : null,
         })
       );
     });
@@ -95,6 +101,7 @@ describe("prettier-velocity", () => {
     velocityServer = await startServer();
     velocityClient = await openSocket();
     browser = await chromium.launch({ headless: true });
+    page = await browser.newPage();
   });
 
   after(async () => {
@@ -121,12 +128,12 @@ describe("prettier-velocity", () => {
 
         const numberOfMismatchedPixels = compareScreenshots(
           await takeScreenshot(
-            browser,
+            page,
             `${testCaseName}_velocity`,
             await renderVelocity(testCaseName, formattedTemplate)
           ),
           await takeScreenshot(
-            browser,
+            page,
             `${testCaseName}`,
             await renderVelocity(testCaseName, template)
           ),

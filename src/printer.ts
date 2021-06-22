@@ -528,11 +528,12 @@ export default function print(
   } else if (node instanceof VelocityDirectiveNode) {
     return decorate(
       [
-        `${node.directive}${node.tokens
+        `#${node.directive}(${node.tokens
           .map((token) => token.textValue)
           .join("")}`,
-        concatChildren(node, printChildren(path, options, print)),
-        "#end",
+        ...(node.hasChildren
+          ? [concatChildren(node, printChildren(path, options, print)), "#end"]
+          : []),
       ],
       node
     );

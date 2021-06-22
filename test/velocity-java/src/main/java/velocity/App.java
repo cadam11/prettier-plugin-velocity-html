@@ -81,35 +81,32 @@ public class App {
     VelocityCommand velocityCommand
   ) {
     // TODO Validation
-    if (
-      velocityCommand.getContextScriptPath() == null ||
-      velocityCommand.getTemplate() == null
-    ) {
-      return RenderVelocityResult.ofFailure(
-        "Must provide path to template and path to json"
-      );
+    if (velocityCommand.getTemplate() == null) {
+      return RenderVelocityResult.ofFailure("Must provide template");
     }
     final VelocityEngine engine = new VelocityEngine();
     final VelocityContext context = new VelocityContext();
 
     GroovyShell shell = new GroovyShell();
     try {
-      Object data = shell.evaluate(
-        velocityCommand.getContextScriptPath().toFile()
-      );
-      if (!(data instanceof Map)) {
-        return RenderVelocityResult.ofFailure(
-          "Result is a %s, expected Map.".formatted(
-              data.getClass().getSimpleName()
-            )
+      if (velocityCommand.getContextScriptPath() != null) {
+        Object data = shell.evaluate(
+          velocityCommand.getContextScriptPath().toFile()
         );
+        if (!(data instanceof Map)) {
+          return RenderVelocityResult.ofFailure(
+            "Result is a %s, expected Map.".formatted(
+                data.getClass().getSimpleName()
+              )
+          );
+        }
+        ((Map<String, Object>) data).entrySet()
+          .forEach(
+            entry -> {
+              context.put(entry.getKey(), entry.getValue());
+            }
+          );
       }
-      ((Map<String, Object>) data).entrySet()
-        .forEach(
-          entry -> {
-            context.put(entry.getKey(), entry.getValue());
-          }
-        );
       StringWriter sw = new StringWriter();
       engine.evaluate(context, sw, "foo", velocityCommand.getTemplate());
       return RenderVelocityResult.ofSuccess(sw.getBuffer().toString());
