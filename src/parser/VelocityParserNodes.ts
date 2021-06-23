@@ -1,6 +1,5 @@
 import {
   isCollapsibleWhitespaceOnly,
-  NEWLINE_REGEX,
   SourceCodeLocation,
   VelocityToken,
 } from "./VelocityToken";
@@ -76,16 +75,10 @@ export abstract class ParserNode extends DecoratedNode {
     return this.getSiblingsRenderMode() == RenderMode.BLOCK;
   }
 
-  constructor(startLocation: SourceCodeLocation | VelocityToken) {
+  constructor(startToken: VelocityToken) {
     super();
-    if (startLocation instanceof VelocityToken) {
-      this._startLocation = startLocation.startLocation;
-      this._endLocation = startLocation.endLocation;
-    } else {
-      // TODO Who needs this?
-      this._startLocation = startLocation;
-      this._endLocation = startLocation;
-    }
+    this._startLocation = startToken.startLocation;
+    this._endLocation = startToken.endLocation;
   }
 
   public getSiblingsRenderMode(): RenderMode {
@@ -184,8 +177,8 @@ export abstract class NodeWithChildren extends ParserNode {
     super.walk(fn);
   }
 
-  constructor(startLocation: SourceCodeLocation | VelocityToken) {
-    super(startLocation);
+  constructor(token: VelocityToken) {
+    super(token);
     this.startNode = new NodeWithChildrenDecoration();
   }
 
@@ -261,7 +254,15 @@ export class RootNode extends NodeWithChildren {
     return RenderMode.BLOCK;
   }
   public constructor() {
-    super({ line: 1, column: 1 });
+    super({} as any);
+  }
+
+  public get startLocation(): SourceCodeLocation {
+    throw new Error("Root node has no start location");
+  }
+
+  public get endLocation(): SourceCodeLocation {
+    throw new Error("Root node has no end location");
   }
 
   public get parent(): NodeWithChildren {
@@ -605,8 +606,8 @@ export class HtmlCloseNode extends NodeWithChildren {
     return RenderMode.BLOCK;
   }
 
-  constructor(startLocation: SourceCodeLocation | VelocityToken) {
-    super(startLocation);
+  constructor(token: VelocityToken) {
+    super(token);
     /**
      * Always break children of close nodes to improve readability:
      * <!--[if lt IE 9]><td></td></td>
