@@ -67,15 +67,14 @@ export class ParserException extends Error {
   }
 }
 
-// TODO Rename mode
 type LexerMode =
-  | "tagOpen"
-  | "attributeLHS"
-  | "attributeRHS"
-  | "outsideTag"
-  | "tagClose"
-  | "doctype"
-  | "velocity";
+  | "DefaultMode"
+  | "TagOpenMode"
+  | "TagCloseMode"
+  | "AttributeLhsMode"
+  | "AttributeRhsMode"
+  | "DocTypeMode"
+  | "VelocityMode";
 
 export default function parse(
   text: string,
@@ -112,7 +111,7 @@ export default function parse(
   let currentNode: ParserNode = rootNode;
   let currentHtmlAttribute: VelocityToken | null = null;
 
-  let mode: LexerMode = "outsideTag";
+  let mode: LexerMode = "DefaultMode";
 
   let revealedConditionalComment: VelocityToken | null = null;
   let prettierIgnore: VelocityToken[] = [];
@@ -137,7 +136,7 @@ export default function parse(
     };
 
     switch (mode) {
-      case "outsideTag": {
+      case "DefaultMode": {
         if (!(currentNode instanceof NodeWithChildren)) {
           throw newParserException();
         }
@@ -167,7 +166,7 @@ export default function parse(
             const node = new HtmlTagNode(token);
             node.tagName = tagName;
             setNewCurrentNode(node);
-            mode = "attributeLHS";
+            mode = "AttributeLhsMode";
             break;
           }
           case VelocityHtmlLexer.EOF: {
@@ -220,7 +219,7 @@ export default function parse(
             setNewCurrentNode(conditionalCommentNode);
             parentStack.unshift(currentNode);
 
-            mode = "outsideTag";
+            mode = "DefaultMode";
             break;
           }
           case VelocityHtmlLexer.IE_COMMENT_CLOSE: {
@@ -245,7 +244,7 @@ export default function parse(
           }
           case VelocityHtmlLexer.DOCTYPE_START: {
             setNewCurrentNode(new HtmlDocTypeNode(token));
-            mode = "doctype";
+            mode = "DocTypeMode";
             break;
           }
           case VelocityHtmlLexer.CDATA: {
@@ -277,8 +276,8 @@ export default function parse(
             if (node.hasChildren) {
               parentStack.unshift(currentNode);
             }
-            velocityModeStack = ["outsideTag"];
-            mode = "velocity";
+            velocityModeStack = ["DefaultMode"];
+            mode = "VelocityMode";
             break;
           }
           case VelocityHtmlLexer.VTL_DIRECTIVE_END: {
@@ -361,7 +360,7 @@ export default function parse(
         }
         break;
       }
-      case "attributeLHS": {
+      case "AttributeLhsMode": {
         if (!(currentNode instanceof HtmlTagNode)) {
           throw newParserException();
         }
@@ -376,7 +375,7 @@ export default function parse(
             } else {
               currentHtmlAttribute = token;
               i++;
-              mode = "attributeRHS";
+              mode = "AttributeRhsMode";
             }
             break;
           }
@@ -393,7 +392,7 @@ export default function parse(
               currentNode.endToken = token;
               currentNode = parentStack[0];
             }
-            mode = "outsideTag";
+            mode = "DefaultMode";
             break;
           }
           default: {
@@ -402,7 +401,7 @@ export default function parse(
         }
         break;
       }
-      case "attributeRHS": {
+      case "AttributeRhsMode": {
         if (!(currentNode instanceof HtmlTagNode)) {
           throw newParserException();
         }
@@ -414,7 +413,7 @@ export default function parse(
           case VelocityHtmlLexer.HTML_STRING: {
             currentNode.addAttribute(currentHtmlAttribute, token);
             currentHtmlAttribute = null;
-            mode = "attributeLHS";
+            mode = "AttributeLhsMode";
             break;
           }
           default: {
@@ -423,7 +422,7 @@ export default function parse(
         }
         break;
       }
-      case "doctype": {
+      case "DocTypeMode": {
         if (!(currentNode instanceof HtmlDocTypeNode)) {
           throw newParserException();
         }
@@ -434,9 +433,8 @@ export default function parse(
           }
           case VelocityHtmlLexer.DOCTYPE_END: {
             currentNode.endToken = token;
-            // TODO Duplicated logic
             currentNode = parentStack[0];
-            mode = "outsideTag";
+            mode = "DefaultMode";
             break;
           }
           default: {
@@ -445,7 +443,7 @@ export default function parse(
         }
         break;
       }
-      case "velocity": {
+      case "VelocityMode": {
         if (!(currentNode instanceof VelocityDirectiveNode)) {
           throw newParserException();
         }
@@ -461,7 +459,7 @@ export default function parse(
           }
           case VelocityHtmlLexer.VTL_PARENS_OPEN: {
             currentNode.tokens.push(token);
-            velocityModeStack.push("velocity");
+            velocityModeStack.push("VelocityMode");
             break;
           }
           case VelocityHtmlLexer.VTL_PARENS_CLOSE: {
