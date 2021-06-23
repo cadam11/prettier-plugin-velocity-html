@@ -80,10 +80,12 @@ export abstract class ParserNode extends DecoratedNode {
     super();
     if (startLocation instanceof VelocityToken) {
       this._startLocation = startLocation.startLocation;
+      this._endLocation = startLocation.endLocation;
     } else {
+      // TODO Who needs this?
       this._startLocation = startLocation;
+      this._endLocation = startLocation;
     }
-    this._endLocation = this._startLocation;
   }
 
   public getSiblingsRenderMode(): RenderMode {
@@ -658,5 +660,16 @@ export class VelocityDirectiveNode extends NodeWithChildren {
         hasChildren: true,
       };
     }
+  }
+}
+
+export class VelocityCommentNode extends ParserNode {
+  getSiblingsRenderMode(): RenderMode {
+    return RenderMode.INLINE;
+  }
+  public text: string;
+  constructor(token: VelocityToken) {
+    super(token);
+    this.text = token.textValue;
   }
 }

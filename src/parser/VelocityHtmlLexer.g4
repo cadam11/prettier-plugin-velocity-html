@@ -111,6 +111,10 @@ TAG_START_OPEN: '<' HTML_LIBERAL_NAME  { this.setNextTagCloseMode() } -> pushMod
 
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
+VTL_COMMENT: '##' ~[\n\r\f]*;
+
+VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
+
 VTL_DIRECTIVE_START : '#' ('foreach'|'if'|'set') VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
 VTL_DIRECTIVE_END: '#end';

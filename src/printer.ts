@@ -13,6 +13,7 @@ import {
   NodeWithChildren,
   ParserNode,
   RootNode,
+  VelocityCommentNode,
   VelocityDirectiveNode,
   WhitespaceToken,
 } from "./parser/VelocityParserNodes";
@@ -537,6 +538,16 @@ export default function print(
       ],
       node
     );
+  } else if (node instanceof VelocityCommentNode) {
+    const parts: Doc[] = [];
+    const textLines = node.text.split(NEWLINE_REGEX);
+    textLines.forEach((textLine, index) => {
+      parts.push(textLine);
+      if (index < textLines.length - 1) {
+        parts.push(literalline);
+      }
+    });
+    return decorate(concat(parts), node);
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

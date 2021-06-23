@@ -16,6 +16,7 @@ import {
   DecoratedNode,
   RootNode,
   VelocityDirectiveNode,
+  VelocityCommentNode,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -151,7 +152,11 @@ export default function parse(
         };
         const setNewCurrentNode = (node: ParserNode): ParserNode => {
           currentNode = node;
-          parentStack[0].addChild(currentNode);
+          addChild(node);
+          return node;
+        };
+        const addChild = (node: ParserNode): ParserNode => {
+          parentStack[0].addChild(node);
           return node;
         };
         switch (token.type) {
@@ -230,9 +235,7 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.COMMENT: {
-            const commentNode = new HtmlCommentNode(token);
-            commentNode.parent = parentStack[0];
-            parentStack[0].addChild(commentNode);
+            addChild(new HtmlCommentNode(token));
             break;
           }
           case VelocityHtmlLexer.HTML_TEXT:
@@ -241,16 +244,12 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.DOCTYPE_START: {
+            setNewCurrentNode(new HtmlDocTypeNode(token));
             mode = "doctype";
-            currentNode = new HtmlDocTypeNode(token);
-            currentNode.parent = parentStack[0];
-            parentStack[0].addChild(currentNode);
             break;
           }
           case VelocityHtmlLexer.CDATA: {
-            const cdataNode = new HtmlCdataNode(token);
-            cdataNode.parent = parentStack[0];
-            parentStack[0].addChild(cdataNode);
+            addChild(new HtmlCdataNode(token));
             break;
           }
           case VelocityHtmlLexer.IE_REVEALED_COMMENT_START: {
@@ -284,6 +283,11 @@ export default function parse(
           }
           case VelocityHtmlLexer.VTL_DIRECTIVE_END: {
             popParentStack();
+            break;
+          }
+          case VelocityHtmlLexer.VTL_COMMENT:
+          case VelocityHtmlLexer.VTL_MULTILINE_COMMENT: {
+            addChild(new VelocityCommentNode(token));
             break;
           }
           default: {
