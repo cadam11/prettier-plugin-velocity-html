@@ -1,4 +1,4 @@
-import { Doc, doc, FastPath } from "prettier";
+import { AstPath, Doc, doc } from "prettier";
 import { RenderMode } from "./parser/tagRegistry";
 import {
   AttributeNode,
@@ -25,7 +25,6 @@ const {
   dedentToRoot,
   fill,
   ifBreak,
-  concat,
   hardline,
   softline,
   join,
@@ -64,17 +63,17 @@ function decorateEnd(node: DecoratedNode | undefined): Doc {
 }
 
 function decorate(doc: Doc | Doc[], node: DecoratedNode | undefined): Doc {
-  return concat([
+  return [
     decorateStart(node),
     ...(doc instanceof Array ? doc : [doc]),
     decorateEnd(node),
-  ]);
+  ];
 }
 
 export function printOpeningTag(
   node: HtmlTagNode,
-  path: FastPath<ParserNode>,
-  print: (path: FastPath) => Doc
+  path: AstPath<ParserNode>,
+  print: (path: AstPath) => Doc
 ): Doc {
   const printedAttributes: Doc[] = path.map(print, "attributes");
   const tagOpenParts: Doc[] = [
@@ -83,7 +82,7 @@ export function printOpeningTag(
   ];
 
   if (printedAttributes.length > 0) {
-    tagOpenParts.push(indent(concat([line, join(line, printedAttributes)])));
+    tagOpenParts.push(indent([line, join(line, printedAttributes)]));
   }
 
   if (!node.isSelfClosing && !breakOpeningTag(node)) {
@@ -94,10 +93,7 @@ export function printOpeningTag(
     );
   }
 
-  return concat([
-    group(concat(tagOpenParts)),
-    node.maxDepth > 2 ? breakParent : "",
-  ]);
+  return [group(tagOpenParts), node.maxDepth > 2 ? breakParent : ""];
 }
 
 export function printClosingTag(node: HtmlTagNode): Doc {
@@ -107,9 +103,9 @@ export function printClosingTag(node: HtmlTagNode): Doc {
       parts.push(decorateStart(node.endNode), `</${node.tagName}`);
     }
     parts.push(`>`, decorateEnd(node.endNode));
-    return concat(parts);
+    return parts;
   } else if (node.isSelfClosing) {
-    return concat([line, "/>"]);
+    return [line, "/>"];
   } else {
     return "";
   }
@@ -143,25 +139,23 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
         true
       ) &&
       firstChild.startLocation.line > node.startLocation.line);
-  return concat([
-    indent(
-      concat([
-        /**
-         * An indent only works with a softline and it only indents to the level of the softline.
-         * Therefore we always must place softline inside the inner most indent.
-         * This seems to be a design decision by prettier.
-         */
-        softlineBeforeChildren ? softline : "",
-        ...(children instanceof Array ? children : [children]),
-        /**
-         * Break up content that is too deeply nested.
-         * An indentation of 2 is considered too much by prettier, so I will do the same.
-         */
-        forceBreakChildren ? breakParent : "",
-      ])
-    ),
+  return [
+    indent([
+      /**
+       * An indent only works with a softline and it only indents to the level of the softline.
+       * Therefore we always must place softline inside the inner most indent.
+       * This seems to be a design decision by prettier.
+       */
+      softlineBeforeChildren ? softline : "",
+      ...(children instanceof Array ? children : [children]),
+      /**
+       * Break up content that is too deeply nested.
+       * An indentation of 2 is considered too much by prettier, so I will do the same.
+       */
+      forceBreakChildren ? breakParent : "",
+    ]),
     softlineAfterChildren ? softline : "",
-  ]);
+  ];
 }
 
 function calculateDifferenceBetweenChildren(
@@ -175,7 +169,7 @@ function calculateDifferenceBetweenChildren(
   } else if (lineDifference == 1) {
     return hardline;
   } else {
-    return concat([hardline, hardline]);
+    return [hardline, hardline];
   }
 }
 
@@ -243,11 +237,11 @@ function breakClosingTag(parent: NodeWithChildren) {
  * This is loosely based on https://developer.mozilla.org/en-US/docs/Web/API/Document_Object_Model/Whitespace
  */
 function printChildren(
-  path: FastPath<ParserNode>,
+  path: AstPath<ParserNode>,
   options: unknown,
-  print: (path: FastPath) => Doc
+  print: (path: AstPath) => Doc
 ): Doc[] {
-  return path.map((childPath, childIndex) => {
+  return path.map((childPath) => {
     const childNode = childPath.getValue();
     const parts: Doc[] = [];
     const childParts = print(childPath);
@@ -306,7 +300,7 @@ function printChildren(
             ? calculateDifferenceBetweenChildren(prev, childNode, line)
             : "";
         }
-        parts.push(group(concat([lineBreak, childParts])));
+        parts.push(group([lineBreak, childParts]));
       } else {
         // Block Mode requires no linebreak, because there will be a linebreak at the end of the prev
         parts.push(childParts);
@@ -327,9 +321,7 @@ function printChildren(
           hardline
         );
         if (next.isInlineRenderMode && childNode.isBlockRenderMode) {
-          parts[parts.length - 1] = group(
-            concat([parts[parts.length - 1], seperator])
-          );
+          parts[parts.length - 1] = group([parts[parts.length - 1], seperator]);
         } else if (next.isBlockRenderMode) {
           parts.push(seperator, breakParent);
         } else if (
@@ -340,12 +332,10 @@ function printChildren(
           next instanceof HtmlTextNode &&
           childNode.hasTrailingSpaces
         ) {
-          parts[parts.length - 1] = group(
-            concat([
-              parts[parts.length - 1],
-              calculateDifferenceBetweenChildren(childNode, next, line),
-            ])
-          );
+          parts[parts.length - 1] = group([
+            parts[parts.length - 1],
+            calculateDifferenceBetweenChildren(childNode, next, line),
+          ]);
         }
       }
     }
@@ -362,16 +352,16 @@ function printChildren(
       );
     }
 
-    return concat(parts);
+    return parts;
   }, "children");
 }
 
 export default function print(
-  path: FastPath<ParserNode>,
+  path: AstPath<ParserNode>,
   options: {
     originalText: string;
   },
-  print: (path: FastPath) => Doc
+  print: (path: AstPath) => Doc
 ): Doc {
   const node: ParserNode = path.getValue();
 
@@ -388,49 +378,42 @@ export default function print(
       0,
       node.endLocation.column
     );
-
-    return concat(
+    /**
+     * Replicate prettiers algorithm:
+     * Intend <!--prettier-ignore--> and starting tag with the current indentation.
+     */
+    return textLines.reduce((parts, text, index) => {
+      const removeIntendation = index <= node.prettierIgnore.length;
       /**
-       * Replicate prettiers algorithm:
-       * Intend <!--prettier-ignore--> and starting tag with the current indentation.
+       * Either use hardline and remove left whitespace or use literalline and keep whitespace.
+       * Whatever follows hardline is intended, whatever follows a literalline is not.
        */
-      textLines.reduce((parts, text, index) => {
-        const removeIntendation = index <= node.prettierIgnore.length;
-        /**
-         * Either use hardline and remove left whitespace or use literalline and keep whitespace.
-         * Whatever follows hardline is intended, whatever follows a literalline is not.
-         */
-        if (index > 0) {
-          parts.push(removeIntendation ? hardline : literalline);
-        }
-        parts.push(removeIntendation ? text.trimLeft() : text);
-        return parts;
-      }, [] as Doc[])
-    );
+      if (index > 0) {
+        parts.push(removeIntendation ? hardline : literalline);
+      }
+      parts.push(removeIntendation ? text.trimLeft() : text);
+      return parts;
+    }, [] as Doc[]);
   } else if (node instanceof RootNode) {
-    return concat(printChildren(path, options, print));
+    return printChildren(path, options, print);
   } else if (node instanceof HtmlTagNode) {
-    return group(
-      concat([
-        printOpeningTag(node, path, print),
-        concatChildren(node, printChildren(path, options, print)),
-        printClosingTag(node),
-      ])
-    );
+    return group([
+      printOpeningTag(node, path, print),
+      concatChildren(node, printChildren(path, options, print)),
+      printClosingTag(node),
+    ]);
   } else if (node instanceof AttributeNode) {
     if (node.value != null) {
       if (node.name === "class") {
         const classNames = node.value.trim().split(/\s+/);
-        return concat([
-          group(
-            concat([
-              'class="',
-              indent(concat([softline, join(line, classNames)])),
-              softline,
-              '"',
-            ])
-          ),
-        ]);
+        return [
+          group([
+            'class="',
+            indent([softline, join(line, classNames)]),
+            softline,
+            '"',
+          ]),
+        ];
       } else {
         return `${node.name}="${escapeDoubleQuote(node.value)}"`;
       }
@@ -454,7 +437,7 @@ export default function print(
         let doc: Doc;
         if (token.type == "prettierIgnore") {
           prettierIgnoreMode = true;
-          doc = concat([
+          doc = [
             token.text.trimRight(),
             /**
              * This is similar to calculateDifferenceBetweenLines.
@@ -465,7 +448,7 @@ export default function print(
               : token.text.split(NEWLINE_REGEX).length > 2
               ? [hardline, hardline]
               : [hardline]),
-          ]);
+          ];
         } else if (prettierIgnoreMode) {
           doc = token.text;
         } else if (token.isWhitespaceOnly && index < node.tokens.length - 1) {
@@ -487,11 +470,11 @@ export default function print(
       node.parent instanceof HtmlTagNode &&
       breakClosingTag(node.parent)
     ) {
-      parts[parts.length - 1] = concat([
+      parts[parts.length - 1] = [
         parts[parts.length - 1],
         decorateStart(node.parent?.endNode),
         `</${node.parent.tagName}`,
-      ]);
+      ];
     }
     return decorate(
       isPreformatted ? dedentToRoot(fill(parts)) : fill(parts),
@@ -504,28 +487,23 @@ export default function print(
     const types = node.types
       .map((type, index) => (index == 0 ? type.toLowerCase() : type))
       .join(" ");
-    return decorate(
-      group(concat([group(concat([`<!DOCTYPE ${types}`])), ">"])),
-      node
-    );
+    return decorate(group([group([`<!DOCTYPE ${types}`]), ">"]), node);
   } else if (node instanceof IeConditionalCommentNode) {
-    return group(
-      concat([
-        decorate(node.text, node.startNode),
-        concatChildren(node, printChildren(path, options, print)),
-        decorate(`<![endif]-->`, node.endNode),
-      ])
-    );
+    return group([
+      decorate(node.text, node.startNode),
+      concatChildren(node, printChildren(path, options, print)),
+      decorate(`<![endif]-->`, node.endNode),
+    ]);
   } else if (node instanceof HtmlCdataNode) {
     return decorate([node.text], node);
   } else if (node instanceof HtmlCloseNode) {
-    return concat([
+    return [
       concatChildren(node, printChildren(path, options, print)),
       breakParent,
       // Children are always preceeded by softline to make indent work.
       node.isFirstChild && node.children.length == 0 ? softline : "",
       `</${node.tagName}>`,
-    ]);
+    ];
   } else if (node instanceof VelocityDirectiveNode) {
     return decorate(
       [
@@ -547,7 +525,7 @@ export default function print(
         parts.push(literalline);
       }
     });
-    return decorate(concat(parts), node);
+    return decorate(parts, node);
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

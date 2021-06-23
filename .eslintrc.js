@@ -1,7 +1,7 @@
 module.exports = {
   root: true,
   parser: "@typescript-eslint/parser",
-  plugins: ["@typescript-eslint", "prettier"],
+  plugins: ["@typescript-eslint", "prettier", "deprecation"],
   parserOptions: {
     "ecmaVersion": 2017,
     "sourceType": "module",
@@ -17,7 +17,8 @@ module.exports = {
   rules: {
     "no-console": 1, // Means warning
     "prettier/prettier": 2, // Means error  
-    "@typescript-eslint/strict-boolean-expressions": ["error", {"allowString": false, "allowNumber": false, "allowNullableObject": false}]
+    "deprecation/deprecation": "warn",
+    "@typescript-eslint/strict-boolean-expressions": ["error", {"allowString": false, "allowNumber": false, "allowNullableObject": false}],
   },
   // overrides: [{
   //   files: ["src/**/*.ts"],

@@ -1,4 +1,4 @@
-import { doc, Doc, FastPath, Options, ParserOptions } from "prettier";
+import { AstPath, doc, Doc, Options, ParserOptions } from "prettier";
 import {
   AttributeNode,
   HtmlTagNode,
@@ -7,7 +7,7 @@ import {
 } from "./parser/VelocityParserNodes";
 import { concatChildren, printClosingTag, printOpeningTag } from "./printer";
 
-const { concat, breakParent, group } = doc.builders;
+const { breakParent, group } = doc.builders;
 
 const CSS_PARSER_OPTIONS = {
   parser: "css",
@@ -21,21 +21,23 @@ const JS_PARSER_OPTIONS = {
   __babelSourceType: "script",
 };
 
-// TODO Type for textToDocOptions
-
 export const embed = (
-  path: FastPath<ParserNode>,
-  print: (path: FastPath<ParserNode>) => Doc,
-  textToDoc: (text: string, options: Options, textToDocOptions: any) => Doc,
+  path: AstPath<ParserNode>,
+  print: (path: AstPath<ParserNode>) => Doc,
+  textToDoc: (
+    text: string,
+    options: Options,
+    textToDocOptions: { stripTrailingHardline: true }
+  ) => Doc,
   options: ParserOptions
 ): Doc | null => {
   const node = path.getValue();
 
   if (node instanceof AttributeNode) {
     let doc: Doc | null = null;
-    if (node.name === "style") {
+    if (node.name === "style" && node.value != null) {
       doc = textToDoc(
-        node.value!,
+        node.value,
         {
           ...options,
           parser: "css",
@@ -47,7 +49,7 @@ export const embed = (
       );
     }
     if (doc != null) {
-      return group(concat([node.name, '="', concatChildren(node, doc), '"']));
+      return group([node.name, '="', concatChildren(node, doc), '"']);
     }
   } else if (node instanceof HtmlTagNode) {
     if (node.tagName == "script" || node.tagName === "style") {
@@ -74,18 +76,18 @@ export const embed = (
             )
           : scriptText;
 
-      return concat([
+      return [
         breakParent,
         printOpeningTag(node, path, print),
         concatChildren(node, doc),
         printClosingTag(node),
-      ]);
+      ];
     }
   }
   return null;
 };
 
-function inferParserOptions(node: HtmlTagNode): any | null {
+function inferParserOptions(node: HtmlTagNode): Record<string, unknown> | null {
   if (node.tagName === "style") {
     return CSS_PARSER_OPTIONS;
   } else {
