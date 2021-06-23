@@ -14,7 +14,7 @@ lexer grammar VelocityHtmlLexer;
   // $\u007B
   private isNotStartOfVtlReference(offset: number = 0): boolean {
     const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength);
-    // TODO Optimize
+    // TODO Remove later?
     for (let vtlPrefix of this.vtlPrefixes) {
       if (nextCharacters.startsWith(vtlPrefix)) {
         return false;
@@ -119,7 +119,7 @@ VTL_DIRECTIVE_START : '#' ('foreach'|'if'|'set') VTL_WS* '(' -> pushMode(VELOCIT
 
 VTL_DIRECTIVE_END: '#end';
 
-HTML_TEXT: {this.isNotStartOfVtlReference()}? ~[ \t\n\r\f<]+;
+HTML_TEXT: ~[ \t\n\r\f<]+;
 
 WS
    : DEFAULT_WS +
@@ -180,9 +180,9 @@ EQUAL: '=';
 // \- since - means "range" inside [...]
 
 HTML_STRING
-   : {this.isNotStartOfVtlReference(1)}?  '"' ( VALID_ESCAPES |  ~ ["])* '"'
+   : '"' ( VALID_ESCAPES |  ~ ["])* '"'
    // Unescaped one must not contain spaces
-   | {this.isNotStartOfVtlReference(1)}? '\'' ( VALID_ESCAPES |  ~ ['])* '\''
+   | '\'' ( VALID_ESCAPES |  ~ ['])* '\''
    ;
 
 // Just allow everything to be escaped.
