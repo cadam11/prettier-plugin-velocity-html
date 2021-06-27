@@ -10,9 +10,11 @@ Online visitors can see it.
 Here is text outside the multi-line comment; it is visible.
 
 This text is visible. ## This text is not.
-<br />
 This text is visible.
 <br />
+## Short comment
+should not be merged with this line
+<br/>
 This text is visible. #* This text, as part of a multi-line
 comment, is not visible. This text is not visible; it is also
 part of the multi-line comment. This text still not
@@ -38,8 +40,10 @@ This is text that is outside the multi-line comment. Online visitors can see it.
 
 Here is text outside the multi-line comment; it is visible. This text is
 visible. ## This text is not.
-<br />
 This text is visible.
+<br />
+## Short comment
+should not be merged with this line
 <br />
 This text is visible.
 #* This text, as part of a multi-line

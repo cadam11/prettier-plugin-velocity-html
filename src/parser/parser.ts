@@ -17,6 +17,7 @@ import {
   RootNode,
   VelocityDirectiveNode,
   VelocityCommentNode,
+  VelocityReferenceNode,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -92,12 +93,10 @@ export default function parse(
   lexer.addErrorListener({
     syntaxError(
       recognizer: Recognizer<Token, ATNSimulator>,
-      offendingSymbol,
-      line,
-      charPositionInLine,
-      msg,
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      e
+      offendingSymbol: unknown,
+      line: unknown,
+      charPositionInLine: unknown,
+      msg: string
     ) {
       errors.push(new Error(msg));
     },
@@ -107,18 +106,19 @@ export default function parse(
 
   const rootNode = new RootNode();
   const parentStack: NodeWithChildren[] = [rootNode];
-  const tokens = tokenStream.getTokens();
+  const tokens: VelocityToken[] = tokenStream.getTokens() as VelocityToken[];
   let currentNode: ParserNode = rootNode;
   let currentHtmlAttribute: VelocityToken | null = null;
 
   let mode: LexerMode = "DefaultMode";
 
+  let velocityReferenceNode: VelocityReferenceNode | null = null;
   let revealedConditionalComment: VelocityToken | null = null;
   let prettierIgnore: VelocityToken[] = [];
   let velocityModeStack: LexerMode[] = [];
 
   for (let i = 0; i < tokens.length; i++) {
-    const token: VelocityToken = tokens[i] as VelocityToken;
+    const token = tokens[i];
     const newParserException = (msg?: string) =>
       new ParserException(token, mode, lexer, msg);
     let nextToken: Token | undefined;
@@ -289,6 +289,30 @@ export default function parse(
             addChild(new VelocityCommentNode(token));
             break;
           }
+          case VelocityHtmlLexer.VTL_VARIABLE: {
+            velocityReferenceNode = new VelocityReferenceNode(token);
+            addChild(velocityReferenceNode);
+            break;
+          }
+          case VelocityHtmlLexer.VTL_DOT:
+          case VelocityHtmlLexer.VTL_IDENTIFIER:
+          case VelocityHtmlLexer.VTL_PARENS_OPEN:
+          case VelocityHtmlLexer.VTL_INDEX_OPEN: {
+            if (velocityReferenceNode == null) {
+              throw newParserException("Velocity reference node is null");
+            }
+            velocityReferenceNode.tokens.push(token);
+            if (
+              [
+                VelocityHtmlLexer.VTL_PARENS_OPEN,
+                VelocityHtmlLexer.VTL_INDEX_OPEN,
+              ].includes(token.type)
+            ) {
+              velocityModeStack = ["DefaultMode"];
+              mode = "VelocityMode";
+            }
+            break;
+          }
           default: {
             throw newParserException();
           }
@@ -444,8 +468,12 @@ export default function parse(
         break;
       }
       case "VelocityMode": {
-        if (!(currentNode instanceof VelocityDirectiveNode)) {
-          throw newParserException();
+        const velocityNode =
+          currentNode instanceof VelocityDirectiveNode
+            ? currentNode
+            : velocityReferenceNode;
+        if (velocityNode == null) {
+          throw newParserException("Current node not a velocity node.");
         }
         switch (token.type) {
           case VelocityHtmlLexer.WS:
@@ -453,22 +481,25 @@ export default function parse(
           case VelocityHtmlLexer.VTL_KEYWORD:
           case VelocityHtmlLexer.VTL_DOT:
           case VelocityHtmlLexer.VTL_IDENTIFIER:
-          case VelocityHtmlLexer.VTL_STRING: {
-            currentNode.tokens.push(token);
+          case VelocityHtmlLexer.VTL_STRING:
+          case VelocityHtmlLexer.VTL_NUMBER: {
+            velocityNode.addToken(token);
             break;
           }
-          case VelocityHtmlLexer.VTL_PARENS_OPEN: {
-            currentNode.tokens.push(token);
+          case VelocityHtmlLexer.VTL_PARENS_OPEN:
+          case VelocityHtmlLexer.VTL_INDEX_OPEN: {
+            velocityNode.addToken(token);
             velocityModeStack.push("VelocityMode");
             break;
           }
-          case VelocityHtmlLexer.VTL_PARENS_CLOSE: {
+          case VelocityHtmlLexer.VTL_PARENS_CLOSE:
+          case VelocityHtmlLexer.VTL_INDEX_CLOSE: {
             if (velocityModeStack.length == 0) {
               throw newParserException("Velocity mode stack is empty");
             }
-            currentNode.tokens.push(token);
+            velocityNode.addToken(token);
             mode = velocityModeStack.pop()!;
-            if (velocityModeStack.length == 0 && !currentNode.hasChildren) {
+            if (velocityModeStack.length == 0 && !velocityNode.hasChildren) {
               currentNode = parentStack[0];
             }
             break;
@@ -483,6 +514,19 @@ export default function parse(
         throw newParserException();
       }
     }
+  }
+
+  const newParserExceptionLastToken = (message: string): ParserException => {
+    return new ParserException(tokens[tokens.length - 1], mode, lexer, message);
+  };
+
+  // TODO Test
+  if (revealedConditionalComment != null) {
+    throw newParserExceptionLastToken("Dangling revealed conditional comment");
+  }
+  // TODO Test
+  if (prettierIgnore.length > 0) {
+    throw newParserExceptionLastToken("Dangling prettier ignores");
   }
   return rootNode;
 }

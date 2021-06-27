@@ -1,0 +1,114 @@
+## References and tags
+<span>pre</span> $myarray.isEmpty() <span>or</span> $myarray.empty <span>post</span>
+
+## References and text
+pre $myarray.isEmpty() or $myarray.empty post
+$myarray.size()
+
+## Funny formatting
+$myarray.get(2    , 3, 4 ,  5)
+
+## New lines
+$myarray.set(
+  1, 
+  'test'
+)
+
+## Nested
+$my.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.nested.property
+
+## Allowed names
+$mudSlinger
+$mud_slinger
+$mudSlinger1
+
+## Property vs function access
+$customer.Address or $customer.getAddress()
+$purchase.Total or $purchase.getTotal()
+
+$page.setTitle( "My Home Page" )
+$person.setAttributes( ["Strange", "Weird", "Excited"] )
+
+## Call chain
+$app.getCustomer().getAddress().getStreet().getStreetNumer().toString().replace("1", "2").substring(0, 2).size()
+
+$sun.setPlanets('Earth', 'Mars', 'Neptune')
+$sun.setPlanets('Mercury')
+$sun.setPlanets()
+
+## Index notation
+$foo[0]       ## $foo takes in an Integer look up
+Output that should remain in document
+$foo[$i]      ## Using another reference as the index   
+Output that should remain in document
+$foo["bar"]   ## Passing a string where $foo may be a Map
+Output that should remain in document
+$foo.bar[1].junk
+Output that should remain in document
+$foo.callMethod()[1]
+Output that should remain in document
+$foo["apple"][4]
+#set($foo[0] = 1)
+#set($foo.bar[1] = 3)
+#set($map["apple"] = "orange")
+## End with reference
+$end
+=====================================output=====================================
+## References and tags
+<span>pre</span> $myarray.isEmpty() <span>or</span> $myarray.empty
+<span>post</span>
+
+## References and text
+pre $myarray.isEmpty() or $myarray.empty post
+$myarray.size()
+
+## Funny formatting
+$myarray.get(2    , 3, 4 ,  5)
+
+## New lines
+$myarray.set(
+  1, 
+  'test'
+)
+
+## Nested
+$my.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.nested.property
+
+## Allowed names
+$mudSlinger
+$mud_slinger
+$mudSlinger1
+
+## Property vs function access
+$customer.Address
+or $customer.getAddress()
+$purchase.Total
+or $purchase.getTotal()
+
+$page.setTitle( "My Home Page" )
+$person.setAttributes( ["Strange", "Weird", "Excited"] )
+
+## Call chain
+$app.getCustomer().getAddress().getStreet().getStreetNumer().toString().replace("1", "2").substring(0, 2).size()
+
+$sun.setPlanets('Earth', 'Mars', 'Neptune')
+$sun.setPlanets('Mercury')
+$sun.setPlanets()
+
+## Index notation
+$foo[0]       ## $foo takes in an Integer look up
+Output that should remain in document
+$foo[$i]      ## Using another reference as the index
+Output that should remain in document
+$foo["bar"]   ## Passing a string where $foo may be a Map
+Output that should remain in document
+$foo.bar[1].junk
+Output that should remain in document
+$foo.callMethod()[1]
+Output that should remain in document
+$foo["apple"][4]
+#set($foo[0] = 1)
+#set($foo.bar[1] = 3)
+#set($map["apple"] = "orange")
+## End with reference
+$end

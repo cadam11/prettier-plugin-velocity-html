@@ -24,36 +24,66 @@ public class App {
 
   private static ObjectMapper objectMapper = new ObjectMapper();
 
+  private static int readFromChannel(SocketChannel channel, ByteBuffer buffer)
+    throws IOException {
+    var startTime = System.nanoTime();
+    int bytesRead = channel.read(buffer);
+    var endTime = System.nanoTime();
+    System.out.println(
+      "Reading %d bytes took %d seconds".formatted(
+          bytesRead,
+          (endTime - startTime) / 1_000_000_000
+        )
+    );
+    return bytesRead;
+  }
+
   private static Optional<VelocityCommand> readMessageFromSocket(
     SocketChannel channel
   ) throws IOException {
+    StringBuilder message = new StringBuilder();
+
     ByteBuffer buffer = ByteBuffer.allocate(1024);
-    int bytesRead = channel.read(buffer);
-    if (bytesRead < 0) return Optional.empty();
+    int bytesRead;
+    while ((bytesRead = readFromChannel(channel, buffer)) > 0) {
+      buffer.flip();
+      byte[] bytes = new byte[bytesRead];
+      buffer.get(bytes);
+      message.append(new String(bytes));
+      // TODO What about exactly 1024 bytes?
+      if (bytesRead == 1024) {
+        buffer.clear();
+      } else {
+        break;
+      }
+    }
 
-    byte[] bytes = new byte[bytesRead];
-    buffer.flip();
-    buffer.get(bytes);
-    String message = new String(bytes);
-    System.out.println("[INFO]: Received %s".formatted(message));
+    if (message.length() == 0) {
+      System.out.println("Read nothing returning empty.");
+      return Optional.empty();
+    }
 
-    return Optional.of(objectMapper.readValue(message, VelocityCommand.class));
+    System.out.println("Read message %s".formatted(message));
+
+    return Optional.of(
+      objectMapper.readValue(message.toString(), VelocityCommand.class)
+    );
   }
 
   public static void main(String[] args) throws Exception {
     Path socketFile = Path
       .of(System.getProperty("user.home"))
       .resolve("server.socket");
-    System.out.println("[INFO] Opening socket at %s...".formatted(socketFile));
+    System.out.println("Opening socket at %s...".formatted(socketFile));
     Files.deleteIfExists(socketFile);
     UnixDomainSocketAddress address = UnixDomainSocketAddress.of(socketFile);
     ServerSocketChannel serverChannel = ServerSocketChannel.open(
       StandardProtocolFamily.UNIX
     );
     serverChannel.bind(address);
-    System.out.println("[INFO] Waiting for client to connect...");
+    System.out.println("Waiting for client to connect...");
     SocketChannel channel = serverChannel.accept();
-    System.out.println("[INFO] Client connected");
+    System.out.println("Client connected");
     while (true) {
       try {
         Optional<VelocityCommand> optionalCommand = readMessageFromSocket(
@@ -71,7 +101,7 @@ public class App {
           }
         }
       } catch (Exception e) {
-        System.out.println("[ERROR] %s".formatted(e));
+        System.err.println("%s".formatted(e));
       }
       Thread.sleep(100);
     }

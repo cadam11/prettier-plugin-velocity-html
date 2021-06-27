@@ -125,10 +125,10 @@ export abstract class ParserNode extends DecoratedNode {
 
   public get isSelfOrParentPreformatted(): boolean {
     // eslint-disable-next-line @typescript-eslint/no-this-alias
-    let parent: ParserNode | undefined = this;
     if (this.isPreformatted()) {
       return true;
     }
+    let parent: ParserNode | undefined = this.parent;
     while (!(parent instanceof RootNode)) {
       if (parent instanceof HtmlTagNode && parent.isPreformatted()) {
         return true;
@@ -236,6 +236,7 @@ export class AttributeNode extends ParserNode {
     super(nameToken);
   }
 
+  // TODO Remove?
   public get isSelfOrParentPreformatted(): boolean {
     return false;
   }
@@ -486,8 +487,22 @@ export class HtmlTagNode extends NodeWithChildren {
   public isPreformatted(): boolean {
     return (
       this.renderDefinition.preformatted ||
-      (this.tagName === "script" && this.scriptParser == null)
+      (this.tagName === "script" && this.scriptParser == null) ||
+      (["style", "script"].includes(this.tagName) &&
+        this.containsVelocityNodes())
     );
+  }
+
+  private containsVelocityNodes(): boolean {
+    for (const child of this.children) {
+      if (
+        child instanceof VelocityDirectiveNode ||
+        child instanceof VelocityReferenceNode
+      ) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public set tagName(tagName: string) {
@@ -628,7 +643,7 @@ interface VelocityRenderDefinition extends Partial<RenderDefinition> {
 export class VelocityDirectiveNode extends NodeWithChildren {
   public directive: string;
 
-  public tokens: VelocityToken[] = [];
+  private _tokens: VelocityToken[] = [];
 
   private directiveToRenderDefinition: Map<string, VelocityRenderDefinition> =
     new Map([["set", { hasChildren: false }]]);
@@ -662,6 +677,15 @@ export class VelocityDirectiveNode extends NodeWithChildren {
       };
     }
   }
+
+  public addToken(token: VelocityToken): void {
+    this._tokens.push(token);
+    this._endLocation = token.endLocation;
+  }
+
+  public get tokens(): VelocityToken[] {
+    return this._tokens;
+  }
 }
 
 export class VelocityCommentNode extends ParserNode {
@@ -672,5 +696,23 @@ export class VelocityCommentNode extends ParserNode {
   constructor(token: VelocityToken) {
     super(token);
     this.text = token.textValue;
+  }
+}
+
+export class VelocityReferenceNode extends ParserNode {
+  private _tokens: VelocityToken[] = [];
+  public hasChildren = false;
+  constructor(token: VelocityToken) {
+    super(token);
+    this._tokens.push(token);
+  }
+
+  public addToken(token: VelocityToken): void {
+    this._tokens.push(token);
+    this._endLocation = token.endLocation;
+  }
+
+  public get tokens(): VelocityToken[] {
+    return this._tokens;
   }
 }

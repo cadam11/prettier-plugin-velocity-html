@@ -1,6 +1,6 @@
 import * as fs from "fs";
 
-import { ChildProcess, spawn } from "child_process";
+import { ChildProcess, spawn, SpawnOptions } from "child_process";
 import { createConnection, Socket } from "net";
 import {
   compareScreenshots,
@@ -12,6 +12,19 @@ import {
 import { expect } from "chai";
 import { Browser, chromium, Page } from "playwright";
 
+import * as log4js from "log4js";
+
+const velocityServerLogger = log4js.getLogger("velocity-server");
+const velocityClientLogger = log4js.getLogger("velocity-client");
+log4js.configure({
+  appenders: {
+    console: { type: "console" },
+  },
+  categories: {
+    default: { appenders: ["console"], level: "debug" },
+  },
+});
+
 const openSocket = (): Promise<Socket> => {
   return new Promise((resolve, reject) => {
     const client = createConnection("/home/fredo/server.socket", () => {
@@ -22,27 +35,38 @@ const openSocket = (): Promise<Socket> => {
 
 const startServer = (): Promise<ChildProcess> => {
   return new Promise((resolve, reject) => {
-    const javaProcess = spawn(
+    const spawnArgs: [string, readonly string[], SpawnOptions] = [
       `/home/fredo/.sdkman/candidates/java/current/bin/java`,
       [
         "-jar",
         `${__dirname}/../../test/velocity-java/target/prettier-velocity-1.0-SNAPSHOT.jar`,
       ],
-      {}
+      {},
+    ];
+    velocityServerLogger.info(
+      `Starting with ${spawnArgs[0]} ${spawnArgs[1].join(" ")}`
     );
-    const logProcessMessage = (m: Buffer) => {
-      console.log(`javaProcess:`, m.toString());
-    };
-    if (javaProcess == null) {
-      throw new Error("foo");
+    const javaProcess = spawn.apply(this, spawnArgs);
+    if (
+      javaProcess == null ||
+      javaProcess.stdout == null ||
+      javaProcess.stderr == null
+    ) {
+      throw new Error();
     }
     javaProcess.stdout.on("data", (data) => {
-      if ((data as Buffer).toString().includes("Waiting for client")) {
+      const text = (data as Buffer).toString();
+      velocityServerLogger.info(text);
+      if (text.includes("Waiting for client")) {
         resolve(javaProcess);
       }
     });
-    javaProcess.stderr.on("data", logProcessMessage);
-    javaProcess.on("close", logProcessMessage);
+    javaProcess.stderr.on("data", (error: Buffer) => {
+      velocityServerLogger.error(error.toString());
+    });
+    javaProcess.on("close", () => {
+      velocityServerLogger.info("Shutting down");
+    });
   });
 };
 
@@ -69,30 +93,36 @@ describe("prettier-velocity", () => {
         velocityClient.off("close", closeHandler);
         velocityClient.off("end", endHandler);
         if (result.success) {
+          velocityClientLogger.info(
+            `Received rendered template\n${result.renderedTemplate}`
+          );
           resolve(result.renderedTemplate);
         } else {
+          velocityClientLogger.error(
+            `Error while rendering template ${result.message}`
+          );
           reject(result.message);
         }
       };
       velocityClient.on("data", dataHandler);
       const closeHandler = (had_error: boolean): void =>
-        console.log("had_error", had_error);
+        velocityClientLogger.error("had_error", had_error);
       velocityClient.on("close", closeHandler);
-      const endHandler = () => console.log("end");
+      const endHandler = () => velocityClientLogger.info("end");
       velocityClient.on("end", endHandler);
       const contextScriptPath = `${__dirname}/parser/valid_velocity/${testCaseName.replace(
         ".vm",
         ".groovy"
       )}`;
 
-      velocityClient.write(
-        JSON.stringify({
-          template,
-          contextScriptPath: fs.existsSync(contextScriptPath)
-            ? contextScriptPath
-            : null,
-        })
-      );
+      const message = JSON.stringify({
+        template,
+        contextScriptPath: fs.existsSync(contextScriptPath)
+          ? contextScriptPath
+          : null,
+      });
+      velocityClientLogger.info(`Sending message ${message}`);
+      velocityClient.write(message);
     });
   };
 
@@ -108,7 +138,9 @@ describe("prettier-velocity", () => {
     if (browser != null) {
       await browser.close();
     }
-    velocityServer.kill();
+    if (velocityServer != null) {
+      velocityServer.kill();
+    }
   });
 
   fs.readdirSync(__dirname + "/parser/valid_velocity/").forEach(

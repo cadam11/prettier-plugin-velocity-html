@@ -4,6 +4,8 @@ import {
   HtmlTagNode,
   HtmlTextNode,
   ParserNode,
+  VelocityDirectiveNode,
+  VelocityReferenceNode,
 } from "./parser/VelocityParserNodes";
 import { concatChildren, printClosingTag, printOpeningTag } from "./printer";
 
@@ -53,19 +55,34 @@ export const embed = (
     }
   } else if (node instanceof HtmlTagNode) {
     if (node.tagName == "script" || node.tagName === "style") {
+      /**
+       * Safely format "invalid" css
+       */
+      const preformatted = node.isPreformatted();
       const scriptText = node.children
         .map((child) => {
-          if (!(child instanceof HtmlTextNode)) {
+          if (child instanceof HtmlTextNode) {
+            return child.text;
+          } else if (
+            child instanceof VelocityReferenceNode ||
+            child instanceof VelocityDirectiveNode
+          ) {
+            if (!preformatted) {
+              throw new Error(
+                "Node is not preformatted, but has velocity nodes."
+              );
+            }
+            return child.tokens.map((token) => token.textValue).join("");
+          } else {
             throw new Error(`Unexpected type ${child.toString()}`);
           }
-          return child.text;
         })
-        .join(" ");
+        .join(preformatted ? "" : " ");
 
       const parserOptions = inferParserOptions(node);
 
       const doc =
-        scriptText != "" && parserOptions != null
+        scriptText != "" && parserOptions != null && !preformatted
           ? textToDoc(
               scriptText,
               {
@@ -75,7 +92,6 @@ export const embed = (
               { stripTrailingHardline: true }
             )
           : scriptText;
-
       return [
         breakParent,
         printOpeningTag(node, path, print),

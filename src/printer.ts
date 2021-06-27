@@ -15,6 +15,7 @@ import {
   RootNode,
   VelocityCommentNode,
   VelocityDirectiveNode,
+  VelocityReferenceNode,
   WhitespaceToken,
 } from "./parser/VelocityParserNodes";
 import { NEWLINE_REGEX } from "./parser/VelocityToken";
@@ -526,6 +527,8 @@ export default function print(
       }
     });
     return decorate(parts, node);
+  } else if (node instanceof VelocityReferenceNode) {
+    return decorate(node.tokens.map((t) => t.textValue).join(""), node);
   } else {
     throw new Error("Unknown type " + node.constructor.toString());
   }

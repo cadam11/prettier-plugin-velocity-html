@@ -6,21 +6,91 @@ lexer grammar VelocityHtmlLexer;
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
 
-  private vtlPrefixes = ['#if', '#foreach', '#end'];
+  private vtlPrefixes = ['if', 'foreach', 'end', 'set'];
   private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
     return Math.max(maxLength, vtlPrefix.length);
   }, 0);
 
+  private toCodePoints(characters: string[] | string): Set<number> {
+    // TODO Fix Me
+    return (characters instanceof Array? characters : characters.split("")).map(character => character.codePointAt(0)).reduce((set, codePoint) => {
+      if (codePoint != null && !set.has(codePoint)) {
+        set.add(codePoint);
+      }
+      return set;
+    }, new Set<number>());
+  }
+  private vtlStart = this.toCodePoints(["#", "$"]);
+  private vtlValidAlpha = this.toCodePoints("abcdefghijklmnopqrstuvwxyz");
+  private vtlValidAlphaNumeric = this.toCodePoints("abcdefghijklmnopqrstuvwxyz0123456789")
+  private vtlOperators = this.toCodePoints([".", "(", "["]);
+  private vtlWhitespace = this.toCodePoints([" ", "\t", "\n", "\r", "\f"]);
+  private vtlAll = new Set([...this.vtlValidAlphaNumeric, ...this.vtlOperators, ...this.vtlWhitespace])
   // $\u007B
-  private isNotStartOfVtlReference(offset: number = 0): boolean {
-    const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength);
-    // TODO Remove later?
-    for (let vtlPrefix of this.vtlPrefixes) {
-      if (nextCharacters.startsWith(vtlPrefix)) {
+  private isStartOfVtlReference(offset: number = 0): boolean {
+    let index = 0;
+    let vtlDirectiveStart = false;
+    let vtlReferenceStart = false;
+    let isVtlReference = false;
+    let isVtlDirective = false;
+    while(true) {
+      const startPosition = this._tokenStartCharIndex + index;
+      if (startPosition >= this.inputStream.size) {
+        return isVtlReference;
+      }
+      const characterInStream = this.inputStream.getText(Interval.of(startPosition, startPosition));
+      const codePoint = characterInStream.toLowerCase().codePointAt(0);
+      if (codePoint == null) {
+        // ?
         return false;
       }
+      if (index == 0) {
+        if ("#".codePointAt(0) == codePoint) {
+          vtlDirectiveStart = true;
+        } else if ("$".codePointAt(0) == codePoint) {
+          vtlReferenceStart = true;
+        } else {
+          return false;
+        }
+      } else {
+        if (vtlReferenceStart) {
+          if (index == 1) {
+            // TODO Test Numbers
+            if (!this.vtlValidAlpha.has(codePoint)) {
+              return false;
+            }
+            isVtlReference = true;
+          } else {
+            if (this.vtlOperators.has(codePoint)) {
+                this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
+              return true;
+            } else if (!this.vtlValidAlpha.has(codePoint)) {
+              return true;
+            }
+          }
+        } else {
+          const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, 1);
+          for (let vtlDirective of this.vtlPrefixes) {
+            if (nextCharacters.startsWith(vtlDirective)) {
+              return true;
+            }
+          }
+        }
+      }
+      index++;
+    } 
+  }
+
+  private popModeIfNecessary(): void {
+    const characterInStream = this.inputStream.getText(Interval.of((this.inputStream as any)._position, (this.inputStream as any)._position));
+    const codePoint = characterInStream.toLowerCase().codePointAt(0);
+    if (codePoint == null) {
+      // ?
+      return;
     }
-    return true;
+    if (!this.vtlAll.has(codePoint)) {
+      this.popMode();
+    }
   }
 
    private isNotStartOfConditionalComment(): boolean {
@@ -111,7 +181,8 @@ TAG_START_OPEN: '<' HTML_LIBERAL_NAME  { this.setNextTagCloseMode() } -> pushMod
 
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
-VTL_COMMENT: '##' ~[\n\r\f]*;
+// TODO Try to break this
+VTL_COMMENT: [ \t]* '##' ~[\n\r\f]*;
 
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
@@ -119,7 +190,9 @@ VTL_DIRECTIVE_START : '#' ('foreach'|'if'|'set') VTL_WS* '(' -> pushMode(VELOCIT
 
 VTL_DIRECTIVE_END: '#end';
 
-HTML_TEXT: ~[ \t\n\r\f<]+;
+VTL_VARIABLE: '$' VTL_IDENTIFIER;
+
+HTML_TEXT: {!this.isStartOfVtlReference()}? ~[ \t\n\r\f<]+;
 
 WS
    : DEFAULT_WS +
@@ -133,18 +206,42 @@ ERROR_CHARACTER : . ;
 
 fragment VTL_REFERENCE_START: '$' '{';
 
+
+mode VELOCITY_REFERENCE_MODE;
+
+VTL_REFERENCE_IDENTIFIER: VTL_IDENTIFIER {this.popModeIfNecessary()} -> type(VTL_IDENTIFIER);
+
+VTL_REFERENCE_DOT: '.' -> type(VTL_DOT);
+
+VTL_REFERENCE_PARENS_OPEN: '(' -> type(VTL_PARENS_OPEN), pushMode(VELOCITY_MODE);
+
+VTL_REFERENCE_INDEX_OPEN: '[' -> type(VTL_INDEX_OPEN), pushMode(VELOCITY_MODE);
+
+VTL_REFERENCE_WS: DEFAULT_WS -> type(WS), popMode;
+
+VTL_REFERENCE_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
+
+
+// TODO Velocity variable. Keep preformatted:
+// - $122.22
+//  Example from user_guide.
 mode VELOCITY_MODE;
 
-VTL_KEYWORD: 'in' | '=';
+VTL_KEYWORD: 'in' | '=' | ',';
 
 VTL_DOT: '.';
 
 VTL_IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]* { this.makeVtlReferenceInsideToken() };
 
+// TODO Velocity terminology
+
+VTL_INDEX_OPEN: '[' -> pushMode(VELOCITY_MODE);
+
+VTL_INDEX_CLOSE: ']' -> popMode;
 
 VTL_PARENS_OPEN: '(' -> pushMode(VELOCITY_MODE);
 
-VTL_PARENS_CLOSE: (')' | '}') -> popMode;
+VTL_PARENS_CLOSE: ')'  -> popMode;
 
 VTL_REFERENCE: '$' VTL_IDENTIFIER;
 
@@ -158,12 +255,13 @@ VTL_STRING
    | '\'' (('\\' ~[\\\u0000-\u001F]) |  ~ ['\\\u0000-\u001F])* '\''
    ;
 
-// TODO Test Number
-// VTL_NUMBER
-//    : [1-9][0-9]*;
+// TODO VTL Variables in CSS. Do not format CSS
+
+VTL_NUMBER
+   : [1-9][0-9]* | '0';
 
 VTL_WS
-   : [ \t] +  -> type(WS)
+   : DEFAULT_WS +  -> type(WS)
    ;
 
 VTL_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
@@ -185,7 +283,6 @@ HTML_STRING
    | '\'' ( VALID_ESCAPES |  ~ ['])* '\''
    ;
 
-// Just allow everything to be escaped.
 // TODO Does this make sense?
 fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
 

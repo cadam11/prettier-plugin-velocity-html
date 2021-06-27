@@ -1,0 +1,19 @@
+<style type="text/css">
+  #body {
+    color: $primaryColor;
+    font: 100% $fontStack;
+  }
+</style>
+
+<p style="display:     $display">Hello, World!</p>
+=====================================output=====================================
+<style
+  type="text/css"
+>
+  #body {
+    color: $primaryColor;
+    font: 100% $fontStack;
+  }
+</style>
+
+<p style="display: $display">Hello, World!</p>
