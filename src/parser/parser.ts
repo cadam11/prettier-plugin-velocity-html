@@ -292,6 +292,10 @@ export default function parse(
           case VelocityHtmlLexer.VTL_VARIABLE: {
             velocityReferenceNode = new VelocityReferenceNode(token);
             addChild(velocityReferenceNode);
+            if (velocityReferenceNode.isFormalReference) {
+              velocityModeStack = ["DefaultMode"];
+              mode = "VelocityMode";
+            }
             break;
           }
           case VelocityHtmlLexer.VTL_DOT:
@@ -487,13 +491,15 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.VTL_PARENS_OPEN:
-          case VelocityHtmlLexer.VTL_INDEX_OPEN: {
+          case VelocityHtmlLexer.VTL_INDEX_OPEN:
+          case VelocityHtmlLexer.VTL_FORMAL_REFERENCE_OPEN: {
             velocityNode.addToken(token);
             velocityModeStack.push("VelocityMode");
             break;
           }
           case VelocityHtmlLexer.VTL_PARENS_CLOSE:
-          case VelocityHtmlLexer.VTL_INDEX_CLOSE: {
+          case VelocityHtmlLexer.VTL_INDEX_CLOSE:
+          case VelocityHtmlLexer.VTL_FORMAL_CLOSE: {
             if (velocityModeStack.length == 0) {
               throw newParserException("Velocity mode stack is empty");
             }

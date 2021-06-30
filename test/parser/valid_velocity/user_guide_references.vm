@@ -51,6 +51,19 @@ $foo["apple"][4]
 #set($foo[0] = 1)
 #set($foo.bar[1] = 3)
 #set($map["apple"] = "orange")
+
+## Formal and quite reference
+${mudSlinger}
+${customer.Address}
+${purchase.getTotal()}
+My name is ${name|'John Doe'}
+
+$myMap.get(${myKeyName})
+
+<p>Send a $email!</p>
+<p>Send a $!email!</p>
+<p>Send a $!{email}</p>
+
 ## End with reference
 $end
 =====================================output=====================================
@@ -110,5 +123,18 @@ $foo["apple"][4]
 #set($foo[0] = 1)
 #set($foo.bar[1] = 3)
 #set($map["apple"] = "orange")
+
+## Formal and quite reference
+${mudSlinger}
+${customer.Address}
+${purchase.getTotal()}
+My name is ${name|'John Doe'}
+
+$myMap.get(${myKeyName})
+
+<p>Send a $email!</p>
+<p>Send a $!email!</p>
+<p>Send a $!{email}</p>
+
 ## End with reference
 $end

@@ -702,8 +702,11 @@ export class VelocityCommentNode extends ParserNode {
 export class VelocityReferenceNode extends ParserNode {
   private _tokens: VelocityToken[] = [];
   public hasChildren = false;
+  public isFormalReference = false;
   constructor(token: VelocityToken) {
     super(token);
+    this.isFormalReference =
+      token.textValue.charAt(1) == "{" || token.textValue.charAt(2) == "{";
     this._tokens.push(token);
   }
 

@@ -23,19 +23,40 @@ lexer grammar VelocityHtmlLexer;
   private vtlStart = this.toCodePoints(["#", "$"]);
   private vtlValidAlpha = this.toCodePoints("abcdefghijklmnopqrstuvwxyz");
   private vtlValidAlphaNumeric = this.toCodePoints("abcdefghijklmnopqrstuvwxyz0123456789")
-  private vtlOperators = this.toCodePoints([".", "(", "["]);
+  private vtlOperators = this.toCodePoints([".", "(", "[", "|"]);
   private vtlWhitespace = this.toCodePoints([" ", "\t", "\n", "\r", "\f"]);
-  private vtlAll = new Set([...this.vtlValidAlphaNumeric, ...this.vtlOperators, ...this.vtlWhitespace])
-  // $\u007B
+  private vtlAll = new Set([...this.vtlValidAlphaNumeric, ...this.vtlOperators, ...this.vtlWhitespace, ...this.toCodePoints(["}"])])
+  // $, { and ! break the syntax highlighting of the plugin
   private isStartOfVtlReference(offset: number = 0): boolean {
     let index = 0;
     let vtlDirectiveStart = false;
     let vtlReferenceStart = false;
     let isVtlReference = false;
     let isVtlDirective = false;
+    let pushVelocityMode = false;
+    const nextCharacters = this.getNextCharacters(3);
+    if ("#" == nextCharacters.charAt(index)) {
+      vtlDirectiveStart = true;
+    } else if ("\u0024" == nextCharacters.charAt(index)) {
+      vtlReferenceStart = true;
+      index++;
+      if ("\u0021" == nextCharacters.charAt(index)) {
+        index++;
+      }
+      if ("\u007b" == nextCharacters.charAt(index)) {
+        pushVelocityMode = true;
+        index++;
+      }
+    }
+    if (!vtlReferenceStart && !vtlDirectiveStart) {
+      return false;
+    }
     while(true) {
       const startPosition = this._tokenStartCharIndex + index;
       if (startPosition >= this.inputStream.size) {
+        if (isVtlReference && pushVelocityMode) {
+          this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
+        }
         return isVtlReference;
       }
       const characterInStream = this.inputStream.getText(Interval.of(startPosition, startPosition));
@@ -44,36 +65,30 @@ lexer grammar VelocityHtmlLexer;
         // ?
         return false;
       }
-      if (index == 0) {
-        if ("#".codePointAt(0) == codePoint) {
-          vtlDirectiveStart = true;
-        } else if ("$".codePointAt(0) == codePoint) {
-          vtlReferenceStart = true;
+      
+      if (vtlReferenceStart) {
+        if (!isVtlReference) {
+          // TODO Test Numbers
+          if (!this.vtlValidAlpha.has(codePoint)) {
+            return false;
+          }
+          isVtlReference = true;
         } else {
-          return false;
+          if (this.vtlOperators.has(codePoint)) {
+              this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
+            return true;
+          } else if (!this.vtlValidAlpha.has(codePoint)) {
+            if (pushVelocityMode) {
+              this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE)
+            }
+            return true;
+          }
         }
       } else {
-        if (vtlReferenceStart) {
-          if (index == 1) {
-            // TODO Test Numbers
-            if (!this.vtlValidAlpha.has(codePoint)) {
-              return false;
-            }
-            isVtlReference = true;
-          } else {
-            if (this.vtlOperators.has(codePoint)) {
-                this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
-              return true;
-            } else if (!this.vtlValidAlpha.has(codePoint)) {
-              return true;
-            }
-          }
-        } else {
-          const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, 1);
-          for (let vtlDirective of this.vtlPrefixes) {
-            if (nextCharacters.startsWith(vtlDirective)) {
-              return true;
-            }
+        const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, 1);
+        for (let vtlDirective of this.vtlPrefixes) {
+          if (nextCharacters.startsWith(vtlDirective)) {
+            return true;
           }
         }
       }
@@ -190,9 +205,11 @@ VTL_DIRECTIVE_START : '#' ('foreach'|'if'|'set') VTL_WS* '(' -> pushMode(VELOCIT
 
 VTL_DIRECTIVE_END: '#end';
 
-VTL_VARIABLE: '$' VTL_IDENTIFIER;
+VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER;
 
 HTML_TEXT: {!this.isStartOfVtlReference()}? ~[ \t\n\r\f<]+;
+
+FOO: '}';
 
 WS
    : DEFAULT_WS +
@@ -204,8 +221,6 @@ fragment DEFAULT_WS: [ \t\n\r\f] ;
 // handle characters which failed to match any other token
 ERROR_CHARACTER : . ;
 
-fragment VTL_REFERENCE_START: '$' '{';
-
 
 mode VELOCITY_REFERENCE_MODE;
 
@@ -213,11 +228,18 @@ VTL_REFERENCE_IDENTIFIER: VTL_IDENTIFIER {this.popModeIfNecessary()} -> type(VTL
 
 VTL_REFERENCE_DOT: '.' -> type(VTL_DOT);
 
+VTL_REFERENCE_PIPE: '|' -> type(VTL_KEYWORD);
+
+VTL_REFERENCE_STRING: VTL_STRING -> type(VTL_STRING);
+
 VTL_REFERENCE_PARENS_OPEN: '(' -> type(VTL_PARENS_OPEN), pushMode(VELOCITY_MODE);
 
 VTL_REFERENCE_INDEX_OPEN: '[' -> type(VTL_INDEX_OPEN), pushMode(VELOCITY_MODE);
 
 VTL_REFERENCE_WS: DEFAULT_WS -> type(WS), popMode;
+
+VTL_REFERENCE_FORMAL_CLOSE: '}' -> type(VTL_FORMAL_CLOSE), popMode;
+
 
 VTL_REFERENCE_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
 
@@ -227,7 +249,7 @@ VTL_REFERENCE_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
 //  Example from user_guide.
 mode VELOCITY_MODE;
 
-VTL_KEYWORD: 'in' | '=' | ',';
+VTL_KEYWORD: 'in' | '=' | ',' | '|';
 
 VTL_DOT: '.';
 
@@ -243,7 +265,11 @@ VTL_PARENS_OPEN: '(' -> pushMode(VELOCITY_MODE);
 
 VTL_PARENS_CLOSE: ')'  -> popMode;
 
+VTL_FORMAL_CLOSE: '}' -> popMode;
+
 VTL_REFERENCE: '$' VTL_IDENTIFIER;
+
+VTL_FORMAL_REFERENCE_OPEN: '${' VTL_IDENTIFIER -> pushMode(VELOCITY_MODE);
 
 // VTL_VALUE
 //    : VTL_STRING
@@ -286,12 +312,8 @@ HTML_STRING
 // TODO Does this make sense?
 fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
 
-// HTML_INSIDE_TAG_STRING_VTL_REFERENCE: '"' VTL_REFERENCE_START { this.isVtlReferenceInsideString = true} -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
-
 TAG_CLOSE: '>' { this.popModeForCurrentTag() };
 SELF_CLOSING_TAG_CLOSE :'/' '>' -> popMode;
-
-// HTML_TAG_VTL:  VTL_REFERENCE_START -> skip, pushMode(INSIDE_VELOCITY_REFERENCE);
 
 HTML_WS
    : DEFAULT_WS -> skip
