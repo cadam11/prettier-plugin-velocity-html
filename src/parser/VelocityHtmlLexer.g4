@@ -96,6 +96,57 @@ lexer grammar VelocityHtmlLexer;
     } 
   }
 
+  private isStartOfVtlReference2(offset: number = 0): boolean {
+    let index = 0;
+    let vtlDirectiveStart = false;
+    let vtlReferenceStart = false;
+    let isVtlReference = false;
+    let isVtlDirective = false;
+    let pushVelocityMode = false;
+    const nextCharacters = this.getNextCharacters(3);
+    if ("#" == nextCharacters.charAt(index)) {
+      vtlDirectiveStart = true;
+    } else if ("\u0024" == nextCharacters.charAt(index)) {
+      vtlReferenceStart = true;
+      index++;
+      if ("\u0021" == nextCharacters.charAt(index)) {
+        index++;
+      }
+      if ("\u007b" == nextCharacters.charAt(index)) {
+        pushVelocityMode = true;
+        index++;
+      }
+    }
+    if (!vtlReferenceStart && !vtlDirectiveStart) {
+      return false;
+    }
+    const startPosition = this._tokenStartCharIndex + index;
+    if (startPosition >= this.inputStream.size) {
+      return isVtlReference;
+    }
+    const characterInStream = this.inputStream.getText(Interval.of(startPosition, startPosition));
+    const codePoint = characterInStream.toLowerCase().codePointAt(0);
+    if (codePoint == null) {
+      // ?
+      return false;
+    }
+    
+    if (vtlReferenceStart) {
+      if (!this.vtlValidAlpha.has(codePoint)) {
+        return false;
+      }
+      return true;
+    } else {
+      const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, 1);
+      for (let vtlDirective of this.vtlPrefixes) {
+        if (nextCharacters.startsWith(vtlDirective)) {
+          return true;
+        }
+      }
+      return false;
+    }
+  }
+
   private popModeIfNecessary(): void {
     const characterInStream = this.inputStream.getText(Interval.of((this.inputStream as any)._position, (this.inputStream as any)._position));
     const codePoint = characterInStream.toLowerCase().codePointAt(0);
@@ -106,6 +157,20 @@ lexer grammar VelocityHtmlLexer;
     if (!this.vtlAll.has(codePoint)) {
       this.popMode();
     }
+  }
+  private pushModeIfNecessary(): void {
+    const tokenText = this.inputStream.getText(Interval.of(this._tokenStartCharIndex, (this.inputStream as any)._position));
+    const codePoint = tokenText.toLowerCase().codePointAt(tokenText.length - 1);
+    if (codePoint == null) {
+      // ?
+      return;
+    }
+    if (this.vtlOperators.has(codePoint)) {
+      this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
+    } else if (tokenText.charAt(1) == "\u007b" || tokenText.charAt(2) == "\u007b") {
+      this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
+    }
+    
   }
 
    private isNotStartOfConditionalComment(): boolean {
@@ -205,11 +270,11 @@ VTL_DIRECTIVE_START : '#' ('foreach'|'if'|'set') VTL_WS* '(' -> pushMode(VELOCIT
 
 VTL_DIRECTIVE_END: '#end';
 
-VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER;
+VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER {this.pushModeIfNecessary()};
 
-HTML_TEXT: {!this.isStartOfVtlReference()}? ~[ \t\n\r\f<]+;
+NOT_VTL_VARIABLE: {!this.isStartOfVtlReference2()}? [#$] ~[ \t\n\r\f<]* -> type(HTML_TEXT);
 
-FOO: '}';
+HTML_TEXT:  ~[ \t\n\r\f<$#]+;
 
 WS
    : DEFAULT_WS +

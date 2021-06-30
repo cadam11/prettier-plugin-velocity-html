@@ -4,6 +4,9 @@
 ## References and text
 pre $myarray.isEmpty() or $myarray.empty post
 $myarray.size()
+prefix${bar}suffix
+prefix$bar
+$bar!suffix
 
 ## Funny formatting
 $myarray.get(2    , 3, 4 ,  5)
@@ -74,6 +77,8 @@ $end
 ## References and text
 pre $myarray.isEmpty() or $myarray.empty post
 $myarray.size()
+prefix${bar}suffix prefix$bar
+$bar!suffix
 
 ## Funny formatting
 $myarray.get(2    , 3, 4 ,  5)

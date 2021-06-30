@@ -463,7 +463,20 @@ export default function print(
           // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
           throw new Error(`Unknown whitespace token type ${token.type}`);
         }
-        parts.push(doc);
+        // TODO Hacky
+        // Every second entry must be line. Cannot have two strings following each other.
+        const lastPart: Doc | undefined = parts[parts.length - 1];
+        if (
+          typeof doc == "string" &&
+          lastPart != null &&
+          typeof lastPart == "string"
+        ) {
+          parts[parts.length - 1] = `${parts[
+            parts.length - 1
+          ].toString()}${doc}`;
+        } else {
+          parts.push(doc);
+        }
       });
     }
     if (
