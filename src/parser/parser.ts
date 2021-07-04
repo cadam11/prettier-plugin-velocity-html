@@ -10,7 +10,6 @@ import {
   HtmlTagNode,
   HtmlTextNode,
   IeConditionalCommentNode,
-  NodeWithChildren,
   NodeWithChildrenDecoration,
   ParserNode,
   DecoratedNode,
@@ -18,6 +17,10 @@ import {
   VelocityDirectiveNode,
   VelocityCommentNode,
   VelocityReferenceNode,
+  AnyNodeWithChildren,
+  NodeWithChildren,
+  VelocityDirectiveEndNode,
+  AttributeNode,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -105,10 +108,21 @@ export default function parse(
   tokenStream.fill();
 
   const rootNode = new RootNode();
-  const parentStack: NodeWithChildren[] = [rootNode];
+  const parentStack: AnyNodeWithChildren[] = [rootNode];
   const tokens: VelocityToken[] = tokenStream.getTokens() as VelocityToken[];
   let currentNode: ParserNode = rootNode;
   let currentHtmlAttribute: VelocityToken | null = null;
+
+  const addChild = (node: ParserNode): ParserNode => {
+    parentStack[0].addChild(node);
+    return node;
+  };
+
+  const setNewCurrentNode = (node: ParserNode): ParserNode => {
+    currentNode = node;
+    addChild(node);
+    return node;
+  };
 
   let mode: LexerMode = "DefaultMode";
 
@@ -135,29 +149,78 @@ export default function parse(
       currentNode = parentStack[0];
     };
 
+    switch (token.type) {
+      case VelocityHtmlLexer.VTL_DIRECTIVE_START:
+      case VelocityHtmlLexer.VTL_ELSE: {
+        const node = new VelocityDirectiveNode(token);
+
+        // End preceeding if or elseif
+        if (["else", "elseif"].includes(node.directive)) {
+          popParentStack();
+        }
+
+        switch (mode) {
+          case "DefaultMode": {
+            addChild(node);
+            break;
+          }
+          case "AttributeLhsMode": {
+            if (!(currentNode instanceof HtmlTagNode)) {
+              throw newParserException("Current node not html tag node.");
+            }
+            currentNode.addAttribute(node);
+            break;
+          }
+          default: {
+            throw newParserException(
+              "Velocity Directive not supported at this position."
+            );
+          }
+        }
+        if (node.hasVelocityCode) {
+          velocityModeStack = [mode];
+          mode = "VelocityMode";
+        }
+
+        currentNode = node;
+
+        if (node instanceof NodeWithChildren && node.hasChildren) {
+          parentStack.unshift(node);
+        }
+        continue;
+      }
+      case VelocityHtmlLexer.VTL_DIRECTIVE_END: {
+        if (!(currentNode instanceof VelocityDirectiveNode)) {
+          throw newParserException(
+            "currentNode must be velocity diretive node"
+          );
+        }
+        // TODO endToken vs endNode
+        currentNode.endToken = token;
+        currentNode.endNode = new VelocityDirectiveEndNode(token);
+        popParentStack();
+        currentNode = parentStack[0];
+        continue;
+      }
+    }
+
     switch (mode) {
       case "DefaultMode": {
         if (!(currentNode instanceof NodeWithChildren)) {
-          throw newParserException();
+          throw newParserException("Current node not NodeWithChildren");
         }
         // Concatenate text to be able to use fill() later.
         const addTextNode = (token: VelocityToken) => {
-          const lastChild = (currentNode as NodeWithChildren).lastChild;
+          const lastChild = (currentNode as AnyNodeWithChildren).lastChild;
           if (lastChild != null && lastChild instanceof HtmlTextNode) {
             lastChild.addText(token);
           } else {
-            (currentNode as NodeWithChildren).addChild(new HtmlTextNode(token));
+            (currentNode as AnyNodeWithChildren).addChild(
+              new HtmlTextNode(token)
+            );
           }
         };
-        const setNewCurrentNode = (node: ParserNode): ParserNode => {
-          currentNode = node;
-          addChild(node);
-          return node;
-        };
-        const addChild = (node: ParserNode): ParserNode => {
-          parentStack[0].addChild(node);
-          return node;
-        };
+
         switch (token.type) {
           case VelocityHtmlLexer.TAG_START_OPEN: {
             const tagName = token.textValue
@@ -166,6 +229,7 @@ export default function parse(
             const node = new HtmlTagNode(token);
             node.tagName = tagName;
             setNewCurrentNode(node);
+            parentStack.unshift(node);
             mode = "AttributeLhsMode";
             break;
           }
@@ -270,20 +334,6 @@ export default function parse(
             prettierIgnore.push(token);
             break;
           }
-          case VelocityHtmlLexer.VTL_DIRECTIVE_START: {
-            const node = new VelocityDirectiveNode(token);
-            setNewCurrentNode(node);
-            if (node.hasChildren) {
-              parentStack.unshift(currentNode);
-            }
-            velocityModeStack = ["DefaultMode"];
-            mode = "VelocityMode";
-            break;
-          }
-          case VelocityHtmlLexer.VTL_DIRECTIVE_END: {
-            popParentStack();
-            break;
-          }
           case VelocityHtmlLexer.VTL_COMMENT:
           case VelocityHtmlLexer.VTL_MULTILINE_COMMENT: {
             addChild(new VelocityCommentNode(token));
@@ -373,9 +423,9 @@ export default function parse(
 
           if (lastNode instanceof NodeWithChildren) {
             if (lastNode.endNode == null) {
-              lastNode = lastNode.startNode;
+              lastNode = lastNode.startNode as NodeWithChildrenDecoration;
             } else {
-              lastNode = lastNode.endNode;
+              lastNode = lastNode.endNode as NodeWithChildrenDecoration;
             }
           }
           if (token.type == VelocityHtmlLexer.IE_REVEALED_COMMENT_CLOSE) {
@@ -389,35 +439,51 @@ export default function parse(
         break;
       }
       case "AttributeLhsMode": {
-        if (!(currentNode instanceof HtmlTagNode)) {
-          throw newParserException();
-        }
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
             if (
+              !(
+                currentNode instanceof HtmlTagNode ||
+                currentNode instanceof VelocityDirectiveNode
+              )
+            ) {
+              throw newParserException(
+                "Current node not a html tag node or velocity directive node"
+              );
+            }
+            if (
               nextToken != null &&
               nextToken.type !== VelocityHtmlLexer.EQUAL
             ) {
-              currentNode.addAttribute(token);
+              const attributeNode = new AttributeNode(token);
+              if (currentNode instanceof HtmlTagNode) {
+                currentNode.addAttribute(attributeNode);
+              } else {
+                currentNode.addChild(attributeNode);
+              }
             } else {
               currentHtmlAttribute = token;
               i++;
               mode = "AttributeRhsMode";
             }
+
             break;
           }
           case VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE:
           case VelocityHtmlLexer.TAG_CLOSE: {
+            if (!(currentNode instanceof HtmlTagNode)) {
+              throw newParserException("Current node not a html tag node");
+            }
+            currentNode.endToken = token;
             const isSelfClosing =
               currentNode.isSelfClosing ||
               token.type == VelocityHtmlLexer.SELF_CLOSING_TAG_CLOSE;
             currentNode.isSelfClosing = isSelfClosing;
-            if (!isSelfClosing) {
-              parentStack.unshift(currentNode);
+            if (isSelfClosing) {
+              popParentStack();
             } else {
               // Self closing tags must not be added to the parent stack.
-              currentNode.endToken = token;
               currentNode = parentStack[0];
             }
             mode = "DefaultMode";
@@ -430,16 +496,29 @@ export default function parse(
         break;
       }
       case "AttributeRhsMode": {
-        if (!(currentNode instanceof HtmlTagNode)) {
-          throw newParserException();
+        if (
+          !(
+            currentNode instanceof HtmlTagNode ||
+            currentNode instanceof VelocityDirectiveNode
+          )
+        ) {
+          throw newParserException("Current node not a html tag node");
         }
         if (currentHtmlAttribute == null) {
-          throw newParserException();
+          throw newParserException("Current html attribute is null");
         }
         switch (token.type) {
           case VelocityHtmlLexer.HTML_NAME:
           case VelocityHtmlLexer.HTML_STRING: {
-            currentNode.addAttribute(currentHtmlAttribute, token);
+            const attributeNode = new AttributeNode(
+              currentHtmlAttribute,
+              token
+            );
+            if (currentNode instanceof HtmlTagNode) {
+              currentNode.addAttribute(attributeNode);
+            } else {
+              currentNode.addChild(attributeNode);
+            }
             currentHtmlAttribute = null;
             mode = "AttributeLhsMode";
             break;
@@ -452,7 +531,7 @@ export default function parse(
       }
       case "DocTypeMode": {
         if (!(currentNode instanceof HtmlDocTypeNode)) {
-          throw newParserException();
+          throw newParserException("Current node not a html tag node");
         }
         switch (token.type) {
           case VelocityHtmlLexer.DOCTYPE_TYPE: {

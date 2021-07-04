@@ -5,13 +5,20 @@ import {
 } from "./VelocityToken";
 import { RenderDefinition, RenderMode, tagRegistry } from "./tagRegistry";
 
+// TODO Maybe overwrite get startNode().
+export type AnyNodeWithChildren = NodeWithChildren<
+  NodeWithChildrenDecoration,
+  NodeWithChildrenDecoration
+>;
+
 // TODO Nested conditional comment
 export class DecoratedNode {
   public _revealedConditionalCommentStart: VelocityToken | null;
 
   public get revealedConditionalCommentStart(): VelocityToken | null {
     if (this instanceof NodeWithChildren) {
-      return this.startNode.revealedConditionalCommentStart;
+      return (this.startNode as NodeWithChildrenDecoration)
+        .revealedConditionalCommentStart;
     } else {
       return this._revealedConditionalCommentStart;
     }
@@ -24,8 +31,10 @@ export class DecoratedNode {
 
   public get revealedConditionalCommentEnd(): VelocityToken | null {
     if (this instanceof NodeWithChildren) {
-      return this.endNode != null
-        ? this.endNode.revealedConditionalCommentEnd
+      // TODO Typescript
+      return (this.endNode as NodeWithChildrenDecoration) != null
+        ? (this.endNode as NodeWithChildrenDecoration)
+            .revealedConditionalCommentEnd
         : null;
     } else {
       return this._revealedConditionalCommentEnd;
@@ -39,10 +48,11 @@ export class DecoratedNode {
 
 export abstract class ParserNode extends DecoratedNode {
   public set endToken(token: VelocityToken) {
-    if (this.endToken != null) {
-      throw new Error("Cannot set endToken more than once.");
-    }
     this._endLocation = token.endLocation;
+  }
+
+  public get endToken(): VelocityToken {
+    throw new Error("Not implemented");
   }
 
   public _startLocation: SourceCodeLocation;
@@ -53,10 +63,15 @@ export abstract class ParserNode extends DecoratedNode {
       return this._startLocation;
     }
   }
+  // TODO Remove
   public _endLocation: SourceCodeLocation;
   public get endLocation(): SourceCodeLocation {
     if (this.revealedConditionalCommentEnd != null) {
       return this.revealedConditionalCommentEnd.endLocation;
+    } else if (this instanceof NodeWithChildren && this.endNode == null) {
+      return this.lastChild != null
+        ? this.lastChild.endLocation
+        : this._endLocation;
     }
     return this._endLocation;
   }
@@ -100,13 +115,13 @@ export abstract class ParserNode extends DecoratedNode {
   public get isLastChild(): boolean {
     return this.index == this.parent.children.length - 1;
   }
-  private _parent: NodeWithChildren;
+  private _parent: AnyNodeWithChildren;
 
-  public get parent(): NodeWithChildren {
+  public get parent(): AnyNodeWithChildren {
     return this._parent;
   }
 
-  public set parent(parent: NodeWithChildren) {
+  public set parent(parent: AnyNodeWithChildren) {
     this._parent = parent;
   }
 
@@ -129,6 +144,7 @@ export abstract class ParserNode extends DecoratedNode {
       return true;
     }
     let parent: ParserNode | undefined = this.parent;
+    // Only node without parent is RootNode
     while (!(parent instanceof RootNode)) {
       if (parent instanceof HtmlTagNode && parent.isPreformatted()) {
         return true;
@@ -155,13 +171,18 @@ export abstract class ParserNode extends DecoratedNode {
   }
 }
 
+export class NullDecoratedNode extends DecoratedNode {}
+
 export class NodeWithChildrenDecoration extends DecoratedNode {
   constructor() {
     super();
   }
 }
 
-export abstract class NodeWithChildren extends ParserNode {
+export abstract class NodeWithChildren<
+  StartNode extends NodeWithChildrenDecoration,
+  EndNode extends NodeWithChildrenDecoration
+> extends ParserNode {
   public children: ParserNode[] = [];
 
   public get lastChild(): ParserNode | undefined {
@@ -179,11 +200,10 @@ export abstract class NodeWithChildren extends ParserNode {
 
   constructor(token: VelocityToken) {
     super(token);
-    this.startNode = new NodeWithChildrenDecoration();
   }
 
-  public startNode: NodeWithChildrenDecoration;
-  public endNode: NodeWithChildrenDecoration | undefined;
+  public startNode: StartNode | undefined;
+  public endNode: EndNode | undefined;
 
   public forceBreakChildren = false;
 
@@ -219,6 +239,9 @@ export class AttributeNode extends ParserNode {
     "content",
     "charset",
   ];
+  public getSiblingsRenderMode(): RenderMode {
+    return RenderMode.BLOCK;
+  }
   get name(): string {
     const attributeName = this.nameToken.stringValue;
     return this.knownAttributes.includes(attributeName.toLowerCase())
@@ -240,17 +263,12 @@ export class AttributeNode extends ParserNode {
   public get isSelfOrParentPreformatted(): boolean {
     return false;
   }
-
-  public get parent(): NodeWithChildren {
-    throw new Error("Root node has no parent");
-  }
-
-  public set parent(parent: NodeWithChildren) {
-    throw new Error("Root node has no parent");
-  }
 }
 
-export class RootNode extends NodeWithChildren {
+export class RootNode extends NodeWithChildren<
+  NullDecoratedNode,
+  NullDecoratedNode
+> {
   public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
@@ -266,11 +284,11 @@ export class RootNode extends NodeWithChildren {
     throw new Error("Root node has no end location");
   }
 
-  public get parent(): NodeWithChildren {
+  public get parent(): AnyNodeWithChildren {
     throw new Error("Root node has no parent");
   }
 
-  public set parent(parent: NodeWithChildren) {
+  public set parent(parent: AnyNodeWithChildren) {
     throw new Error("Root node has no parent");
   }
 
@@ -445,7 +463,20 @@ export class HtmlTextNode extends ParserNode {
   }
 }
 
-export class HtmlTagNode extends NodeWithChildren {
+export class HtmlAttributesNode extends NodeWithChildren<
+  NullDecoratedNode,
+  NullDecoratedNode
+> {
+  constructor() {
+    // TODO
+    super({} as any);
+  }
+}
+
+export class HtmlTagNode extends NodeWithChildren<
+  NodeWithChildrenDecoration,
+  NodeWithChildrenDecoration
+> {
   public getSiblingsRenderMode(): RenderMode {
     return this.renderDefinition.siblingsMode;
   }
@@ -457,17 +488,22 @@ export class HtmlTagNode extends NodeWithChildren {
   private renderDefinition: Required<RenderDefinition>;
   private _tagName: string;
   public isSelfClosing: boolean;
-  public attributes: AttributeNode[] = [];
+  public _attributes: HtmlAttributesNode;
   public forceCloseTag: boolean;
 
   public constructor(public token: VelocityToken) {
     super(token);
+    this.startNode = new NodeWithChildrenDecoration();
+    this._attributes = new HtmlAttributesNode();
+    this._attributes.parent = this;
   }
 
   public get scriptParser(): string | undefined {
-    const typeAttribute = this.attributes.find(
-      (attribute) => attribute.name === "type"
-    );
+    // TODO Typescript
+    const typeAttribute = this._attributes.children.find(
+      (attribute) =>
+        attribute instanceof AttributeNode && attribute.name === "type"
+    ) as AttributeNode;
     const scriptType = typeAttribute != null ? typeAttribute.value : undefined;
     return Object.keys(this.supportedScriptTypes).find((parser) =>
       this.supportedScriptTypes[parser].includes(scriptType)
@@ -508,6 +544,17 @@ export class HtmlTagNode extends NodeWithChildren {
   public set tagName(tagName: string) {
     this._tagName = tagName;
     const renderDefinition = tagRegistry.get(this.tagName);
+    // TODO
+    // this.renderDefinition = {
+    //   siblingsMode: RenderMode.INLINE,
+    //   childrenMode: RenderMode.INLINE,
+    //   forceBreak: false,
+    //   forceBreakChildren: false,
+    //   forceClose: false,
+    //   preformatted: false,
+    //   selfClosing: false,
+    //   ...renderDefinition,
+    // };
     if (renderDefinition == null) {
       this.renderDefinition = {
         siblingsMode: RenderMode.INLINE,
@@ -562,8 +609,12 @@ export class HtmlTagNode extends NodeWithChildren {
     return "";
   }
 
-  public addAttribute(key: VelocityToken, value?: VelocityToken): void {
-    this.attributes.push(new AttributeNode(key, value));
+  public get attributes(): ParserNode[] {
+    return this._attributes.children;
+  }
+
+  public addAttribute(attribute: AttributeNode | VelocityDirectiveNode): void {
+    this._attributes.addChild(attribute);
   }
 }
 
@@ -580,7 +631,10 @@ export class HtmlCommentNode extends ParserNode {
   }
 }
 
-export class IeConditionalCommentNode extends NodeWithChildren {
+export class IeConditionalCommentNode extends NodeWithChildren<
+  NodeWithChildrenDecoration,
+  NodeWithChildrenDecoration
+> {
   public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
@@ -590,6 +644,7 @@ export class IeConditionalCommentNode extends NodeWithChildren {
 
   public constructor(public token: VelocityToken) {
     super(token);
+    this.startNode = new NodeWithChildrenDecoration();
   }
 }
 
@@ -614,7 +669,10 @@ export class HtmlCdataNode extends ParserNode {
   }
 }
 
-export class HtmlCloseNode extends NodeWithChildren {
+export class HtmlCloseNode extends NodeWithChildren<
+  NodeWithChildrenDecoration,
+  NodeWithChildrenDecoration
+> {
   public tagName: string;
 
   public getSiblingsRenderMode(): RenderMode {
@@ -633,29 +691,74 @@ export class HtmlCloseNode extends NodeWithChildren {
      *        </tr>
      */
     this.forceBreakChildren = true;
+    // TODO This should be endNode
+    this.endNode = new NodeWithChildrenDecoration();
   }
 }
 
-interface VelocityRenderDefinition extends Partial<RenderDefinition> {
-  hasChildren: boolean;
+interface VelocityRenderDefinition {
+  siblingsMode?: RenderMode;
+  hasChildren?: boolean;
+  hasVelocityCode?: boolean;
+  adaptiveMode?: boolean;
 }
 
-export class VelocityDirectiveNode extends NodeWithChildren {
+export class VelocityDirectiveEndNode extends NodeWithChildrenDecoration {
+  constructor(public token: VelocityToken) {
+    super();
+  }
+}
+export class VelocityDirectiveNode extends NodeWithChildren<
+  NodeWithChildrenDecoration,
+  VelocityDirectiveEndNode
+> {
   public directive: string;
 
   private _tokens: VelocityToken[] = [];
 
+  // prettier-ignore
   private directiveToRenderDefinition: Map<string, VelocityRenderDefinition> =
-    new Map([["set", { hasChildren: false }]]);
+    new Map([
+      ["set", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+      ["if", { adaptiveMode: true }],
+      ["elseif", {adaptiveMode: true}],
+      ["else", { adaptiveMode: true, hasVelocityCode: false }],
+    ]);
 
-  private renderDefinition: VelocityRenderDefinition;
+  private renderDefinition: Required<VelocityRenderDefinition>;
+
+  public endStatement = false;
+
+  public formalMode = false;
 
   getSiblingsRenderMode(): RenderMode {
-    return RenderMode.BLOCK;
+    if (this.renderDefinition.adaptiveMode) {
+      let prev = this.prev;
+      while (prev != null && prev instanceof VelocityDirectiveNode) {
+        prev = prev.prev;
+      }
+      const prevRenderMode =
+        prev != null ? prev.getSiblingsRenderMode() : RenderMode.BLOCK;
+      let next = this.next;
+      while (next != null && next instanceof VelocityDirectiveNode) {
+        next = next.next;
+      }
+      const nextRenderMode =
+        next != null ? next.getSiblingsRenderMode() : RenderMode.BLOCK;
+      return prevRenderMode == RenderMode.INLINE ||
+        nextRenderMode == RenderMode.INLINE
+        ? RenderMode.INLINE
+        : RenderMode.BLOCK;
+    }
+    return this.renderDefinition.siblingsMode;
   }
 
   get hasChildren(): boolean {
     return this.renderDefinition.hasChildren;
+  }
+
+  get hasVelocityCode(): boolean {
+    return this.renderDefinition.hasVelocityCode;
   }
 
   constructor(startLocation: VelocityToken) {
@@ -664,18 +767,26 @@ export class VelocityDirectiveNode extends NodeWithChildren {
     // TODO #set with space and tab.
     this.directive = directiveWithoutSpaces.substring(
       1,
-      directiveWithoutSpaces.length - 1
+      directiveWithoutSpaces.endsWith("(")
+        ? directiveWithoutSpaces.length - 1
+        : directiveWithoutSpaces.length
     );
+    if (this.directive.startsWith("{")) {
+      this.formalMode = true;
+      this.directive = this.directive.substring(1, this.directive.length - 1);
+    }
     const renderDefinition = this.directiveToRenderDefinition.get(
       this.directive
     );
-    if (renderDefinition != null) {
-      this.renderDefinition = renderDefinition;
-    } else {
-      this.renderDefinition = {
-        hasChildren: true,
-      };
-    }
+    this.renderDefinition = {
+      siblingsMode: RenderMode.BLOCK,
+      hasChildren: true,
+      hasVelocityCode: true,
+      adaptiveMode: false,
+      ...renderDefinition,
+    };
+    this.forceBreakChildren = true;
+    this.startNode = new NodeWithChildrenDecoration();
   }
 
   public addToken(token: VelocityToken): void {

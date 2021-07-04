@@ -6,7 +6,7 @@ lexer grammar VelocityHtmlLexer;
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
 
-  private vtlPrefixes = ['if', 'foreach', 'end', 'set'];
+  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif'];
   private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
     return Math.max(maxLength, vtlPrefix.length);
   }, 0);
@@ -96,6 +96,7 @@ lexer grammar VelocityHtmlLexer;
     } 
   }
 
+  // TODO Constants for unicode characters.
   private isStartOfVtlReference2(offset: number = 0): boolean {
     let index = 0;
     let vtlDirectiveStart = false;
@@ -106,6 +107,10 @@ lexer grammar VelocityHtmlLexer;
     const nextCharacters = this.getNextCharacters(3);
     if ("#" == nextCharacters.charAt(index)) {
       vtlDirectiveStart = true;
+      index++;
+      if ("\u007b" === nextCharacters.charAt(index)) {
+        index++;
+      }
     } else if ("\u0024" == nextCharacters.charAt(index)) {
       vtlReferenceStart = true;
       index++;
@@ -137,7 +142,7 @@ lexer grammar VelocityHtmlLexer;
       }
       return true;
     } else {
-      const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, 1);
+      const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, index);
       for (let vtlDirective of this.vtlPrefixes) {
         if (nextCharacters.startsWith(vtlDirective)) {
           return true;
@@ -146,6 +151,7 @@ lexer grammar VelocityHtmlLexer;
       return false;
     }
   }
+
 
   private popModeIfNecessary(): void {
     const characterInStream = this.inputStream.getText(Interval.of((this.inputStream as any)._position, (this.inputStream as any)._position));
@@ -266,9 +272,11 @@ VTL_COMMENT: [ \t]* '##' ~[\n\r\f]*;
 
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
-VTL_DIRECTIVE_START : '#' ('foreach'|'if'|'set') VTL_WS* '(' -> pushMode(VELOCITY_MODE);
+VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
-VTL_DIRECTIVE_END: '#end';
+VTL_ELSE: '#' '{'? 'else' '}'?;
+
+VTL_DIRECTIVE_END: '#' '{' ? 'end' '}'?;
 
 VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER {this.pushModeIfNecessary()};
 
@@ -314,7 +322,7 @@ VTL_REFERENCE_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
 //  Example from user_guide.
 mode VELOCITY_MODE;
 
-VTL_KEYWORD: 'in' | '=' | ',' | '|';
+VTL_KEYWORD: 'in' | '=' | ',' | '|' | '<' | '>' | '!' | '&';
 
 VTL_DOT: '.';
 
@@ -362,7 +370,7 @@ mode TAG_MODE;
 // Tag open state: ASCII alpha https://html.spec.whatwg.org/#tag-open-state
 // Tag name state: Not tab, lf, ff, space, solidus, > https://html.spec.whatwg.org/#tag-name-state
 // Attribute name: https://html.spec.whatwg.org/#attribute-name-state
-fragment HTML_LIBERAL_NAME: ~[ \t\n\r\f/><="']+;
+fragment HTML_LIBERAL_NAME: ~[ \t\n\r\f/><="'#]+;
 
 HTML_NAME: HTML_LIBERAL_NAME;
 EQUAL: '=';
@@ -378,7 +386,16 @@ HTML_STRING
 fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
 
 TAG_CLOSE: '>' { this.popModeForCurrentTag() };
+
 SELF_CLOSING_TAG_CLOSE :'/' '>' -> popMode;
+
+TAG_VTL_DIRECTIVE_START : '#' '{'? ('if'|'elseif') '}'? VTL_WS* '(' -> type(VTL_DIRECTIVE_START), pushMode(VELOCITY_MODE);
+
+TAG_VTL_ELSE: '#' '{'? 'else' '}'? -> type(VTL_ELSE);
+
+TAG_VTL_DIRECTIVE_END: '#end' -> type(VTL_DIRECTIVE_END);
+
+TAG_NOT_VTL_VARIABLE: {!this.isStartOfVtlReference2()}? [#] ~[ \t\n\r\f<]* -> type(HTML_STRING);
 
 HTML_WS
    : DEFAULT_WS -> skip

@@ -1,0 +1,188 @@
+## BLOCK
+
+## Attribute without leading or trailing whitespace.
+#set($hasError = true)
+<span #if($hasError)class="error"#end>Error</span>
+## Attribute with leading whitespace
+<span #if($hasError) class="error"#end>Error</span>
+## Attribute with leading whitespace
+<span #if($hasError) class="error" #end>Error</span>
+
+## Attribute with leading and trailing whitespace.
+#set($disabled = true)
+#set($labelText = "Label for disabled field")
+<div>
+<label for="input">$labelText</label>
+<input name="input" class="disabled" #if($disabled) disabled #end/>
+</div>
+
+#set($foo = true)
+<div>
+#if( $foo )<strong>Velocity!</strong>#end
+#if( $foo )<strong>Velocity!</strong>#end
+#if( $foo )<strong>Velocity!</strong>#end
+#if ($foo )<div>
+  #if ($foo) <strong>Velocity!</strong>#end
+</div> #end
+</div>
+
+## INLINE
+
+## With surrounding text and no leading or trailing whitespace. Must not break
+<p>text #if(true)suffixIf#{else}suffixElse#{end}@prefix</p>
+<p>text #if(false)suffixIf#{else}suffixElse#{end}@prefix</p>
+<p>text suffix#if(true)suffixIf#{else}suffixElse#end</p>
+<p>text suffix#if(false)suffixIf#{else}suffixElse#end</p>
+## With surrounding text and leading or trailing whitespace
+<p>text #if(true) suffixIf#{else}suffixElse#{end}@prefix</p>
+<p>text #if(false)suffixIf#{else} suffixElse#{end}@prefix</p>
+<p>text #if(true)suffixIf #{else}suffixElse#{end}@prefix</p>
+<p>text #if(false)suffixIf#{else}suffixElse #{end}@prefix</p>
+<p>text suffix#if(true) suffixIf#{else}suffixElse#end</p>
+<p>text suffix#if(false)suffixIf#{else} suffixElse#end</p>
+<p>text suffix#if(true)suffixIf #{else}suffixElse#end</p>
+<p>text suffix#if(false)suffixIf#{else}suffixElse #end</p>
+## Without surrounding text
+<p>text #if(true)textIf#{else}textElse#end</p>
+<p>text #if(false)textIf#{else}textElse#end</p>
+
+
+## Different conditions
+<p>
+#if ($foo) #end
+#if ($ref == $null) #end
+#if ($ref == false) #end
+#if ($ref == '') #end
+#if ($ref == 0) #end
+#if ($ref.size() == 0) #end
+#if ($ref <= 10) #end
+#if ($ref >= 10) #end
+#if ($ref != 10) #end
+#if( $foo && $bar ) #end
+#if( $foo || $bar ) #end
+#if( !$foo ) #end
+</p>
+
+#if( $o < 10 )
+    **Go North**
+#elseif( $o == 10 )
+    **Go East**
+#elseif( $o > 6 )
+    **Go South**
+#else
+    **Go West**
+#end
+=====================================output=====================================
+## BLOCK
+
+## Attribute without leading or trailing whitespace.
+#set($hasError = true)
+<span
+  #if($hasError)
+    class="error"
+  #end
+  >Error</span
+>
+## Attribute with leading whitespace
+<span
+  #if($hasError)
+    class="error"
+  #end
+  >Error</span
+>
+## Attribute with leading whitespace
+<span
+  #if($hasError)
+    class="error"
+  #end
+  >Error</span
+>
+
+## Attribute with leading and trailing whitespace.
+#set($disabled = true)
+#set($labelText = "Label for disabled field")
+<div>
+  <label for="input">$labelText</label>
+  <input
+    name="input"
+    class="disabled"
+    #if($disabled)
+      disabled
+    #end
+  />
+</div>
+
+#set($foo = true)
+<div>
+  #if( $foo )<strong>Velocity!</strong>#end
+  #if( $foo )<strong>Velocity!</strong>#end
+  #if( $foo )<strong>Velocity!</strong>#end
+  #if ($foo )
+    <div>
+      #if ($foo)
+        <strong>Velocity!</strong>
+      #end
+    </div>
+  #end
+</div>
+
+## INLINE
+
+## With surrounding text and no leading or trailing whitespace. Must not break
+<p>text #if(true)suffixIf#{else}suffixElse#{end}@prefix</p>
+<p>text #if(false)suffixIf#{else}suffixElse#{end}@prefix</p>
+<p>text suffix#if(true)suffixIf#{else}suffixElse#end</p>
+<p>text suffix#if(false)suffixIf#{else}suffixElse#end</p>
+## With surrounding text and leading or trailing whitespace
+<p>
+  text
+  #if(true)
+    suffixIf#{else}suffixElse#{end}@prefix
+</p>
+<p>
+  text #if(false)suffixIf#else
+    suffixElse
+  #{end}@prefix
+</p>
+<p>text #if(true)suffixIf #{else}suffixElse#{end}@prefix</p>
+<p>text #if(false)suffixIf#{else}suffixElse #{end}@prefix</p>
+<p>
+  text suffix#if(true)
+    suffixIf#{else}suffixElse#end
+</p>
+<p>
+  text suffix#if(false)suffixIf#else
+    suffixElse
+  #end
+</p>
+<p>text suffix#if(true)suffixIf #{else}suffixElse#end</p>
+<p>text suffix#if(false)suffixIf#{else}suffixElse #end</p>
+## Without surrounding text
+<p>text #if(true)textIf#{else}textElse#end</p>
+<p>text #if(false)textIf#{else}textElse#end</p>
+
+## Different conditions
+<p>
+  #if ($foo)#end
+  #if ($ref == $null)#end
+  #if ($ref == false)#end
+  #if ($ref == '')#end
+  #if ($ref == 0)#end
+  #if ($ref.size() == 0)#end
+  #if ($ref <= 10)#end
+  #if ($ref >= 10)#end
+  #if ($ref != 10)#end
+  #if( $foo && $bar ) #end
+  #if( $foo || $bar ) #end
+  #if( !$foo ) #end
+</p>
+
+#if( $o < 10 )
+  **Go North**
+#elseif( $o == 10 )
+  **Go East**
+#elseif( $o > 6 )
+  **Go South**
+#else
+  **Go West**
+#end

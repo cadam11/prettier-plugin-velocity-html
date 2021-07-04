@@ -1,4 +1,4 @@
-import { AstPath, Doc, doc } from "prettier";
+import { AstPath, Doc, doc, ParserOptions } from "prettier";
 import { RenderMode } from "./parser/tagRegistry";
 import {
   AttributeNode,
@@ -12,6 +12,7 @@ import {
   IeConditionalCommentNode,
   NodeWithChildren,
   ParserNode,
+  AnyNodeWithChildren,
   RootNode,
   VelocityCommentNode,
   VelocityDirectiveNode,
@@ -118,17 +119,18 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
   }
   const firstChild = node instanceof NodeWithChildren ? node.children[0] : null;
   /**
-   * The close node is special, because it prints its children first (no start tag).
+   * Skip beginning line, if first child has no start node.
    * This will result in too many softlines (one per level) before the children content starts.
    */
   const softlineBeforeChildren =
-    !node.isSelfOrParentPreformatted && !(firstChild instanceof HtmlCloseNode);
+    !node.isSelfOrParentPreformatted &&
+    !(firstChild instanceof NodeWithChildren && firstChild.startNode == null);
   /**
    * Same as above, but for nodes missing the end tag.
    */
   const softlineAfterChildren =
     !node.isSelfOrParentPreformatted &&
-    !(node instanceof HtmlTagNode && node.endNode == null);
+    !(node instanceof NodeWithChildren && node.endNode == null);
   const forceBreakChildren =
     (node instanceof NodeWithChildren &&
       (node.forceBreakChildren || node.maxDepth >= 2)) ||
@@ -174,7 +176,7 @@ function calculateDifferenceBetweenChildren(
   }
 }
 
-function breakOpeningTag(parent: NodeWithChildren) {
+function breakOpeningTag(parent: AnyNodeWithChildren): boolean {
   return (
     (parent instanceof HtmlTagNode
       ? parent.getChildrenRenderMode() == RenderMode.INLINE
@@ -185,7 +187,7 @@ function breakOpeningTag(parent: NodeWithChildren) {
   );
 }
 
-function breakClosingTag(parent: NodeWithChildren) {
+function breakClosingTag(parent: AnyNodeWithChildren): boolean {
   return (
     (parent instanceof HtmlTagNode
       ? parent.getChildrenRenderMode() == RenderMode.INLINE
@@ -239,7 +241,7 @@ function breakClosingTag(parent: NodeWithChildren) {
  */
 function printChildren(
   path: AstPath<ParserNode>,
-  options: unknown,
+  options: ParserOptions,
   print: (path: AstPath) => Doc
 ): Doc[] {
   return path.map((childPath) => {
@@ -359,9 +361,7 @@ function printChildren(
 
 export default function print(
   path: AstPath<ParserNode>,
-  options: {
-    originalText: string;
-  },
+  options: ParserOptions,
   print: (path: AstPath) => Doc
 ): Doc {
   const node: ParserNode = path.getValue();
@@ -519,17 +519,41 @@ export default function print(
       `</${node.tagName}>`,
     ];
   } else if (node instanceof VelocityDirectiveNode) {
-    return decorate(
-      [
-        `#${node.directive}(${node.tokens
-          .map((token) => token.textValue)
-          .join("")}`,
-        ...(node.hasChildren
-          ? [concatChildren(node, printChildren(path, options, print)), "#end"]
-          : []),
-      ],
-      node
-    );
+    const parts: Doc[] = [`#`];
+    const formalMode = !node.forceBreakChildren && node.formalMode;
+    const inlineChildren =
+      (node.isInlineRenderMode &&
+        node.firstChild != null &&
+        node.firstChild.isInlineRenderMode &&
+        !node.firstChild.hasLeadingSpaces) ||
+      (node.lastChild != null &&
+        node.lastChild.isInlineRenderMode &&
+        !node.lastChild.hasLeadingSpaces);
+    if (formalMode || (inlineChildren && node.directive == "else")) {
+      parts.push("{");
+    }
+    parts.push(node.directive);
+    if (formalMode || (inlineChildren && node.directive == "else")) {
+      parts.push("}");
+    }
+    if (node.hasVelocityCode) {
+      parts.push(`(`);
+      node.tokens.forEach((token) => parts.push(token.textValue));
+    }
+    if (node.hasChildren) {
+      const children = printChildren(path, options, print);
+      // TODO Copy logic from breakOpeningTag. If true and ChildrenRenderMode = Inline, do not indent, do not insert newline
+      // TODO What if "if" and "else" different first childs?
+      if (inlineChildren) {
+        parts.push(children);
+      } else {
+        parts.push(concatChildren(node, children));
+      }
+    }
+    if (node.endNode != null) {
+      parts.push(node.endNode.token.textValue);
+    }
+    return decorate(parts, node);
   } else if (node instanceof VelocityCommentNode) {
     const parts: Doc[] = [];
     const textLines = node.text.split(NEWLINE_REGEX);
