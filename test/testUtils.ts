@@ -104,6 +104,10 @@ export const takeScreenshot = async (
   const htmlPath = path.join(SCREENSHOT_FOLDER, `${prefix}.html`);
   fs.writeFileSync(htmlPath, html);
   await page.goto(`file://${htmlPath}`);
+  const isContentTooLong = await page.evaluate(
+    "document.body.scrollHeight > document.body.clientHeight"
+  );
+
   // Chrome shows a short loading spinner inside video elements. It cannot be paused() (only thing I have tried), therefore we wait until it is hopefully done.
   // If we don't wait the screenshot comparision won't work.
   if (html.includes("<video")) {
@@ -111,5 +115,8 @@ export const takeScreenshot = async (
   }
   const screenshotPath = path.join(SCREENSHOT_FOLDER, `${prefix}.png`);
   await page.screenshot({ path: screenshotPath });
+  if (isContentTooLong == true) {
+    throw new Error(`Content of ${prefix} is too long.`);
+  }
   return screenshotPath;
 };

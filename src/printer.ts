@@ -1,3 +1,4 @@
+import { Parser } from "antlr4ts";
 import { AstPath, Doc, doc, ParserOptions } from "prettier";
 import { RenderMode } from "./parser/tagRegistry";
 import {
@@ -34,6 +35,24 @@ const {
   indent,
   line,
 } = doc.builders;
+
+function isInlineAndHasLeadingSpaces(node: ParserNode | undefined): boolean {
+  return node != null && node.isInlineRenderMode && node.hasLeadingSpaces;
+}
+
+function isInlineAndHasTrailingSpaces(node: ParserNode | undefined): boolean {
+  return node != null && node.isInlineRenderMode && node.hasTrailingSpaces;
+}
+
+// TODO Naming. Too general. Maybe not?
+function doInlineChildren(node: AnyNodeWithChildren | undefined): boolean {
+  return (
+    node != null &&
+    node.isInlineRenderMode &&
+    (!isInlineAndHasLeadingSpaces(node.firstChild) ||
+      !isInlineAndHasTrailingSpaces(node.lastChild))
+  );
+}
 
 function escapeDoubleQuote(text: string): string {
   return text.replace(/"/g, "&quot;");
@@ -521,14 +540,8 @@ export default function print(
   } else if (node instanceof VelocityDirectiveNode) {
     const parts: Doc[] = [`#`];
     const formalMode = !node.forceBreakChildren && node.formalMode;
-    const inlineChildren =
-      (node.isInlineRenderMode &&
-        node.firstChild != null &&
-        node.firstChild.isInlineRenderMode &&
-        !node.firstChild.hasLeadingSpaces) ||
-      (node.lastChild != null &&
-        node.lastChild.isInlineRenderMode &&
-        !node.lastChild.hasLeadingSpaces);
+
+    const inlineChildren = doInlineChildren(node);
     if (formalMode || (inlineChildren && node.directive == "else")) {
       parts.push("{");
     }
@@ -552,6 +565,17 @@ export default function print(
     }
     if (node.endNode != null) {
       parts.push(node.endNode.token.textValue);
+    } else if (
+      isInlineAndHasTrailingSpaces(node.lastChild) &&
+      doInlineChildren(node.next as VelocityDirectiveNode)
+    ) {
+      // This is an if or elseif followed by a elseif or else.
+      // See only child logic in printChildren.
+      parts.push(
+        node.lastChild != null && node.lastChild.isOnlyChild
+          ? ifBreak(" ", "")
+          : " "
+      );
     }
     return decorate(parts, node);
   } else if (node instanceof VelocityCommentNode) {

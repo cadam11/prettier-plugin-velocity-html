@@ -18,34 +18,47 @@
 
 #set($foo = true)
 <div>
-#if( $foo )<strong>Velocity!</strong>#end
-#if( $foo )<strong>Velocity!</strong>#end
-#if( $foo )<strong>Velocity!</strong>#end
-#if ($foo )<div>
-  #if ($foo) <strong>Velocity!</strong>#end
-</div> #end
-</div>
+  #if( $foo )<strong>Velocity!</strong>#end 
+  
+  #if( $foo )<strong>Velocity!</strong>#end
+  
+  #if ($foo )<div>
+    #if ($foo) <strong>Velocity!</strong>#end
+  </div> #end
+  </div>
 
 ## INLINE
 
 ## With surrounding text and no leading or trailing whitespace. Must not break
-<p>text #if(true)suffixIf#{else}suffixElse#{end}@prefix</p>
-<p>text #if(false)suffixIf#{else}suffixElse#{end}@prefix</p>
-<p>text suffix#if(true)suffixIf#{else}suffixElse#end</p>
-<p>text suffix#if(false)suffixIf#{else}suffixElse#end</p>
+<p>
+<span>text #if(true)suffixIf#{else}suffixElse#{end}@prefix</span>
+<span>text #if(false)suffixIf#{else}suffixElse#{end}@prefix</span>
+<span>text suffix#if(true)suffixIf#{else}suffixElse#end</span>
+<span>text suffix#if(false)suffixIf#{else}suffixElse#end</span>
+</p>
 ## With surrounding text and leading or trailing whitespace
-<p>text #if(true) suffixIf#{else}suffixElse#{end}@prefix</p>
-<p>text #if(false)suffixIf#{else} suffixElse#{end}@prefix</p>
-<p>text #if(true)suffixIf #{else}suffixElse#{end}@prefix</p>
-<p>text #if(false)suffixIf#{else}suffixElse #{end}@prefix</p>
-<p>text suffix#if(true) suffixIf#{else}suffixElse#end</p>
-<p>text suffix#if(false)suffixIf#{else} suffixElse#end</p>
-<p>text suffix#if(true)suffixIf #{else}suffixElse#end</p>
-<p>text suffix#if(false)suffixIf#{else}suffixElse #end</p>
+<p>
+<span>text #if(false)suffixIf#{else} suffixElse#{end}@prefix</span>
+<span>text #if(true) suffixIf#{else}suffixElse#{end}@prefix</span>
+<span>text #if(true)suffixIf #{else}suffixElse#{end}@prefix</span>
+<span>text #if(false)suffixIf#{else}suffixElse #{end}@prefix</span>
+<span>text suffix#if(true) suffixIf#{else}suffixElse#end</span>
+<span>text suffix#if(false)suffixIf#{else} suffixElse#end</span>
+<span>text suffix#if(true)suffixIf #{else}suffixElse#end</span>
+<span>text suffix#if(false)suffixIf#{else}suffixElse #end</span>
+</p>
 ## Without surrounding text
-<p>text #if(true)textIf#{else}textElse#end</p>
-<p>text #if(false)textIf#{else}textElse#end</p>
-
+<p>
+<span>text #if(true)textIf#{else}textElse#end</span>
+<span>text #if(false)textIf#{else}textElse#end</span>
+</p>
+## With surrounding text and both
+<p>
+<span>text #if(true) suffixIf #{else}suffixElse#{end}@prefix</span>
+<span>text #if(false)suffixIf#{else} suffixElse #{end}@prefix</span>
+<span>text suffix#if(true) suffixIf #{else}suffixElse#end</span>
+<span>text suffix#if(false)suffixIf#{else} suffixElse #end</span>
+</p>
 
 ## Different conditions
 <p>
@@ -114,12 +127,17 @@
 
 #set($foo = true)
 <div>
-  #if( $foo )<strong>Velocity!</strong>#end
-  #if( $foo )<strong>Velocity!</strong>#end
-  #if( $foo )<strong>Velocity!</strong>#end
-  #if ($foo )
+  #if( $foo )
+    <strong>Velocity!</strong>
+  #end
+
+  #if( $foo )
+    <strong>Velocity!</strong>
+  #end
+
+  #if($foo )
     <div>
-      #if ($foo)
+      #if($foo)
         <strong>Velocity!</strong>
       #end
     </div>
@@ -129,52 +147,89 @@
 ## INLINE
 
 ## With surrounding text and no leading or trailing whitespace. Must not break
-<p>text #if(true)suffixIf#{else}suffixElse#{end}@prefix</p>
-<p>text #if(false)suffixIf#{else}suffixElse#{end}@prefix</p>
-<p>text suffix#if(true)suffixIf#{else}suffixElse#end</p>
-<p>text suffix#if(false)suffixIf#{else}suffixElse#end</p>
+<p>
+  <span>text #if(true)suffixIf#{else}suffixElse#{end}@prefix</span>
+  <span>text #if(false)suffixIf#{else}suffixElse#{end}@prefix</span>
+  <span>text suffix#if(true)suffixIf#{else}suffixElse#end</span>
+  <span>text suffix#if(false)suffixIf#{else}suffixElse#end</span>
+</p>
 ## With surrounding text and leading or trailing whitespace
 <p>
-  text
-  #if(true)
-    suffixIf#{else}suffixElse#{end}@prefix
+  <span>text #if(false)suffixIf#{else} suffixElse#{end}@prefix</span>
+  <span>text #if(true) suffixIf#{else}suffixElse#{end}@prefix</span>
+  <span>text #if(true)suffixIf #{else}suffixElse#{end}@prefix</span>
+  <span>text #if(false)suffixIf#{else}suffixElse #{end}@prefix</span>
+  <span>text suffix#if(true) suffixIf#{else}suffixElse#end</span>
+  <span>text suffix#if(false)suffixIf#{else} suffixElse#end</span>
+  <span>text suffix#if(true)suffixIf #{else}suffixElse#end</span>
+  <span>text suffix#if(false)suffixIf#{else}suffixElse #end</span>
 </p>
-<p>
-  text #if(false)suffixIf#else
-    suffixElse
-  #{end}@prefix
-</p>
-<p>text #if(true)suffixIf #{else}suffixElse#{end}@prefix</p>
-<p>text #if(false)suffixIf#{else}suffixElse #{end}@prefix</p>
-<p>
-  text suffix#if(true)
-    suffixIf#{else}suffixElse#end
-</p>
-<p>
-  text suffix#if(false)suffixIf#else
-    suffixElse
-  #end
-</p>
-<p>text suffix#if(true)suffixIf #{else}suffixElse#end</p>
-<p>text suffix#if(false)suffixIf#{else}suffixElse #end</p>
 ## Without surrounding text
-<p>text #if(true)textIf#{else}textElse#end</p>
-<p>text #if(false)textIf#{else}textElse#end</p>
+<p>
+  <span>text #if(true)textIf#{else}textElse#end</span>
+  <span>text #if(false)textIf#{else}textElse#end</span>
+</p>
+## With surrounding text and both
+<p>
+  <span
+    >text
+    #if(true)
+      suffixIf #{else}suffixElse#{end}@prefix</span
+  >
+  <span
+    >text #if(false)suffixIf#else
+      suffixElse
+    #{end}@prefix</span
+  >
+  <span
+    >text suffix#if(true)
+      suffixIf #{else}suffixElse#end</span
+  >
+  <span
+    >text suffix#if(false)suffixIf#else
+      suffixElse
+    #end</span
+  >
+</p>
 
 ## Different conditions
 <p>
-  #if ($foo)#end
-  #if ($ref == $null)#end
-  #if ($ref == false)#end
-  #if ($ref == '')#end
-  #if ($ref == 0)#end
-  #if ($ref.size() == 0)#end
-  #if ($ref <= 10)#end
-  #if ($ref >= 10)#end
-  #if ($ref != 10)#end
-  #if( $foo && $bar ) #end
-  #if( $foo || $bar ) #end
-  #if( !$foo ) #end
+  #if($foo)
+
+  #end
+  #if($ref == $null)
+
+  #end
+  #if($ref == false)
+
+  #end
+  #if($ref == '')
+
+  #end
+  #if($ref == 0)
+
+  #end
+  #if($ref.size() == 0)
+
+  #end
+  #if($ref <= 10)
+
+  #end
+  #if($ref >= 10)
+
+  #end
+  #if($ref != 10)
+
+  #end
+  #if( $foo && $bar )
+
+  #end
+  #if( $foo || $bar )
+
+  #end
+  #if( !$foo )
+
+  #end
 </p>
 
 #if( $o < 10 )

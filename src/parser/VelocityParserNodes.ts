@@ -723,6 +723,7 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       ["if", { adaptiveMode: true }],
       ["elseif", {adaptiveMode: true}],
       ["else", { adaptiveMode: true, hasVelocityCode: false }],
+      ["foreach", {}],
     ]);
 
   private renderDefinition: Required<VelocityRenderDefinition>;
@@ -734,6 +735,7 @@ export class VelocityDirectiveNode extends NodeWithChildren<
   getSiblingsRenderMode(): RenderMode {
     if (this.renderDefinition.adaptiveMode) {
       let prev = this.prev;
+      // Skip over other DirectiveNodes. Their content might not be rendered at runtime.
       while (prev != null && prev instanceof VelocityDirectiveNode) {
         prev = prev.prev;
       }
@@ -775,9 +777,13 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       this.formalMode = true;
       this.directive = this.directive.substring(1, this.directive.length - 1);
     }
+    this.directive = this.directive.trimRight();
     const renderDefinition = this.directiveToRenderDefinition.get(
       this.directive
     );
+    if (renderDefinition == null) {
+      throw new Error(`Directive ${this.directive} is unknown`);
+    }
     this.renderDefinition = {
       siblingsMode: RenderMode.BLOCK,
       hasChildren: true,
