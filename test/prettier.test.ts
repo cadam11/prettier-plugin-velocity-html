@@ -24,8 +24,16 @@ describe("prettier", () => {
 
   before(async () => {
     prepareScreenshotFolder();
-    browser = await chromium.launch({ headless: true });
-    page = await browser.newPage();
+    browser = await chromium.launch({
+      headless: true,
+    });
+    const browserContext = await browser.newContext({
+      viewport: {
+        height: 2000,
+        width: 1000,
+      },
+    });
+    page = await browserContext.newPage();
   });
 
   after(async () => {
