@@ -571,6 +571,7 @@ export default function parse(
           }
           case VelocityHtmlLexer.VTL_PARENS_OPEN:
           case VelocityHtmlLexer.VTL_INDEX_OPEN:
+          case VelocityHtmlLexer.VTL_CURLY_OPEN:
           case VelocityHtmlLexer.VTL_FORMAL_REFERENCE_OPEN: {
             velocityNode.addToken(token);
             velocityModeStack.push("VelocityMode");

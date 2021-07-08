@@ -26,75 +26,6 @@ lexer grammar VelocityHtmlLexer;
   private vtlOperators = this.toCodePoints([".", "(", "[", "|"]);
   private vtlWhitespace = this.toCodePoints([" ", "\t", "\n", "\r", "\f"]);
   private vtlAll = new Set([...this.vtlValidAlphaNumeric, ...this.vtlOperators, ...this.vtlWhitespace, ...this.toCodePoints(["}"])])
-  // $, { and ! break the syntax highlighting of the plugin
-  private isStartOfVtlReference(offset: number = 0): boolean {
-    let index = 0;
-    let vtlDirectiveStart = false;
-    let vtlReferenceStart = false;
-    let isVtlReference = false;
-    let isVtlDirective = false;
-    let pushVelocityMode = false;
-    const nextCharacters = this.getNextCharacters(3);
-    if ("#" == nextCharacters.charAt(index)) {
-      vtlDirectiveStart = true;
-    } else if ("\u0024" == nextCharacters.charAt(index)) {
-      vtlReferenceStart = true;
-      index++;
-      if ("\u0021" == nextCharacters.charAt(index)) {
-        index++;
-      }
-      if ("\u007b" == nextCharacters.charAt(index)) {
-        pushVelocityMode = true;
-        index++;
-      }
-    }
-    if (!vtlReferenceStart && !vtlDirectiveStart) {
-      return false;
-    }
-    while(true) {
-      const startPosition = this._tokenStartCharIndex + index;
-      if (startPosition >= this.inputStream.size) {
-        if (isVtlReference && pushVelocityMode) {
-          this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
-        }
-        return isVtlReference;
-      }
-      const characterInStream = this.inputStream.getText(Interval.of(startPosition, startPosition));
-      const codePoint = characterInStream.toLowerCase().codePointAt(0);
-      if (codePoint == null) {
-        // ?
-        return false;
-      }
-      
-      if (vtlReferenceStart) {
-        if (!isVtlReference) {
-          // TODO Test Numbers
-          if (!this.vtlValidAlpha.has(codePoint)) {
-            return false;
-          }
-          isVtlReference = true;
-        } else {
-          if (this.vtlOperators.has(codePoint)) {
-              this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE);
-            return true;
-          } else if (!this.vtlValidAlpha.has(codePoint)) {
-            if (pushVelocityMode) {
-              this.pushMode(VelocityHtmlLexer.VELOCITY_REFERENCE_MODE)
-            }
-            return true;
-          }
-        }
-      } else {
-        const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, 1);
-        for (let vtlDirective of this.vtlPrefixes) {
-          if (nextCharacters.startsWith(vtlDirective)) {
-            return true;
-          }
-        }
-      }
-      index++;
-    } 
-  }
 
   // TODO Constants for unicode characters.
   private isStartOfVtlReference2(offset: number = 0): boolean {
@@ -268,7 +199,7 @@ TAG_START_OPEN: '<' HTML_LIBERAL_NAME  { this.setNextTagCloseMode() } -> pushMod
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
 // TODO Try to break this
-VTL_COMMENT: [ \t]* '##' ~[\n\r\f]*;
+VTL_COMMENT: '##' ~[\n\r\f]*;
 
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
@@ -322,7 +253,7 @@ VTL_REFERENCE_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
 //  Example from user_guide.
 mode VELOCITY_MODE;
 
-VTL_KEYWORD: 'in' | '=' | ',' | '|' | '<' | '>' | '!' | '&';
+VTL_KEYWORD: 'in' | '=' | ',' | '|' | '<' | '>' | '!' | '&' | ':' | '+' | '-' | '*' | '/';
 
 VTL_DOT: '.';
 
@@ -337,6 +268,8 @@ VTL_INDEX_CLOSE: ']' -> popMode;
 VTL_PARENS_OPEN: '(' -> pushMode(VELOCITY_MODE);
 
 VTL_PARENS_CLOSE: ')'  -> popMode;
+
+VTL_CURLY_OPEN: '{' -> pushMode(VELOCITY_MODE);
 
 VTL_FORMAL_CLOSE: '}' -> popMode;
 

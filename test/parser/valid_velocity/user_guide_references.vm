@@ -114,11 +114,11 @@ $sun.setPlanets('Mercury')
 $sun.setPlanets()
 
 ## Index notation
-$foo[0]       ## $foo takes in an Integer look up
+$foo[0] ## $foo takes in an Integer look up
 Output that should remain in document
-$foo[$i]      ## Using another reference as the index
+$foo[$i] ## Using another reference as the index
 Output that should remain in document
-$foo["bar"]   ## Passing a string where $foo may be a Map
+$foo["bar"] ## Passing a string where $foo may be a Map
 Output that should remain in document
 $foo.bar[1].junk
 Output that should remain in document

@@ -4,8 +4,17 @@ import java.nio.file.Path;
 
 public class VelocityCommand {
 
+  private String name;
   private String template;
   private Path contextScriptPath;
+
+  public void setName(String name) {
+    this.name = name;
+  }
+
+  public String getName() {
+    return name;
+  }
 
   public String getTemplate() {
     return template;

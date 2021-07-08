@@ -50,7 +50,7 @@ public class App {
       byte[] bytes = new byte[bytesRead];
       buffer.get(bytes);
       message.append(new String(bytes));
-      // TODO What about exactly 1024 bytes?
+      // TODO What about exactly 1024 bytes? -> Add EOL byte
       if (bytesRead == 1024) {
         buffer.clear();
       } else {
@@ -138,7 +138,12 @@ public class App {
           );
       }
       StringWriter sw = new StringWriter();
-      engine.evaluate(context, sw, "foo", velocityCommand.getTemplate());
+      engine.evaluate(
+        context,
+        sw,
+        velocityCommand.getName(),
+        velocityCommand.getTemplate()
+      );
       return RenderVelocityResult.ofSuccess(sw.getBuffer().toString());
     } catch (Exception e) {
       StringWriter sw = new StringWriter();

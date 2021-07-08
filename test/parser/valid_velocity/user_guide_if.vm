@@ -61,26 +61,27 @@
 </p>
 
 ## Different conditions
+#set($number = 10)
 <p>
 #if ($foo) #end
 #if ($ref == $null) #end
 #if ($ref == false) #end
 #if ($ref == '') #end
-#if ($ref == 0) #end
+#if ($number == 0) #end
 #if ($ref.size() == 0) #end
-#if ($ref <= 10) #end
-#if ($ref >= 10) #end
-#if ($ref != 10) #end
+#if ($number <= 10) #end
+#if ($number >= 10) #end
+#if ($number != 10) #end
 #if( $foo && $bar ) #end
 #if( $foo || $bar ) #end
 #if( !$foo ) #end
 </p>
 
-#if( $o < 10 )
+#if( $number < 10 )
     **Go North**
-#elseif( $o == 10 )
+#elseif( $number == 10 )
     **Go East**
-#elseif( $o > 6 )
+#elseif( $number > 6 )
     **Go South**
 #else
     **Go West**
@@ -193,6 +194,7 @@
 </p>
 
 ## Different conditions
+#set($number = 10)
 <p>
   #if($foo)
 
@@ -206,19 +208,19 @@
   #if($ref == '')
 
   #end
-  #if($ref == 0)
+  #if($number == 0)
 
   #end
   #if($ref.size() == 0)
 
   #end
-  #if($ref <= 10)
+  #if($number <= 10)
 
   #end
-  #if($ref >= 10)
+  #if($number >= 10)
 
   #end
-  #if($ref != 10)
+  #if($number != 10)
 
   #end
   #if( $foo && $bar )
@@ -232,11 +234,11 @@
   #end
 </p>
 
-#if( $o < 10 )
+#if( $number < 10 )
   **Go North**
-#elseif( $o == 10 )
+#elseif( $number == 10 )
   **Go East**
-#elseif( $o > 6 )
+#elseif( $number > 6 )
   **Go South**
 #else
   **Go West**

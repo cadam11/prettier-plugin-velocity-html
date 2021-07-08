@@ -116,6 +116,7 @@ describe("prettier-velocity", () => {
       )}`;
 
       const message = JSON.stringify({
+        name: testCaseName,
         template,
         contextScriptPath: fs.existsSync(contextScriptPath)
           ? contextScriptPath

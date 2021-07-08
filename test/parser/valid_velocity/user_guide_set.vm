@@ -1,0 +1,58 @@
+#set( $primate = "monkey" )
+#set( $customer.Behavior = $primate )
+
+#set( $monkey = $bill ) ## variable reference
+#set( $monkey.Friend = "monica" ) ## string literal
+#set( $monkey.Blame = $whitehouse.Leak ) ## property reference
+#set( $monkey.Plan = $spindoctor.weave($web) ) ## method reference
+#set( $monkey.Number = 123 ) ##number literal
+#set( $monkey.Words = ["Not", $my, "fault"] ) ## ArrayList
+#set( $monkey.theMap = {"banana" : "good", "roast beef" : "bad"}) ## Map
+
+#set( $value = $foo + 1 )
+#set( $value = $bar - 1 )
+#set( $value = $foo * $bar )
+#set( $value = $foo / $bar )
+
+#set( $directoryRoot = "www" )
+#set( $templateName = "index.vm" )
+#set( $template = "$directoryRoot/$templateName" )
+$template
+
+#set( $foo = "bar" )
+$foo
+#set( $blargh = '$foo' )
+$blargh
+=====================================output=====================================
+#set( $primate = "monkey" )
+#set( $customer.Behavior = $primate )
+
+#set( $monkey = $bill )
+## variable reference
+#set( $monkey.Friend = "monica" )
+## string literal
+#set( $monkey.Blame = $whitehouse.Leak )
+## property reference
+#set( $monkey.Plan = $spindoctor.weave($web) )
+## method reference
+#set( $monkey.Number = 123 )
+##number literal
+#set( $monkey.Words = ["Not", $my, "fault"] )
+## ArrayList
+#set( $monkey.theMap = {"banana" : "good", "roast beef" : "bad"})
+## Map
+
+#set( $value = $foo + 1 )
+#set( $value = $bar - 1 )
+#set( $value = $foo * $bar )
+#set( $value = $foo / $bar )
+
+#set( $directoryRoot = "www" )
+#set( $templateName = "index.vm" )
+#set( $template = "$directoryRoot/$templateName" )
+$template
+
+#set( $foo = "bar" )
+$foo
+#set( $blargh = '$foo' )
+$blargh
