@@ -62,13 +62,17 @@
 
 ## Different conditions
 #set($number = 10)
+#set($null = "null")
+#set($ref = "notNull")
+#set($array = [])
+#set($bar = false)
 <p>
 #if ($foo) #end
 #if ($ref == $null) #end
 #if ($ref == false) #end
 #if ($ref == '') #end
 #if ($number == 0) #end
-#if ($ref.size() == 0) #end
+#if ($ref.length() == 0) #end
 #if ($number <= 10) #end
 #if ($number >= 10) #end
 #if ($number != 10) #end
@@ -195,6 +199,10 @@
 
 ## Different conditions
 #set($number = 10)
+#set($null = "null")
+#set($ref = "notNull")
+#set($array = [])
+#set($bar = false)
 <p>
   #if($foo)
 
@@ -211,7 +219,7 @@
   #if($number == 0)
 
   #end
-  #if($ref.size() == 0)
+  #if($ref.length() == 0)
 
   #end
   #if($number <= 10)

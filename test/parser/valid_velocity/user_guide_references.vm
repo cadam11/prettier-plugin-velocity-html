@@ -1,15 +1,14 @@
+#set($myarray = [0, 1, 2])
 ## References and tags
 <span>pre</span> $myarray.isEmpty() <span>or</span> $myarray.empty <span>post</span>
 
+#set($bar = "bar")
 ## References and text
 pre $myarray.isEmpty() or $myarray.empty post
 $myarray.size()
 prefix${bar}suffix
 prefix$bar
 $bar!suffix
-
-## Funny formatting
-$myarray.get(2    , 3, 4 ,  5)
 
 ## New lines
 $myarray.set(
@@ -18,12 +17,14 @@ $myarray.set(
 )
 
 ## Nested
-$my.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.nested.property
+#set($my = {"deeply": {"deeply": {"deeply": {"deeply": {"deeply": {"deeply": {"deeply": {"nested": {"property": "foo" }}}}}}}}})
+$my.deeply.deeply.deeply.deeply.deeply.deeply.deeply.nested.property
+
 
 ## Allowed names
-$mudSlinger
-$mud_slinger
-$mudSlinger1
+#set($mudSlinger = "mudSlinger")
+#set($mud_slinger = "mud_slinger")
+#set($mudSlinger1 = "mudSlinger1")
 
 ## Property vs function access
 $customer.Address or $customer.getAddress()
@@ -39,21 +40,24 @@ $sun.setPlanets('Earth', 'Mars', 'Neptune')
 $sun.setPlanets('Mercury')
 $sun.setPlanets()
 
+#set($foo = [0, 1, 2])
+#set($i = 0)
+#set($bar = {"bar": [1, {"junk": "junk"}]})
+#set($map = {"apple": [1, 2, 3, 4, 5], "peach": "peach"})
 ## Index notation
 $foo[0]       ## $foo takes in an Integer look up
 Output that should remain in document
 $foo[$i]      ## Using another reference as the index   
 Output that should remain in document
-$foo["bar"]   ## Passing a string where $foo may be a Map
+$bar["bar"]   ## Passing a string where $foo may be a Map
 Output that should remain in document
-$foo.bar[1].junk
+$bar.bar[1].junk
 Output that should remain in document
-$foo.callMethod()[1]
+$map.peach.toString()
 Output that should remain in document
-$foo["apple"][4]
-#set($foo[0] = 1)
-#set($foo.bar[1] = 3)
-#set($map["apple"] = "orange")
+$map["apple"][4]
+#set($map.apple[0] = 1)
+#set($map["peach"] = "orange")
 
 ## Formal and quite reference
 ${mudSlinger}
@@ -61,27 +65,29 @@ ${customer.Address}
 ${purchase.getTotal()}
 My name is ${name|'John Doe'}
 
-$myMap.get(${myKeyName})
+#set($myKeyName = "apple")
+$map.get(${myKeyName})
 
+#set($email = "email@domain")
 <p>Send a $email!</p>
 <p>Send a $!email!</p>
 <p>Send a $!{email}</p>
 
+#set($end = true)
 ## End with reference
 $end
 =====================================output=====================================
+#set($myarray = [0, 1, 2])
 ## References and tags
 <span>pre</span> $myarray.isEmpty() <span>or</span> $myarray.empty
 <span>post</span>
 
+#set($bar = "bar")
 ## References and text
 pre $myarray.isEmpty() or $myarray.empty post
 $myarray.size()
 prefix${bar}suffix prefix$bar
 $bar!suffix
-
-## Funny formatting
-$myarray.get(2    , 3, 4 ,  5)
 
 ## New lines
 $myarray.set(
@@ -90,12 +96,13 @@ $myarray.set(
 )
 
 ## Nested
-$my.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.deeply.nested.property
+#set($my = {"deeply": {"deeply": {"deeply": {"deeply": {"deeply": {"deeply": {"deeply": {"nested": {"property": "foo" }}}}}}}}})
+$my.deeply.deeply.deeply.deeply.deeply.deeply.deeply.nested.property
 
 ## Allowed names
-$mudSlinger
-$mud_slinger
-$mudSlinger1
+#set($mudSlinger = "mudSlinger")
+#set($mud_slinger = "mud_slinger")
+#set($mudSlinger1 = "mudSlinger1")
 
 ## Property vs function access
 $customer.Address
@@ -113,21 +120,24 @@ $sun.setPlanets('Earth', 'Mars', 'Neptune')
 $sun.setPlanets('Mercury')
 $sun.setPlanets()
 
+#set($foo = [0, 1, 2])
+#set($i = 0)
+#set($bar = {"bar": [1, {"junk": "junk"}]})
+#set($map = {"apple": [1, 2, 3, 4, 5], "peach": "peach"})
 ## Index notation
 $foo[0] ## $foo takes in an Integer look up
 Output that should remain in document
 $foo[$i] ## Using another reference as the index
 Output that should remain in document
-$foo["bar"] ## Passing a string where $foo may be a Map
+$bar["bar"] ## Passing a string where $foo may be a Map
 Output that should remain in document
-$foo.bar[1].junk
+$bar.bar[1].junk
 Output that should remain in document
-$foo.callMethod()[1]
+$map.peach.toString()
 Output that should remain in document
-$foo["apple"][4]
-#set($foo[0] = 1)
-#set($foo.bar[1] = 3)
-#set($map["apple"] = "orange")
+$map["apple"][4]
+#set($map.apple[0] = 1)
+#set($map["peach"] = "orange")
 
 ## Formal and quite reference
 ${mudSlinger}
@@ -135,11 +145,14 @@ ${customer.Address}
 ${purchase.getTotal()}
 My name is ${name|'John Doe'}
 
-$myMap.get(${myKeyName})
+#set($myKeyName = "apple")
+$map.get(${myKeyName})
 
+#set($email = "email@domain")
 <p>Send a $email!</p>
 <p>Send a $!email!</p>
 <p>Send a $!{email}</p>
 
+#set($end = true)
 ## End with reference
 $end

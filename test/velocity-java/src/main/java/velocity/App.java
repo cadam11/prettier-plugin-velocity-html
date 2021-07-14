@@ -12,6 +12,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Properties;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -23,6 +24,13 @@ import groovy.lang.GroovyShell;
 public class App {
 
   private static ObjectMapper objectMapper = new ObjectMapper();
+  private static VelocityEngine engine;
+
+  static {
+    Properties properties = new Properties();
+    properties.setProperty("runtime.strict-mode.enable", "true");
+    engine = new VelocityEngine(properties);
+  }
 
   private static int readFromChannel(SocketChannel channel, ByteBuffer buffer)
     throws IOException {
@@ -114,7 +122,7 @@ public class App {
     if (velocityCommand.getTemplate() == null) {
       return RenderVelocityResult.ofFailure("Must provide template");
     }
-    final VelocityEngine engine = new VelocityEngine();
+
     final VelocityContext context = new VelocityContext();
 
     GroovyShell shell = new GroovyShell();
