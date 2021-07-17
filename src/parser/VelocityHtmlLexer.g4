@@ -25,7 +25,7 @@ lexer grammar VelocityHtmlLexer;
   private vtlValidAlphaNumeric = this.toCodePoints("abcdefghijklmnopqrstuvwxyz0123456789")
   private vtlOperators = this.toCodePoints([".", "(", "[", "|"]);
   private vtlWhitespace = this.toCodePoints([" ", "\t", "\n", "\r", "\f"]);
-  private vtlAll = new Set([...this.vtlValidAlphaNumeric, ...this.vtlOperators, ...this.vtlWhitespace, ...this.toCodePoints(["}"])])
+  private vtlContinueReferenceMode = new Set([...this.vtlOperators, ...this.vtlWhitespace, ...this.toCodePoints(["}"])])
 
   // TODO Constants for unicode characters.
   private isStartOfVtlReference2(offset: number = 0): boolean {
@@ -83,7 +83,6 @@ lexer grammar VelocityHtmlLexer;
     }
   }
 
-
   private popModeIfNecessary(): void {
     const characterInStream = this.inputStream.getText(Interval.of((this.inputStream as any)._position, (this.inputStream as any)._position));
     const codePoint = characterInStream.toLowerCase().codePointAt(0);
@@ -91,8 +90,18 @@ lexer grammar VelocityHtmlLexer;
       // ?
       return;
     }
-    if (!this.vtlAll.has(codePoint)) {
-      this.popMode();
+    if (!this.vtlContinueReferenceMode.has(codePoint)) {
+      // Pop velocity reference mode (no popMode in lexer grammar)
+      const isVelocityReferenceMode = this._mode == VelocityHtmlLexer.VELOCITY_REFERENCE_MODE;
+      // Pop velocity mode and lexer popMode will pop velocity reference mode. 
+      //                             ▼
+      // Example: allProducts.get(key)</span>
+      const isVelocityModeInsideVelocityReferenceMode = this._mode == VelocityHtmlLexer.VELOCITY_MODE && this._modeStack.peek() == VelocityHtmlLexer.VELOCITY_REFERENCE_MODE;
+      if (isVelocityModeInsideVelocityReferenceMode || isVelocityReferenceMode) {
+        this.debug(`next character ${characterInStream} is not VTL continuation. Popping mode`, this.printModeStack());
+        this.popMode();
+        this.debug(`New mode stack`, this.printModeStack())
+      }
     }
   }
   private pushModeIfNecessary(): void {
@@ -240,6 +249,7 @@ VTL_REFERENCE_PARENS_OPEN: '(' -> type(VTL_PARENS_OPEN), pushMode(VELOCITY_MODE)
 
 VTL_REFERENCE_INDEX_OPEN: '[' -> type(VTL_INDEX_OPEN), pushMode(VELOCITY_MODE);
 
+// TODO Entfernen
 VTL_REFERENCE_WS: DEFAULT_WS -> type(WS), popMode;
 
 VTL_REFERENCE_FORMAL_CLOSE: '}' -> type(VTL_FORMAL_CLOSE), popMode;
@@ -267,7 +277,7 @@ VTL_INDEX_CLOSE: ']' -> popMode;
 
 VTL_PARENS_OPEN: '(' -> pushMode(VELOCITY_MODE);
 
-VTL_PARENS_CLOSE: ')'  -> popMode;
+VTL_PARENS_CLOSE: ')'  {this.popModeIfNecessary()} -> popMode;
 
 VTL_CURLY_OPEN: '{' -> pushMode(VELOCITY_MODE);
 
