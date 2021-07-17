@@ -273,7 +273,7 @@ VTL_IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]* { this.makeVtlReferenceInsideToken() };
 
 VTL_INDEX_OPEN: '[' -> pushMode(VELOCITY_MODE);
 
-VTL_INDEX_CLOSE: ']' -> popMode;
+VTL_INDEX_CLOSE: ']' {this.popModeIfNecessary()} -> popMode;
 
 VTL_PARENS_OPEN: '(' -> pushMode(VELOCITY_MODE);
 
@@ -281,7 +281,7 @@ VTL_PARENS_CLOSE: ')'  {this.popModeIfNecessary()} -> popMode;
 
 VTL_CURLY_OPEN: '{' -> pushMode(VELOCITY_MODE);
 
-VTL_FORMAL_CLOSE: '}' -> popMode;
+VTL_FORMAL_CLOSE: '}' {this.popModeIfNecessary()} -> popMode;
 
 VTL_REFERENCE: '$' VTL_IDENTIFIER;
 

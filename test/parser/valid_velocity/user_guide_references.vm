@@ -45,25 +45,25 @@ $sun.setPlanets()
 #set($bar = {"bar": [1, {"junk": "junk"}]})
 #set($map = {"apple": [1, 2, 3, 4, 5], "peach": "peach"})
 ## Index notation
-$foo[0]       ## $foo takes in an Integer look up
+<span>$foo[0]</span>       ## $foo takes in an Integer look up
 Output that should remain in document
-$foo[$i]      ## Using another reference as the index   
+<span>$foo[$i]</span>      ## Using another reference as the index   
 Output that should remain in document
-$bar["bar"]   ## Passing a string where $foo may be a Map
+<span>$bar["bar"]</span>   ## Passing a string where $foo may be a Map
 Output that should remain in document
-$bar.bar[1].junk
+<span>$bar.bar[1].junk</span>
 Output that should remain in document
-$map.peach.toString()
+<span>$map.peach.toString()</span>
 Output that should remain in document
-$map["apple"][4]
+<span>$map["apple"][4]</span>
 #set($map.apple[0] = 1)
 #set($map["peach"] = "orange")
 
 ## Formal and quite reference
-${mudSlinger}
-${customer.Address}
-${purchase.getTotal()}
-My name is ${name|'John Doe'}
+<span>${mudSlinger}</span>
+<span>${customer.Address}</span>
+<span>${purchase.getTotal()}</span>
+<span>My name is ${name|'John Doe'}</span>
 
 #set($myKeyName = "apple")
 $map.get(${myKeyName})
@@ -125,25 +125,25 @@ $sun.setPlanets()
 #set($bar = {"bar": [1, {"junk": "junk"}]})
 #set($map = {"apple": [1, 2, 3, 4, 5], "peach": "peach"})
 ## Index notation
-$foo[0] ## $foo takes in an Integer look up
+<span>$foo[0]</span> ## $foo takes in an Integer look up
 Output that should remain in document
-$foo[$i] ## Using another reference as the index
+<span>$foo[$i]</span> ## Using another reference as the index
 Output that should remain in document
-$bar["bar"] ## Passing a string where $foo may be a Map
+<span>$bar["bar"]</span> ## Passing a string where $foo may be a Map
 Output that should remain in document
-$bar.bar[1].junk
+<span>$bar.bar[1].junk</span>
 Output that should remain in document
-$map.peach.toString()
+<span>$map.peach.toString()</span>
 Output that should remain in document
-$map["apple"][4]
+<span>$map["apple"][4]</span>
 #set($map.apple[0] = 1)
 #set($map["peach"] = "orange")
 
 ## Formal and quite reference
-${mudSlinger}
-${customer.Address}
-${purchase.getTotal()}
-My name is ${name|'John Doe'}
+<span>${mudSlinger}</span>
+<span>${customer.Address}</span>
+<span>${purchase.getTotal()}</span>
+<span>My name is ${name|'John Doe'}</span>
 
 #set($myKeyName = "apple")
 $map.get(${myKeyName})
