@@ -724,6 +724,7 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       ["elseif", {adaptiveMode: true}],
       ["else", { adaptiveMode: true, hasVelocityCode: false }],
       ["foreach", {}],
+      ["include", {siblingsMode: RenderMode.BLOCK, hasChildren: false}]
     ]);
 
   private renderDefinition: Required<VelocityRenderDefinition>;

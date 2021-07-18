@@ -24,13 +24,6 @@ import groovy.lang.GroovyShell;
 public class App {
 
   private static ObjectMapper objectMapper = new ObjectMapper();
-  private static VelocityEngine engine;
-
-  static {
-    Properties properties = new Properties();
-    properties.setProperty("runtime.strict-mode.enable", "true");
-    engine = new VelocityEngine(properties);
-  }
 
   private static int readFromChannel(SocketChannel channel, ByteBuffer buffer)
     throws IOException {
@@ -146,6 +139,7 @@ public class App {
           );
       }
       StringWriter sw = new StringWriter();
+      VelocityEngine engine = buildEngine(velocityCommand);
       engine.evaluate(
         context,
         sw,
@@ -159,5 +153,21 @@ public class App {
       String exceptionAsString = sw.toString();
       return RenderVelocityResult.ofFailure(exceptionAsString);
     }
+  }
+
+  private static VelocityEngine buildEngine(VelocityCommand velocityCommand) {
+    Properties properties = new Properties();
+    properties.setProperty("runtime.strict-mode.enable", "true");
+    if (velocityCommand.getResourceLoaderPath() != null) {
+      System.out.println(
+        "Using resource loader path " + velocityCommand.getResourceLoaderPath()
+      );
+      properties.setProperty("resource.loader.file.cache", "true");
+      properties.setProperty(
+        "resource.loader.file.path",
+        velocityCommand.getResourceLoaderPath().toString()
+      );
+    }
+    return new VelocityEngine(properties);
   }
 }

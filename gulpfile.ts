@@ -62,8 +62,9 @@ function buildTools(): NodeJS.ReadWriteStream {
 }
 
 function copyTestArtifacts() {
+  // TODO !{js}
   return gulp
-    .src("test/**/*.{html,vm,groovy}")
+    .src("test/**/*.{html,vm,groovy,txt}")
     .pipe(gulp.dest(path.join(TARGET_PATH, "test")));
 }
 

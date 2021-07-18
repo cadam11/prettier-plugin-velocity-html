@@ -25,6 +25,8 @@ log4js.configure({
   },
 });
 
+const VALID_VELOCITY_PATH = `${__dirname}/parser/valid_velocity`;
+
 const openSocket = (): Promise<Socket> => {
   return new Promise((resolve, reject) => {
     const client = createConnection("/home/fredo/server.socket", () => {
@@ -76,6 +78,13 @@ interface RenderVelocityResult {
   renderedTemplate: string;
 }
 
+interface VelocityCommand {
+  name: string;
+  template: string;
+  contextScriptPath?: string | null;
+  resourceLoaderPath?: string | null;
+}
+
 describe("prettier-velocity", () => {
   let velocityServer: ChildProcess;
   let velocityClient: Socket;
@@ -110,18 +119,26 @@ describe("prettier-velocity", () => {
       velocityClient.on("close", closeHandler);
       const endHandler = () => velocityClientLogger.info("end");
       velocityClient.on("end", endHandler);
-      const contextScriptPath = `${__dirname}/parser/valid_velocity/${testCaseName.replace(
+      const contextScriptPath = `${VALID_VELOCITY_PATH}/${testCaseName.replace(
         ".vm",
         ".groovy"
       )}`;
+      const resourceLoaderPath = `${VALID_VELOCITY_PATH}/${testCaseName.replace(
+        ".vm",
+        ""
+      )}`;
 
-      const message = JSON.stringify({
+      const command: VelocityCommand = {
         name: testCaseName,
         template,
         contextScriptPath: fs.existsSync(contextScriptPath)
           ? contextScriptPath
           : null,
-      });
+        resourceLoaderPath: fs.existsSync(resourceLoaderPath)
+          ? resourceLoaderPath
+          : null,
+      };
+      const message = JSON.stringify(command);
       velocityClientLogger.info(`Sending message ${message}`);
       velocityClient.write(message);
     });
@@ -144,45 +161,46 @@ describe("prettier-velocity", () => {
     }
   });
 
-  fs.readdirSync(__dirname + "/parser/valid_velocity/").forEach(
-    (testCaseName) => {
-      if (testCaseName.endsWith(".groovy")) {
-        return;
-      }
-      if (!testCaseName.endsWith(".vm")) {
-        throw new Error(`${testCaseName} must end with .groovy or .vm`);
-      }
-      it(`should format ${testCaseName}`, async () => {
-        const [template, expectedOutput, options] = readTestcaseFile(
-          __dirname + "/parser/valid_velocity/" + testCaseName
-        );
-
-        const formattedTemplate = formatVelocity(template, options);
-
-        const numberOfMismatchedPixels = compareScreenshots(
-          await takeScreenshot(
-            page,
-            `${testCaseName}_velocity`,
-            await renderVelocity(testCaseName, formattedTemplate)
-          ),
-          await takeScreenshot(
-            page,
-            `${testCaseName}`,
-            await renderVelocity(testCaseName, template)
-          ),
-          `${testCaseName}_diff`
-        );
-
-        // Comparing strings prints a very good diff.
-        expect(formatVelocity(template, options)).to.equal(
-          expectedOutput,
-          `Expected does not match actual. Rendered output is equal to prettier? ${
-            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-            numberOfMismatchedPixels === 0
-          }`
-        );
-        expect(numberOfMismatchedPixels).to.equal(0);
-      });
+  fs.readdirSync(VALID_VELOCITY_PATH).forEach((testCaseName) => {
+    if (testCaseName.endsWith(".groovy")) {
+      return;
     }
-  );
+    const testCasePath = `${VALID_VELOCITY_PATH}/${testCaseName}`;
+    if (fs.lstatSync(testCasePath).isDirectory()) {
+      return;
+    }
+    if (!testCaseName.endsWith(".vm")) {
+      throw new Error(`${testCaseName} must end with .groovy or .vm`);
+    }
+    it(`should format ${testCaseName}`, async () => {
+      const [template, expectedOutput, options] =
+        readTestcaseFile(testCasePath);
+
+      const formattedTemplate = formatVelocity(template, options);
+
+      const numberOfMismatchedPixels = compareScreenshots(
+        await takeScreenshot(
+          page,
+          `${testCaseName}_velocity`,
+          await renderVelocity(testCaseName, formattedTemplate)
+        ),
+        await takeScreenshot(
+          page,
+          `${testCaseName}`,
+          await renderVelocity(testCaseName, template)
+        ),
+        `${testCaseName}_diff`
+      );
+
+      // Comparing strings prints a very good diff.
+      expect(formatVelocity(template, options)).to.equal(
+        expectedOutput,
+        `Expected does not match actual. Rendered output is equal to prettier? ${
+          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+          numberOfMismatchedPixels === 0
+        }`
+      );
+      expect(numberOfMismatchedPixels).to.equal(0);
+    });
+  });
 });

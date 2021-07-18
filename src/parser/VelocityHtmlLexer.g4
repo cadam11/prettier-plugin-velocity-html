@@ -6,7 +6,7 @@ lexer grammar VelocityHtmlLexer;
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
 
-  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif'];
+  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include'];
   private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
     return Math.max(maxLength, vtlPrefix.length);
   }, 0);
@@ -212,7 +212,7 @@ VTL_COMMENT: '##' ~[\n\r\f]*;
 
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
-VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
+VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif'|'include') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
 VTL_ELSE: '#' '{'? 'else' '}'?;
 

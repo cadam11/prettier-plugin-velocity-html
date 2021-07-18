@@ -1,0 +1,9 @@
+#include( "one.txt" )
+#include( "one.txt","two.txt","three.html" )
+#set($seasonalstock = "pumpkin.txt")
+#include( "greetings.txt", $seasonalstock )
+=====================================output=====================================
+#include( "one.txt" )
+#include( "one.txt","two.txt","three.html" )
+#set($seasonalstock = "pumpkin.txt")
+#include( "greetings.txt", $seasonalstock )

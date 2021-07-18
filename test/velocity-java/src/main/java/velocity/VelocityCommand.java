@@ -7,6 +7,7 @@ public class VelocityCommand {
   private String name;
   private String template;
   private Path contextScriptPath;
+  private Path resourceLoaderPath;
 
   public void setName(String name) {
     this.name = name;
@@ -30,5 +31,13 @@ public class VelocityCommand {
 
   public void setContextScriptPath(Path contextScriptPath) {
     this.contextScriptPath = contextScriptPath;
+  }
+
+  public Path getResourceLoaderPath() {
+    return resourceLoaderPath;
+  }
+
+  public void setResourceLoaderPath(Path resourceLoaderPath) {
+    this.resourceLoaderPath = resourceLoaderPath;
   }
 }
