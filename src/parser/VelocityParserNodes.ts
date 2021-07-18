@@ -727,7 +727,9 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       ["foreach", {}],
       ["include", {siblingsMode: RenderMode.BLOCK, hasChildren: false}],
       ["parse", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
-      ["break", { siblingsMode: RenderMode.BLOCK, hasChildren: false }]
+      ["break", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+      ["stop", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+      ["evaluate", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
     ]);
 
   private renderDefinition: Required<VelocityRenderDefinition>;
@@ -799,7 +801,7 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       throw new Error(`Directive ${this.directive} is unknown`);
     }
 
-    if (token.type == VelocityHtmlLexer.VTL_BREAK) {
+    if (token.type != VelocityHtmlLexer.VTL_DIRECTIVE_START) {
       renderDefinition.hasVelocityCode = false;
     }
     this.renderDefinition = {

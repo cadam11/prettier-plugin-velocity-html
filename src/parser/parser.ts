@@ -151,7 +151,7 @@ export default function parse(
 
     switch (token.type) {
       case VelocityHtmlLexer.VTL_DIRECTIVE_START:
-      case VelocityHtmlLexer.VTL_BREAK:
+      case VelocityHtmlLexer.VTL_NO_CODE_DIRECTIVE:
       case VelocityHtmlLexer.VTL_ELSE: {
         const node = new VelocityDirectiveNode(token);
 

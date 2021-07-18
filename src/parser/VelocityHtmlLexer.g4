@@ -6,7 +6,7 @@ lexer grammar VelocityHtmlLexer;
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
 
-  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include', 'parse', 'break'];
+  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include', 'parse', 'break', 'stop', 'evaluate'];
   private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
     return Math.max(maxLength, vtlPrefix.length);
   }, 0);
@@ -212,13 +212,13 @@ VTL_COMMENT: '##' ~[\n\r\f]*;
 
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
-VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif'|'include'|'parse'|'break') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
+VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif'|'include'|'parse'|'break'|'stop'|'evaluate') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
 VTL_ELSE: '#' '{'? 'else' '}'?;
 
 VTL_DIRECTIVE_END: '#' '{' ? 'end' '}'?;
 
-VTL_BREAK: '#' '{'? 'break' '}'?;
+VTL_NO_CODE_DIRECTIVE: '#' '{'? ('break' | 'stop') '}'?;
 
 VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER {this.pushModeIfNecessary()};
 

@@ -1,0 +1,13 @@
+#set($condition = true)
+#if($condition) 
+  #stop('$condition is true')
+#end
+#if(!$condition) #stop #end
+=====================================output=====================================
+#set($condition = true)
+#if($condition)
+  #stop('$condition is true')
+#end
+#if(!$condition)
+  #stop
+#end
