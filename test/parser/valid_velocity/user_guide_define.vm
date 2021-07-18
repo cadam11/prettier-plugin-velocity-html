@@ -1,0 +1,19 @@
+#define( $inlineBlock )Hello $who#end
+#define( $blockBlock)
+  Hello $who
+#end
+#define( $customBlock)       Hello
+$who#end
+#set( $who = 'World!' )
+$inlineBlock
+$blockBlock
+=====================================output=====================================
+#define( $inlineBlock )Hello $who#end
+#define( $blockBlock)
+  Hello $who
+#end
+#define( $customBlock)       Hello
+$who#end
+#set( $who = 'World!' )
+$inlineBlock
+$blockBlock

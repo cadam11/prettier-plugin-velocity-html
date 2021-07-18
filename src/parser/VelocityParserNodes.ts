@@ -147,7 +147,7 @@ export abstract class ParserNode extends DecoratedNode {
     let parent: ParserNode | undefined = this.parent;
     // Only node without parent is RootNode
     while (!(parent instanceof RootNode)) {
-      if (parent instanceof HtmlTagNode && parent.isPreformatted()) {
+      if (parent.isPreformatted()) {
         return true;
       }
       parent = parent.parent;
@@ -702,6 +702,7 @@ interface VelocityRenderDefinition {
   hasChildren?: boolean;
   hasVelocityCode?: boolean;
   adaptiveMode?: boolean;
+  preformatted?: boolean;
 }
 
 export class VelocityDirectiveEndNode extends NodeWithChildrenDecoration {
@@ -718,19 +719,22 @@ export class VelocityDirectiveNode extends NodeWithChildren<
   private _tokens: VelocityToken[] = [];
 
   // prettier-ignore
+  private renderDefinitions: [string, VelocityRenderDefinition][] = [
+    ["set", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+    ["if", { adaptiveMode: true }],
+    ["elseif", {adaptiveMode: true}],
+    ["else", { adaptiveMode: true, hasVelocityCode: false }],
+    ["foreach", {}],
+    ["include", {siblingsMode: RenderMode.BLOCK, hasChildren: false}],
+    ["parse", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+    ["break", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+    ["stop", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+    ["evaluate", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+    // Cannot be sure in what context content is rendered, therefore we keep it preformatted to delegate to the user.
+    ["define", {siblingsMode: RenderMode.BLOCK, preformatted: true}]
+  ]
   private directiveToRenderDefinition: Map<string, VelocityRenderDefinition> =
-    new Map([
-      ["set", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
-      ["if", { adaptiveMode: true }],
-      ["elseif", {adaptiveMode: true}],
-      ["else", { adaptiveMode: true, hasVelocityCode: false }],
-      ["foreach", {}],
-      ["include", {siblingsMode: RenderMode.BLOCK, hasChildren: false}],
-      ["parse", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
-      ["break", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
-      ["stop", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
-      ["evaluate", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
-    ]);
+    new Map(this.renderDefinitions);
 
   private renderDefinition: Required<VelocityRenderDefinition>;
 
@@ -809,9 +813,11 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       hasChildren: true,
       hasVelocityCode: true,
       adaptiveMode: false,
+      preformatted: false,
       ...renderDefinition,
     };
     this.forceBreakChildren = true;
+    this._isPreformatted = this.renderDefinition.preformatted;
     this.startNode = new NodeWithChildrenDecoration();
   }
 
