@@ -1,0 +1,37 @@
+#parse( "me.vm" )
+
+#parse( "parsefoo.vm" )
+All done with dofoo.vm!
+
+#set( $count = 1 )
+#if( $count > 0 )
+    #parse( "parsefoo.vm" )
+#else
+    All done with parsefoo.vm!
+#end
+
+#set( $otherCount = 0 )
+#if( $otherCount > 0 )
+    #parse( "parsefoo.vm" )
+#else
+    All done with parsefoo.vm!
+#end
+=====================================output=====================================
+#parse( "me.vm" )
+
+#parse( "parsefoo.vm" )
+All done with dofoo.vm!
+
+#set( $count = 1 )
+#if( $count > 0 )
+  #parse( "parsefoo.vm" )
+#else
+  All done with parsefoo.vm!
+#end
+
+#set( $otherCount = 0 )
+#if( $otherCount > 0 )
+  #parse( "parsefoo.vm" )
+#else
+  All done with parsefoo.vm!
+#end

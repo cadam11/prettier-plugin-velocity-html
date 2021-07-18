@@ -6,7 +6,7 @@ lexer grammar VelocityHtmlLexer;
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
 
-  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include'];
+  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include', 'parse', 'break'];
   private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
     return Math.max(maxLength, vtlPrefix.length);
   }, 0);
@@ -212,11 +212,13 @@ VTL_COMMENT: '##' ~[\n\r\f]*;
 
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
-VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif'|'include') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
+VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif'|'include'|'parse'|'break') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
 VTL_ELSE: '#' '{'? 'else' '}'?;
 
 VTL_DIRECTIVE_END: '#' '{' ? 'end' '}'?;
+
+VTL_BREAK: '#' '{'? 'break' '}'?;
 
 VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER {this.pushModeIfNecessary()};
 
@@ -239,7 +241,7 @@ mode VELOCITY_REFERENCE_MODE;
 
 VTL_REFERENCE_IDENTIFIER: VTL_IDENTIFIER {this.popModeIfNecessary()} -> type(VTL_IDENTIFIER);
 
-VTL_REFERENCE_DOT: '.' -> type(VTL_DOT);
+VTL_REFERENCE_DOT: '.';
 
 VTL_REFERENCE_PIPE: '|' -> type(VTL_KEYWORD);
 
@@ -247,6 +249,7 @@ VTL_REFERENCE_STRING: VTL_STRING -> type(VTL_STRING);
 
 VTL_REFERENCE_PARENS_OPEN: '(' -> type(VTL_PARENS_OPEN), pushMode(VELOCITY_MODE);
 
+// TODO Also used for ranges
 VTL_REFERENCE_INDEX_OPEN: '[' -> type(VTL_INDEX_OPEN), pushMode(VELOCITY_MODE);
 
 // TODO Entfernen
@@ -263,9 +266,7 @@ VTL_REFERENCE_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
 //  Example from user_guide.
 mode VELOCITY_MODE;
 
-VTL_KEYWORD: 'in' | '=' | ',' | '|' | '<' | '>' | '!' | '&' | ':' | '+' | '-' | '*' | '/';
-
-VTL_DOT: '.';
+VTL_KEYWORD: 'in' | '=' | ',' | '|' | '<' | '>' | '!' | '&' | ':' | '+' | '-' | '*' | '/' | '.';
 
 VTL_IDENTIFIER: [a-zA-Z][a-zA-Z0-9_]* { this.makeVtlReferenceInsideToken() };
 

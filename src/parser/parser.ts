@@ -151,6 +151,7 @@ export default function parse(
 
     switch (token.type) {
       case VelocityHtmlLexer.VTL_DIRECTIVE_START:
+      case VelocityHtmlLexer.VTL_BREAK:
       case VelocityHtmlLexer.VTL_ELSE: {
         const node = new VelocityDirectiveNode(token);
 
@@ -182,9 +183,11 @@ export default function parse(
           mode = "VelocityMode";
         }
 
-        currentNode = node;
+        if (node.hasVelocityCode || node.hasChildren) {
+          currentNode = node;
+        }
 
-        if (node instanceof NodeWithChildren && node.hasChildren) {
+        if (node.hasChildren) {
           parentStack.unshift(node);
         }
         continue;
@@ -192,7 +195,7 @@ export default function parse(
       case VelocityHtmlLexer.VTL_DIRECTIVE_END: {
         if (!(currentNode instanceof VelocityDirectiveNode)) {
           throw newParserException(
-            "currentNode must be velocity diretive node"
+            "currentNode must be velocity directive node"
           );
         }
         // TODO endToken vs endNode
@@ -348,7 +351,7 @@ export default function parse(
             }
             break;
           }
-          case VelocityHtmlLexer.VTL_DOT:
+          case VelocityHtmlLexer.VTL_REFERENCE_DOT:
           case VelocityHtmlLexer.VTL_IDENTIFIER:
           case VelocityHtmlLexer.VTL_PARENS_OPEN:
           case VelocityHtmlLexer.VTL_INDEX_OPEN: {
@@ -562,8 +565,8 @@ export default function parse(
           case VelocityHtmlLexer.WS:
           case VelocityHtmlLexer.VTL_REFERENCE:
           case VelocityHtmlLexer.VTL_KEYWORD:
-          case VelocityHtmlLexer.VTL_DOT:
           case VelocityHtmlLexer.VTL_IDENTIFIER:
+          case VelocityHtmlLexer.VTL_REFERENCE_DOT:
           case VelocityHtmlLexer.VTL_STRING:
           case VelocityHtmlLexer.VTL_NUMBER: {
             velocityNode.addToken(token);

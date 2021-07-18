@@ -36,12 +36,12 @@ const {
   line,
 } = doc.builders;
 
-function isInlineAndHasLeadingSpaces(node: ParserNode | undefined): boolean {
-  return node != null && node.isInlineRenderMode && node.hasLeadingSpaces;
+function isInlineAndHasNoLeadingSpaces(node: ParserNode | undefined): boolean {
+  return node != null && node.isInlineRenderMode && !node.hasLeadingSpaces;
 }
 
-function isInlineAndHasTrailingSpaces(node: ParserNode | undefined): boolean {
-  return node != null && node.isInlineRenderMode && node.hasTrailingSpaces;
+function isInlineAndHasNoTrailingSpaces(node: ParserNode | undefined): boolean {
+  return node != null && node.isInlineRenderMode && !node.hasTrailingSpaces;
 }
 
 // TODO Naming. Too general. Maybe not?
@@ -49,8 +49,8 @@ function doInlineChildren(node: AnyNodeWithChildren | undefined): boolean {
   return (
     node != null &&
     node.isInlineRenderMode &&
-    (!isInlineAndHasLeadingSpaces(node.firstChild) ||
-      !isInlineAndHasTrailingSpaces(node.lastChild))
+    (isInlineAndHasNoLeadingSpaces(node.firstChild) ||
+      isInlineAndHasNoTrailingSpaces(node.lastChild))
   );
 }
 
@@ -538,21 +538,24 @@ export default function print(
       `</${node.tagName}>`,
     ];
   } else if (node instanceof VelocityDirectiveNode) {
-    const parts: Doc[] = [`#`];
+    const parts: Doc[] = [];
+    // Make the Doc more readable
+    const preChildrenParts = [`#`];
     const formalMode = !node.forceBreakChildren && node.formalMode;
 
     const inlineChildren = doInlineChildren(node);
     if (formalMode || (inlineChildren && node.directive == "else")) {
-      parts.push("{");
+      preChildrenParts.push("{");
     }
-    parts.push(node.directive);
+    preChildrenParts.push(node.directive);
     if (formalMode || (inlineChildren && node.directive == "else")) {
-      parts.push("}");
+      preChildrenParts.push("}");
     }
     if (node.hasVelocityCode) {
-      parts.push(`(`);
-      node.tokens.forEach((token) => parts.push(token.textValue));
+      preChildrenParts.push(`(`);
+      preChildrenParts.push(...node.tokens.map((token) => token.textValue));
     }
+    parts.push(preChildrenParts.join(""));
     if (node.hasChildren) {
       const children = printChildren(path, options, print);
       // TODO Copy logic from breakOpeningTag. If true and ChildrenRenderMode = Inline, do not indent, do not insert newline
@@ -566,7 +569,9 @@ export default function print(
     if (node.endNode != null) {
       parts.push(node.endNode.token.textValue);
     } else if (
-      isInlineAndHasTrailingSpaces(node.lastChild) &&
+      node.lastChild != null &&
+      node.lastChild.isInlineRenderMode &&
+      node.lastChild.hasTrailingSpaces &&
       doInlineChildren(node.next as VelocityDirectiveNode)
     ) {
       // This is an if or elseif followed by a elseif or else.

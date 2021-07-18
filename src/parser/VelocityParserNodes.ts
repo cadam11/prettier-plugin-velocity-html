@@ -4,6 +4,7 @@ import {
   VelocityToken,
 } from "./VelocityToken";
 import { RenderDefinition, RenderMode, tagRegistry } from "./tagRegistry";
+import { VelocityHtmlLexer } from "./generated/VelocityHtmlLexer";
 
 // TODO Maybe overwrite get startNode().
 export type AnyNodeWithChildren = NodeWithChildren<
@@ -724,7 +725,9 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       ["elseif", {adaptiveMode: true}],
       ["else", { adaptiveMode: true, hasVelocityCode: false }],
       ["foreach", {}],
-      ["include", {siblingsMode: RenderMode.BLOCK, hasChildren: false}]
+      ["include", {siblingsMode: RenderMode.BLOCK, hasChildren: false}],
+      ["parse", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
+      ["break", { siblingsMode: RenderMode.BLOCK, hasChildren: false }]
     ]);
 
   private renderDefinition: Required<VelocityRenderDefinition>;
@@ -734,16 +737,25 @@ export class VelocityDirectiveNode extends NodeWithChildren<
   public formalMode = false;
 
   getSiblingsRenderMode(): RenderMode {
+    // TODO. What about foo#set($content=1)#if($content>1)1#end?
     if (this.renderDefinition.adaptiveMode) {
       let prev = this.prev;
-      // Skip over other DirectiveNodes. Their content might not be rendered at runtime.
-      while (prev != null && prev instanceof VelocityDirectiveNode) {
+      // Skip over other DirectiveNodes with adaptiveMode to prevent infinite recursion.
+      while (
+        prev != null &&
+        prev instanceof VelocityDirectiveNode &&
+        prev.renderDefinition.adaptiveMode
+      ) {
         prev = prev.prev;
       }
       const prevRenderMode =
         prev != null ? prev.getSiblingsRenderMode() : RenderMode.BLOCK;
       let next = this.next;
-      while (next != null && next instanceof VelocityDirectiveNode) {
+      while (
+        next != null &&
+        next instanceof VelocityDirectiveNode &&
+        next.renderDefinition.adaptiveMode
+      ) {
         next = next.next;
       }
       const nextRenderMode =
@@ -764,9 +776,9 @@ export class VelocityDirectiveNode extends NodeWithChildren<
     return this.renderDefinition.hasVelocityCode;
   }
 
-  constructor(startLocation: VelocityToken) {
-    super(startLocation);
-    const directiveWithoutSpaces = startLocation.textValue.replace(/ \t/g, "");
+  constructor(token: VelocityToken) {
+    super(token);
+    const directiveWithoutSpaces = token.textValue.replace(/ \t/g, "");
     // TODO #set with space and tab.
     this.directive = directiveWithoutSpaces.substring(
       1,
@@ -782,8 +794,13 @@ export class VelocityDirectiveNode extends NodeWithChildren<
     const renderDefinition = this.directiveToRenderDefinition.get(
       this.directive
     );
+
     if (renderDefinition == null) {
       throw new Error(`Directive ${this.directive} is unknown`);
+    }
+
+    if (token.type == VelocityHtmlLexer.VTL_BREAK) {
+      renderDefinition.hasVelocityCode = false;
     }
     this.renderDefinition = {
       siblingsMode: RenderMode.BLOCK,
