@@ -6,7 +6,7 @@ lexer grammar VelocityHtmlLexer;
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
 
-  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include', 'parse', 'break', 'stop', 'evaluate', 'define'];
+  private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include', 'parse', 'break', 'stop', 'evaluate', 'define', 'macro'];
   private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
     return Math.max(maxLength, vtlPrefix.length);
   }, 0);
@@ -27,59 +27,102 @@ lexer grammar VelocityHtmlLexer;
   private vtlWhitespace = this.toCodePoints([" ", "\t", "\n", "\r", "\f"]);
   private vtlContinueReferenceMode = new Set([...this.vtlOperators, ...this.vtlWhitespace, ...this.toCodePoints(["}"])])
 
-  // TODO Constants for unicode characters.
-  private isStartOfVtlReference2(offset: number = 0): boolean {
+  // Characters break syntax highlighting of file
+  private static LEFT_CURLY = "\u007b"
+  private static DOLLAR = "\u0024";
+  private static EXCLAMATION_MARK = "\u0021";
+
+  private isStartOfVtlReference2(): boolean {
     let index = 0;
-    let vtlDirectiveStart = false;
-    let vtlReferenceStart = false;
-    let isVtlReference = false;
-    let isVtlDirective = false;
-    let pushVelocityMode = false;
+    let mode: 'reference' | 'directive' | null = null;
     const nextCharacters = this.getNextCharacters(3);
     if ("#" == nextCharacters.charAt(index)) {
-      vtlDirectiveStart = true;
+      mode = 'directive';
       index++;
-      if ("\u007b" === nextCharacters.charAt(index)) {
+      if ("@" == nextCharacters.charAt(index)) {
         index++;
       }
-    } else if ("\u0024" == nextCharacters.charAt(index)) {
-      vtlReferenceStart = true;
-      index++;
-      if ("\u0021" == nextCharacters.charAt(index)) {
+      if (VelocityHtmlLexer.LEFT_CURLY === nextCharacters.charAt(index)) {
         index++;
       }
-      if ("\u007b" == nextCharacters.charAt(index)) {
-        pushVelocityMode = true;
+    } else if (VelocityHtmlLexer.DOLLAR == nextCharacters.charAt(index)) {
+      mode = 'reference';
+      index++;
+      if (VelocityHtmlLexer.EXCLAMATION_MARK == nextCharacters.charAt(index)) {
+        index++;
+      }
+      if (VelocityHtmlLexer.LEFT_CURLY == nextCharacters.charAt(index)) {
         index++;
       }
     }
-    if (!vtlReferenceStart && !vtlDirectiveStart) {
+    if (mode == null) {
       return false;
     }
-    const startPosition = this._tokenStartCharIndex + index;
-    if (startPosition >= this.inputStream.size) {
-      return isVtlReference;
-    }
-    const characterInStream = this.inputStream.getText(Interval.of(startPosition, startPosition));
-    const codePoint = characterInStream.toLowerCase().codePointAt(0);
-    if (codePoint == null) {
-      // ?
-      return false;
-    }
-    
-    if (vtlReferenceStart) {
-      if (!this.vtlValidAlpha.has(codePoint)) {
+    let velocityDirectiveMode : 'start' | 'identifier' | 'space' = 'start';
+    while (true) {
+      const startPosition = this._tokenStartCharIndex + index;
+      // TODO Test
+      if (startPosition >= this.inputStream.size) {
         return false;
       }
-      return true;
-    } else {
-      const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, index);
-      for (let vtlDirective of this.vtlPrefixes) {
-        if (nextCharacters.startsWith(vtlDirective)) {
+      let characterInStream = this.inputStream.getText(Interval.of(startPosition, startPosition));
+      let codePoint = characterInStream.toLowerCase().codePointAt(0) as number;
+      
+      const isAlpha = this.vtlValidAlpha.has(codePoint);
+      const isAlphaNumeric = this.vtlValidAlphaNumeric.has(codePoint);
+      const isWhitespace = this.vtlWhitespace.has(codePoint);
+      switch(mode) {
+        case 'reference': {
+          if (!isAlpha) {
+            return false;
+          }
           return true;
         }
+        case 'directive': {
+          switch(velocityDirectiveMode) {
+            case 'start': {
+              // Some built-in directives don't have parameters.
+              const nextCharacters = this.getNextCharacters(this.maxVtlPrefixLength, index);
+              for (let vtlDirective of this.vtlPrefixes) {
+                if (nextCharacters.startsWith(vtlDirective)) {
+                  return true;
+                }
+              }
+              if (!isAlpha) {
+                return false;
+              }
+              velocityDirectiveMode = 'identifier';
+              break;
+            }
+            case 'identifier': {
+              if (characterInStream == "(") {
+                return true;
+              } else if (isWhitespace) {
+                velocityDirectiveMode = 'space';
+              } else if (!isAlphaNumeric) {
+                return false;
+              }
+              break;
+            }
+            case 'space': {
+              if (characterInStream == "(") {
+                return true;
+              } else if (!isWhitespace) {
+                return false;
+              }
+              break;
+            }
+            default: {
+              throw new Error(`Unknown mode ${velocityDirectiveMode}`);
+            }
+          }
+          break;
+        }
+        default: {
+          throw new Error(`Unknown mode ${mode}`);
+        }
       }
-      return false;
+      index++;
     }
   }
 
@@ -212,13 +255,15 @@ VTL_COMMENT: '##' ~[\n\r\f]*;
 
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
-VTL_DIRECTIVE_START : '#' '{'? ('foreach'|'if'|'set'|'elseif'|'include'|'parse'|'break'|'stop'|'evaluate'|'define') '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
+VTL_DIRECTIVE_START : '#' '{'? VTL_IDENTIFIER '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
 VTL_ELSE: '#' '{'? 'else' '}'?;
 
 VTL_DIRECTIVE_END: '#' '{' ? 'end' '}'?;
 
 VTL_NO_CODE_DIRECTIVE: '#' '{'? ('break' | 'stop') '}'?;
+
+VTL_MACRO_WITH_BODY_START: '#@' VTL_IDENTIFIER VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
 VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER {this.pushModeIfNecessary()};
 

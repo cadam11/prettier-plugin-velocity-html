@@ -1,0 +1,93 @@
+#macro( d )
+<tr><td>Other row</td></tr>
+#end
+
+<table>
+<tr><td>Row 1</td></tr>
+#d()
+</table>
+
+#macro( x )
+<tr><td>$!bodyContent</td></tr>
+#end
+
+<table>
+  <tr><td>Row 1</td></tr>  #@x() Hello Row! #end  <tr><td>Row 2</td></tr>
+</table>
+
+
+#macro( text )
+Hello$!bodyContent
+#end
+
+<p>#@text(),World!#end</p>
+
+
+#macro( noLeadingOrTrailingSpaces)Hello,$!bodyContent#end
+
+<p>Prefix#@noLeadingOrTrailingSpaces(),World!#{end}Suffix</p>
+<p>Prefix #@noLeadingOrTrailingSpaces(),World!#{end}Suffix</p>
+<p>Prefix#@noLeadingOrTrailingSpaces(),World!#{end} Suffix</p>
+<p>Prefix #@noLeadingOrTrailingSpaces(),World!#{end} Suffix</p>
+
+#macro( tablerows $color $somelist )
+#foreach( $something in $somelist )
+    <tr><td bgcolor=$color>$something</td></tr>
+#end
+#end
+
+#set( $greatlakes = ["Superior","Michigan","Huron","Erie","Ontario"] )
+#set( $color = "blue" )
+<table>
+    #tablerows( $color $greatlakes )
+</table>
+=====================================output=====================================
+#macro( d )
+<tr><td>Other row</td></tr>
+#end
+
+<table>
+  <tr>
+    <td>Row 1</td>
+  </tr>
+  #d()
+</table>
+
+#macro( x )
+<tr><td>$!bodyContent</td></tr>
+#end
+
+<table>
+  <tr>
+    <td>Row 1</td>
+  </tr>
+  #@x() Hello Row! #end
+  <tr>
+    <td>Row 2</td>
+  </tr>
+</table>
+
+#macro( text )
+Hello$!bodyContent
+#end
+
+<p>#@text(),World!#end</p>
+
+#macro( noLeadingOrTrailingSpaces)Hello,$!bodyContent#end
+
+<p>Prefix#@noLeadingOrTrailingSpaces(),World!#{end}Suffix</p>
+<p>Prefix #@noLeadingOrTrailingSpaces(),World!#{end}Suffix</p>
+<p>Prefix#@noLeadingOrTrailingSpaces(),World!#{end} Suffix</p>
+<p>Prefix #@noLeadingOrTrailingSpaces(),World!#{end} Suffix</p>
+
+#macro( tablerows $color $somelist )
+#foreach( $something in $somelist )
+    <tr><td bgcolor="$color">$something</td></tr>
+#end
+#end
+
+#set( $greatlakes = ["Superior","Michigan","Huron","Erie","Ontario"] )
+#set( $color = "blue" )
+<table>
+  #tablerows( $color $greatlakes )
+</table>

@@ -277,6 +277,10 @@ export class RootNode extends NodeWithChildren<
     super({} as any);
   }
 
+  public get isSelfOrParentPreformatted(): boolean {
+    return false;
+  }
+
   public get startLocation(): SourceCodeLocation {
     throw new Error("Root node has no start location");
   }
@@ -731,7 +735,8 @@ export class VelocityDirectiveNode extends NodeWithChildren<
     ["stop", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
     ["evaluate", { siblingsMode: RenderMode.BLOCK, hasChildren: false }],
     // Cannot be sure in what context content is rendered, therefore we keep it preformatted to delegate to the user.
-    ["define", {siblingsMode: RenderMode.BLOCK, preformatted: true}]
+    ["define", {siblingsMode: RenderMode.BLOCK, preformatted: true}],
+    ["macro", {siblingsMode: RenderMode.BLOCK, preformatted: true}]
   ]
   private directiveToRenderDefinition: Map<string, VelocityRenderDefinition> =
     new Map(this.renderDefinitions);
@@ -784,30 +789,43 @@ export class VelocityDirectiveNode extends NodeWithChildren<
 
   constructor(token: VelocityToken) {
     super(token);
-    const directiveWithoutSpaces = token.textValue.replace(/ \t/g, "");
-    // TODO #set with space and tab.
-    this.directive = directiveWithoutSpaces.substring(
-      1,
-      directiveWithoutSpaces.endsWith("(")
-        ? directiveWithoutSpaces.length - 1
-        : directiveWithoutSpaces.length
-    );
-    if (this.directive.startsWith("{")) {
-      this.formalMode = true;
-      this.directive = this.directive.substring(1, this.directive.length - 1);
-    }
-    this.directive = this.directive.trimRight();
-    const renderDefinition = this.directiveToRenderDefinition.get(
-      this.directive
-    );
+    let renderDefinition: VelocityRenderDefinition | undefined;
 
-    if (renderDefinition == null) {
-      throw new Error(`Directive ${this.directive} is unknown`);
+    if (token.type != VelocityHtmlLexer.VTL_MACRO_WITH_BODY_START) {
+      const directiveWithoutSpaces = token.textValue.replace(/ \t/g, "");
+      // TODO #set with space and tab.
+      this.directive = directiveWithoutSpaces.substring(
+        1,
+        directiveWithoutSpaces.endsWith("(")
+          ? directiveWithoutSpaces.length - 1
+          : directiveWithoutSpaces.length
+      );
+      if (this.directive.startsWith("{")) {
+        this.formalMode = true;
+        this.directive = this.directive.substring(1, this.directive.length - 1);
+      }
+      this.directive = this.directive.trimRight();
+      renderDefinition = this.directiveToRenderDefinition.get(this.directive);
+
+      if (renderDefinition == null) {
+        // Custom directive
+        renderDefinition = {
+          hasVelocityCode: true,
+          hasChildren: false,
+        };
+      }
+      if (token.type != VelocityHtmlLexer.VTL_DIRECTIVE_START) {
+        renderDefinition.hasVelocityCode = false;
+      }
+    } else {
+      this.formalMode = false;
+      this.directive = token.textValue.substring(1, token.textValue.length - 1);
+      renderDefinition = {
+        siblingsMode: RenderMode.INLINE,
+        preformatted: true,
+      };
     }
 
-    if (token.type != VelocityHtmlLexer.VTL_DIRECTIVE_START) {
-      renderDefinition.hasVelocityCode = false;
-    }
     this.renderDefinition = {
       siblingsMode: RenderMode.BLOCK,
       hasChildren: true,

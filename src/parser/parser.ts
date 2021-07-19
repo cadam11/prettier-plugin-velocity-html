@@ -150,6 +150,7 @@ export default function parse(
     };
 
     switch (token.type) {
+      case VelocityHtmlLexer.VTL_MACRO_WITH_BODY_START:
       case VelocityHtmlLexer.VTL_DIRECTIVE_START:
       case VelocityHtmlLexer.VTL_NO_CODE_DIRECTIVE:
       case VelocityHtmlLexer.VTL_ELSE: {

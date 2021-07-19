@@ -1,4 +1,3 @@
-import { Parser } from "antlr4ts";
 import { AstPath, Doc, doc, ParserOptions } from "prettier";
 import { RenderMode } from "./parser/tagRegistry";
 import {
@@ -281,7 +280,8 @@ function printChildren(
     }
 
     if (childNode.isOnlyChild) {
-      const isParentInlineRenderingMode = parent.isInlineRenderMode;
+      const isParentInlineRenderingMode =
+        parent.isInlineRenderMode && !parent.isSelfOrParentPreformatted;
       /**
        * Preserve whitespace from input, but don't use linebreaks.
        * Children are enclosed by line breaks in concatChildren()
@@ -297,14 +297,14 @@ function printChildren(
       /**
        * Look at previous node to determine if line break is needed before child content.
        */
-      if (childNode.prev != null) {
+      if (childNode.prev != null && !parent.isSelfOrParentPreformatted) {
         const prev = childNode.prev;
         let lineBreak: Doc = "";
 
         if (
-          prev.isPreformatted() ||
           // TODO This should be renamed because its logic is only made for <br/> tags.
-          (prev.forceBreak && prev.hasTrailingSpaces)
+          prev.forceBreak &&
+          prev.hasTrailingSpaces
         ) {
           // At least one hardline after preformatted text
           lineBreak = calculateDifferenceBetweenChildren(
@@ -334,7 +334,9 @@ function printChildren(
       // Preformatted and force break is handled in prev check of next node.
       if (
         childNode.next != null &&
-        !(childNode.isPreformatted() || childNode.forceBreak)
+        !parent.isSelfOrParentPreformatted &&
+        // TODO ?
+        !childNode.forceBreak
       ) {
         const next = childNode.next;
         const seperator = calculateDifferenceBetweenChildren(
