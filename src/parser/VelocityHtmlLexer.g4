@@ -1,7 +1,8 @@
 lexer grammar VelocityHtmlLexer;
 
 @lexer::header { 
-   import { Interval } from 'antlr4ts/misc/Interval';
+  import { Interval } from 'antlr4ts/misc/Interval';
+  type VelocityMode = "directive" | "reference";
 } 
 //@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
@@ -33,8 +34,39 @@ lexer grammar VelocityHtmlLexer;
   private static EXCLAMATION_MARK = "\u0021";
 
   private isStartOfVtlReference2(): boolean {
+    
+    let index;
+    let mode;
+    [index, mode] = this.isStartOfVelocityElement();
+    if (mode == null) {
+      return false;
+    }
+
+    return this.tryMatchVelocityElement(index, mode) && !this.isEscaped();
+  }
+
+  private isEscaped() {
+    let index = 1;
+    let escapeCount = 0;
+    while (true) {
+      const startPosition = this._tokenStartCharIndex - index;
+      if (startPosition < 0) {
+        break;
+      }
+      let characterInStream = this.inputStream.getText(Interval.of(startPosition, startPosition));
+      if (characterInStream == "\\") {
+        escapeCount++;
+      } else {
+        break;
+      }
+      index++;
+    }
+    return escapeCount % 2 == 1;
+  }
+
+  private isStartOfVelocityElement(): [number, VelocityMode | null] {
     let index = 0;
-    let mode: 'reference' | 'directive' | null = null;
+    let mode: VelocityMode | null = null;
     const nextCharacters = this.getNextCharacters(3);
     if ("#" == nextCharacters.charAt(index)) {
       mode = 'directive';
@@ -55,9 +87,10 @@ lexer grammar VelocityHtmlLexer;
         index++;
       }
     }
-    if (mode == null) {
-      return false;
-    }
+    return [index, mode];
+  }
+
+  private tryMatchVelocityElement(index: number, mode: VelocityMode): boolean {
     let velocityDirectiveMode : 'start' | 'identifier' | 'space' = 'start';
     while (true) {
       const startPosition = this._tokenStartCharIndex + index;
@@ -251,9 +284,13 @@ TAG_START_OPEN: '<' HTML_LIBERAL_NAME  { this.setNextTagCloseMode() } -> pushMod
 TAG_END: '<' '/' HTML_LIBERAL_NAME DEFAULT_WS* '>';
 
 // TODO Try to break this
+// Not escapable
 VTL_COMMENT: '##' ~[\n\r\f]*;
-
+// Not escapable
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
+
+// This needs to be above all velocity rules that can be escaped
+NOT_VTL_VARIABLE: {!this.isStartOfVtlReference2()}? [#$] ~[ \t\n\r\f<]* -> type(HTML_TEXT);
 
 VTL_DIRECTIVE_START : '#' '{'? VTL_IDENTIFIER '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
@@ -265,9 +302,7 @@ VTL_NO_CODE_DIRECTIVE: '#' '{'? ('break' | 'stop') '}'?;
 
 VTL_MACRO_WITH_BODY_START: '#@' VTL_IDENTIFIER VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
-VTL_VARIABLE: '$' '!'? '{'? VTL_IDENTIFIER {this.pushModeIfNecessary()};
-
-NOT_VTL_VARIABLE: {!this.isStartOfVtlReference2()}? [#$] ~[ \t\n\r\f<]* -> type(HTML_TEXT);
+VTL_VARIABLE:  '$' '!'? '{'? VTL_IDENTIFIER  {this.pushModeIfNecessary()};
 
 HTML_TEXT:  ~[ \t\n\r\f<$#]+;
 

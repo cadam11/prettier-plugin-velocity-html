@@ -1,0 +1,51 @@
+I bought a 4 lb. sack of potatoes at the farmer's market for only $2.50!
+
+## The following line defines $email in this template:
+#set( $email = "foo" )
+$email
+\$email
+\\$email
+\\\$email
+
+#set( $D = '$' )
+${D}{my:invalid:non:reference}
+${esc.d}{my:invalid:non:reference}
+
+## Should break up escaped reference
+sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss \$foo( bar bar bar 2 3 + 5)
+
+<p>
+\#if( $jazz )
+    Vyacheslav Ganelin
+\#end
+</p>
+
+<p>\#end \#break \#stop</p>
+
+<p>
+\\#if( $jazz )
+   Vyacheslav Ganelin
+\\#end
+</p>
+=====================================output=====================================
+I bought a 4 lb. sack of potatoes at the farmer's market for only $2.50!
+
+## The following line defines $email in this template:
+#set( $email = "foo" )
+$email
+\$email \\$email
+\\\$email
+
+#set( $D = '$' )
+${D}{my:invalid:non:reference}
+${esc.d}{my:invalid:non:reference}
+
+## Should break up escaped reference
+sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss \$foo( bar
+bar bar 2 3 + 5)
+
+<p>\#if( $jazz ) Vyacheslav Ganelin \#end</p>
+
+<p>\#end \#break \#stop</p>
+
+<p>\\#if( $jazz ) Vyacheslav Ganelin \\#end</p>
