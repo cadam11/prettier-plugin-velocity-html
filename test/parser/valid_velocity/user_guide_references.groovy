@@ -1,6 +1,6 @@
 class Street {
 
-  String streetNumber
+  final String streetNumber
   Street(String streetNumber) {
     this.streetNumber = streetNumber
   }
@@ -12,7 +12,7 @@ class Street {
 
 class Address {
 
-  Street street
+  final Street street
   Address(Street street) {
     this.street = street
   }
@@ -24,7 +24,7 @@ class Address {
 
 class Customer {
 
-  String address
+  final Address address
   Customer(Address address) {
     this.address = address
   }
@@ -42,7 +42,7 @@ class Purchase {
 
 class Page {
 
-  String titel
+  String title
 
 }
 
@@ -67,8 +67,8 @@ customer = new Customer(new Address(new Street('5')))
 
 class App {
 
-  final Customer customer
-  App() {
+  Customer customer
+  App(Customer customer) {
     this.customer = customer
   }
 
@@ -83,7 +83,8 @@ class Sun {
 
 [
   'foo': new Foo(),
-  'map': new HashMap<String, Object>(),
+  'map': [:],
+  'app': new App(customer),
   'customer': customer,
   'purchase': new Purchase(100),
   'page': new Page(),

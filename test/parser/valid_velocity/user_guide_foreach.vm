@@ -6,7 +6,7 @@
 
 <ul>
 #foreach( $key in $allProductsTable.keySet() )
-    <li>Key: $key -> Value: $allProducts.get($key)</li>
+    <li>Key: $key -> Value: $allProductsTable.get($key)</li>
 #end
 </ul>
 
@@ -46,7 +46,7 @@
 
 <ul>
   #foreach( $key in $allProductsTable.keySet() )
-    <li>Key: $key -> Value: $allProducts.get($key)</li>
+    <li>Key: $key -> Value: $allProductsTable.get($key)</li>
   #end
 </ul>
 

@@ -151,7 +151,7 @@ export function concatChildren(node: ParserNode, children: Doc[] | Doc): Doc {
     !(node instanceof NodeWithChildren && node.endNode == null);
   const forceBreakChildren =
     (node instanceof NodeWithChildren &&
-      (node.forceBreakChildren || node.maxDepth >= 2)) ||
+      (node.forceBreakChildren() || node.maxDepth >= 2)) ||
     (firstChild instanceof HtmlTagNode &&
       node instanceof NodeWithChildren &&
       // Try to keep nodes with text on one line to improve readability.
@@ -286,11 +286,19 @@ function printChildren(
        * Preserve whitespace from input, but don't use linebreaks.
        * Children are enclosed by line breaks in concatChildren()
        */
-      if (isParentInlineRenderingMode && childNode.hasLeadingSpaces) {
+      if (
+        parent.startNode != null &&
+        isParentInlineRenderingMode &&
+        childNode.hasLeadingSpaces
+      ) {
         parts.push(ifBreak("", " "));
       }
       parts.push(childParts);
-      if (isParentInlineRenderingMode && childNode.hasTrailingSpaces) {
+      if (
+        parent.endNode != null &&
+        isParentInlineRenderingMode &&
+        childNode.hasTrailingSpaces
+      ) {
         parts.push(ifBreak("", " "));
       }
     } else {
@@ -425,9 +433,14 @@ export default function print(
       printClosingTag(node),
     ]);
   } else if (node instanceof AttributeNode) {
-    if (node.value != null) {
+    if (node.value.length > 0) {
+      const value = node.value
+        .map((token) =>
+          token.escapeQuotes ? escapeDoubleQuote(token.text) : token.text
+        )
+        .join("");
       if (node.name === "class") {
-        const classNames = node.value.trim().split(/\s+/);
+        const classNames = value.trim().split(/\s+/);
         return [
           group([
             'class="',
@@ -437,7 +450,7 @@ export default function print(
           ]),
         ];
       } else {
-        return `${node.name}="${escapeDoubleQuote(node.value)}"`;
+        return `${node.name}="${value}"`;
       }
     } else {
       return node.name;
@@ -543,7 +556,7 @@ export default function print(
     const parts: Doc[] = [];
     // Make the Doc more readable
     const preChildrenParts = [`#`];
-    const formalMode = !node.forceBreakChildren && node.formalMode;
+    const formalMode = !node.forceBreakChildren() && node.formalMode;
 
     const inlineChildren = doInlineChildren(node);
     if (formalMode || (inlineChildren && node.directive == "else")) {
@@ -570,19 +583,6 @@ export default function print(
     }
     if (node.endNode != null) {
       parts.push(node.endNode.token.textValue);
-    } else if (
-      node.lastChild != null &&
-      node.lastChild.isInlineRenderMode &&
-      node.lastChild.hasTrailingSpaces &&
-      doInlineChildren(node.next as VelocityDirectiveNode)
-    ) {
-      // This is an if or elseif followed by a elseif or else.
-      // See only child logic in printChildren.
-      parts.push(
-        node.lastChild != null && node.lastChild.isOnlyChild
-          ? ifBreak(" ", "")
-          : " "
-      );
     }
     return decorate(parts, node);
   } else if (node instanceof VelocityCommentNode) {

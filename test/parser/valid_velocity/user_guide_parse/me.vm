@@ -1,2 +1,2 @@
 #set($name = "me")
-<p>It's $me</p>
+<p>It's $name</p>

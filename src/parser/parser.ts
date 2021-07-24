@@ -21,6 +21,7 @@ import {
   NodeWithChildren,
   VelocityDirectiveEndNode,
   AttributeNode,
+  AttributeValueToken,
 } from "./VelocityParserNodes";
 import { VelocityToken } from "./VelocityToken";
 import { VelocityTokenFactory } from "./VelocityTokenFactory";
@@ -78,7 +79,9 @@ type LexerMode =
   | "AttributeLhsMode"
   | "AttributeRhsMode"
   | "DocTypeMode"
-  | "VelocityMode";
+  | "VelocityMode"
+  | "TagStringMode"
+  | "AttributeStringMode";
 
 export default function parse(
   text: string,
@@ -111,7 +114,7 @@ export default function parse(
   const parentStack: AnyNodeWithChildren[] = [rootNode];
   const tokens: VelocityToken[] = tokenStream.getTokens() as VelocityToken[];
   let currentNode: ParserNode = rootNode;
-  let currentHtmlAttribute: VelocityToken | null = null;
+  let currentHtmlAttribute: AttributeNode | null = null;
 
   const addChild = (node: ParserNode): ParserNode => {
     parentStack[0].addChild(node);
@@ -130,6 +133,18 @@ export default function parse(
   let revealedConditionalComment: VelocityToken | null = null;
   let prettierIgnore: VelocityToken[] = [];
   let velocityModeStack: LexerMode[] = [];
+
+  const addAttributeNode = () => {
+    if (currentHtmlAttribute == null) {
+      throw new Error("currentHtmlAttribute is null");
+    }
+    if (currentNode instanceof HtmlTagNode) {
+      currentNode.addAttribute(currentHtmlAttribute);
+    } else if (currentNode instanceof VelocityDirectiveNode) {
+      currentNode.addChild(currentHtmlAttribute);
+    }
+    currentHtmlAttribute = null;
+  };
 
   for (let i = 0; i < tokens.length; i++) {
     const token = tokens[i];
@@ -159,6 +174,11 @@ export default function parse(
         // End preceeding if or elseif
         if (["else", "elseif"].includes(node.directive)) {
           popParentStack();
+        }
+
+        if (mode == "AttributeRhsMode") {
+          // Handled in AttributeRhsMode
+          break;
         }
 
         switch (mode) {
@@ -194,10 +214,10 @@ export default function parse(
         continue;
       }
       case VelocityHtmlLexer.VTL_DIRECTIVE_END: {
-        if (!(currentNode instanceof VelocityDirectiveNode)) {
-          throw newParserException(
-            "currentNode must be velocity directive node"
-          );
+        // Remove dangling nodes from parent stack
+        while (!(currentNode instanceof VelocityDirectiveNode)) {
+          parentStack.shift();
+          currentNode = parentStack[0];
         }
         // TODO endToken vs endNode
         currentNode.endToken = token;
@@ -253,7 +273,8 @@ export default function parse(
               currentNode.endNode = new NodeWithChildrenDecoration();
             } else if (
               currentNode instanceof HtmlCloseNode ||
-              currentNode instanceof IeConditionalCommentNode
+              currentNode instanceof IeConditionalCommentNode ||
+              currentNode instanceof VelocityDirectiveNode
             ) {
               const closeNode = new HtmlCloseNode(token);
               closeNode.tagName = tagName;
@@ -467,7 +488,7 @@ export default function parse(
                 currentNode.addChild(attributeNode);
               }
             } else {
-              currentHtmlAttribute = token;
+              currentHtmlAttribute = new AttributeNode(token);
               i++;
               mode = "AttributeRhsMode";
             }
@@ -500,35 +521,44 @@ export default function parse(
         break;
       }
       case "AttributeRhsMode": {
-        if (
-          !(
-            currentNode instanceof HtmlTagNode ||
-            currentNode instanceof VelocityDirectiveNode
-          )
-        ) {
-          throw newParserException("Current node not a html tag node");
-        }
         if (currentHtmlAttribute == null) {
           throw newParserException("Current html attribute is null");
         }
         switch (token.type) {
-          case VelocityHtmlLexer.HTML_NAME:
-          case VelocityHtmlLexer.HTML_STRING: {
-            const attributeNode = new AttributeNode(
-              currentHtmlAttribute,
-              token
-            );
-            if (currentNode instanceof HtmlTagNode) {
-              currentNode.addAttribute(attributeNode);
-            } else {
-              currentNode.addChild(attributeNode);
-            }
-            currentHtmlAttribute = null;
+          case VelocityHtmlLexer.HTML_STRING_START: {
+            mode = "AttributeStringMode";
+            break;
+          }
+          case VelocityHtmlLexer.HTML_NAME: {
+            currentHtmlAttribute.addValueToken(token);
+            addAttributeNode();
             mode = "AttributeLhsMode";
             break;
           }
           default: {
             throw newParserException();
+          }
+        }
+        break;
+      }
+      case "AttributeStringMode": {
+        if (currentHtmlAttribute == null) {
+          throw newParserException("Current html attribute is null");
+        }
+        switch (token.type) {
+          case VelocityHtmlLexer.HTML_STRING_END: {
+            if (currentHtmlAttribute.value.length == 0) {
+              currentHtmlAttribute.value.push(
+                new AttributeValueToken("", false)
+              );
+            }
+            addAttributeNode();
+            mode = "AttributeLhsMode";
+            break;
+          }
+          default: {
+            currentHtmlAttribute.addValueToken(token);
+            break;
           }
         }
         break;

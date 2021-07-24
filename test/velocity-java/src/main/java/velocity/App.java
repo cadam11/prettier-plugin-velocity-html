@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Properties;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -24,6 +25,7 @@ import groovy.lang.GroovyShell;
 public class App {
 
   private static ObjectMapper objectMapper = new ObjectMapper();
+  private static String GLOBAL_LIBRARY_NAME = "VM_global_library.vm";
 
   private static int readFromChannel(SocketChannel channel, ByteBuffer buffer)
     throws IOException {
@@ -157,16 +159,27 @@ public class App {
 
   private static VelocityEngine buildEngine(VelocityCommand velocityCommand) {
     Properties properties = new Properties();
-    properties.setProperty("runtime.strict-mode.enable", "true");
+    properties.setProperty("runtime.strict_mode.enable", "true");
     if (velocityCommand.getResourceLoaderPath() != null) {
-      System.out.println(
-        "Using resource loader path " + velocityCommand.getResourceLoaderPath()
-      );
+      String resourcePaths = velocityCommand
+        .getResourceLoaderPath()
+        .stream()
+        .map(path -> path.toString())
+        .collect(Collectors.joining(","));
+      System.out.println("Using resource loader path " + resourcePaths);
       properties.setProperty("resource.loader.file.cache", "true");
-      properties.setProperty(
-        "resource.loader.file.path",
-        velocityCommand.getResourceLoaderPath().toString()
-      );
+      properties.setProperty("resource.loader.file.path", resourcePaths);
+      for (Path resourcePath : velocityCommand.getResourceLoaderPath()) {
+        Path globalLibraryPath = resourcePath.resolve(GLOBAL_LIBRARY_NAME);
+        if (globalLibraryPath.toFile().exists()) {
+          System.out.println("Using global library " + globalLibraryPath);
+          properties.setProperty(
+            "velocimacro.library.path",
+            GLOBAL_LIBRARY_NAME
+          );
+          break;
+        }
+      }
     }
     return new VelocityEngine(properties);
   }

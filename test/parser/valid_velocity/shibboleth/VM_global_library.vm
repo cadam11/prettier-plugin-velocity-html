@@ -1,0 +1,15 @@
+#macro (springMessageText $key $defaultMessage)
+#if($defaultMessage)
+$defaultMessage
+#else
+$key
+#end
+#end
+
+#macro (springMessage $key $defaultMessage)
+#if($defaultMessage)
+$defaultMessage
+#else
+$key
+#end
+#end

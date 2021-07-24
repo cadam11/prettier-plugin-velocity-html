@@ -82,7 +82,7 @@ interface VelocityCommand {
   name: string;
   template: string;
   contextScriptPath?: string | null;
-  resourceLoaderPath?: string | null;
+  resourceLoaderPath?: string[] | null;
 }
 
 describe("prettier-velocity", () => {
@@ -123,10 +123,19 @@ describe("prettier-velocity", () => {
         ".vm",
         ".groovy"
       )}`;
-      const resourceLoaderPath = `${VALID_VELOCITY_PATH}/${testCaseName.replace(
+
+      const resourceLoaderPath = [];
+      const testCaseResourcePath = `${VALID_VELOCITY_PATH}/${testCaseName.replace(
         ".vm",
         ""
       )}`;
+      if (fs.existsSync(testCaseResourcePath)) {
+        resourceLoaderPath.push(testCaseResourcePath);
+      }
+      const groupPath = `${VALID_VELOCITY_PATH}/${testCaseName.split("_")[0]}`;
+      if (fs.existsSync(groupPath)) {
+        resourceLoaderPath.push(groupPath);
+      }
 
       const command: VelocityCommand = {
         name: testCaseName,
@@ -134,9 +143,7 @@ describe("prettier-velocity", () => {
         contextScriptPath: fs.existsSync(contextScriptPath)
           ? contextScriptPath
           : null,
-        resourceLoaderPath: fs.existsSync(resourceLoaderPath)
-          ? resourceLoaderPath
-          : null,
+        resourceLoaderPath,
       };
       const message = JSON.stringify(command);
       velocityClientLogger.info(`Sending message ${message}`);

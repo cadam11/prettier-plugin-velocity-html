@@ -206,7 +206,11 @@ export abstract class NodeWithChildren<
   public startNode: StartNode | undefined;
   public endNode: EndNode | undefined;
 
-  public forceBreakChildren = false;
+  protected _forceBreakChildren = false;
+
+  public forceBreakChildren(): boolean {
+    return this._forceBreakChildren;
+  }
 
   public addChild(child: ParserNode): void {
     this.children.push(child);
@@ -230,6 +234,10 @@ export abstract class NodeWithChildren<
   }
 }
 
+export class AttributeValueToken {
+  public constructor(public text: string, public escapeQuotes: boolean) {}
+}
+
 export class AttributeNode extends ParserNode {
   public knownAttributes = [
     "id",
@@ -243,20 +251,31 @@ export class AttributeNode extends ParserNode {
   public getSiblingsRenderMode(): RenderMode {
     return RenderMode.BLOCK;
   }
+  private _value: AttributeValueToken[] = [];
   get name(): string {
     const attributeName = this.nameToken.stringValue;
     return this.knownAttributes.includes(attributeName.toLowerCase())
       ? attributeName.toLowerCase()
       : attributeName;
   }
-  get value(): string | undefined {
-    return this.valueToken != null ? this.valueToken.stringValue : undefined;
+  get value(): AttributeValueToken[] {
+    return this._value;
   }
 
-  public constructor(
-    public nameToken: VelocityToken,
-    public valueToken?: VelocityToken
-  ) {
+  get unescapedValue(): string {
+    return this._value.map((v) => v.text).join("");
+  }
+
+  public addValueToken(token: VelocityToken): void {
+    this._value.push(
+      new AttributeValueToken(
+        token.textValue,
+        token.type === VelocityHtmlLexer.HTML_STRING
+      )
+    );
+  }
+
+  public constructor(public nameToken: VelocityToken) {
     super(nameToken);
   }
 
@@ -303,6 +322,12 @@ export class RootNode extends NodeWithChildren<
 
   public set revealedConditionalCommentEnd(token: VelocityToken | null) {
     throw new Error(`Cannot decorate root node.`);
+  }
+  public get prev(): ParserNode | undefined {
+    return undefined;
+  }
+  public get next(): ParserNode | undefined {
+    return undefined;
   }
 }
 
@@ -509,7 +534,8 @@ export class HtmlTagNode extends NodeWithChildren<
       (attribute) =>
         attribute instanceof AttributeNode && attribute.name === "type"
     ) as AttributeNode;
-    const scriptType = typeAttribute != null ? typeAttribute.value : undefined;
+    const scriptType =
+      typeAttribute != null ? typeAttribute.unescapedValue : undefined;
     return Object.keys(this.supportedScriptTypes).find((parser) =>
       this.supportedScriptTypes[parser].includes(scriptType)
     );
@@ -601,7 +627,7 @@ export class HtmlTagNode extends NodeWithChildren<
     }
     this.forceCloseTag = this.renderDefinition.forceClose;
     this.forceBreak = this.renderDefinition.forceBreak;
-    this.forceBreakChildren = this.renderDefinition.forceBreakChildren;
+    this._forceBreakChildren = this.renderDefinition.forceBreakChildren;
     this.isSelfClosing = this.renderDefinition.selfClosing;
   }
 
@@ -695,7 +721,7 @@ export class HtmlCloseNode extends NodeWithChildren<
      *          <td></td></td>
      *        </tr>
      */
-    this.forceBreakChildren = true;
+    this._forceBreakChildren = true;
     // TODO This should be endNode
     this.endNode = new NodeWithChildrenDecoration();
   }
@@ -707,6 +733,7 @@ interface VelocityRenderDefinition {
   hasVelocityCode?: boolean;
   adaptiveMode?: boolean;
   preformatted?: boolean;
+  adaptiveForceBreakChildren?: boolean;
 }
 
 export class VelocityDirectiveEndNode extends NodeWithChildrenDecoration {
@@ -832,11 +859,32 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       hasVelocityCode: true,
       adaptiveMode: false,
       preformatted: false,
+      adaptiveForceBreakChildren: false,
       ...renderDefinition,
     };
-    this.forceBreakChildren = true;
+
     this._isPreformatted = this.renderDefinition.preformatted;
     this.startNode = new NodeWithChildrenDecoration();
+  }
+
+  public forceBreakChildren(): boolean {
+    if (this.renderDefinition.adaptiveForceBreakChildren) {
+      if (
+        this.firstChild != undefined &&
+        this.startLocation.line < this.firstChild.startLocation.line
+      ) {
+        return true;
+      }
+      if (
+        this.lastChild != null &&
+        this.endNode != null &&
+        this.endLocation.line > this.lastChild.startLocation.line
+      ) {
+        return true;
+      }
+      return false;
+    }
+    return true;
   }
 
   public addToken(token: VelocityToken): void {

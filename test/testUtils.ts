@@ -105,7 +105,7 @@ export const takeScreenshot = async (
   fs.writeFileSync(htmlPath, html);
   await page.goto(`file://${htmlPath}`);
   const isContentTooLong = await page.evaluate(
-    "document.body.scrollHeight > document.body.clientHeight"
+    "Math.max(document.body.offsetHeight, document.body.clientHeight, document.body.scrollHeight) > window.innerHeight"
   );
 
   // Chrome shows a short loading spinner inside video elements. It cannot be paused() (only thing I have tried), therefore we wait until it is hopefully done.

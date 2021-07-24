@@ -9,11 +9,12 @@ $email
 
 #set( $D = '$' )
 ${D}{my:invalid:non:reference}
-${esc.d}{my:invalid:non:reference}
 
+#set($foo = "foo")
 ## Should break up escaped reference
 sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss \$foo( bar bar bar 2 3 + 5)
 
+#set($jazz = "jazz")
 <p>
 \#if( $jazz )
     Vyacheslav Ganelin
@@ -38,12 +39,13 @@ $email
 
 #set( $D = '$' )
 ${D}{my:invalid:non:reference}
-${esc.d}{my:invalid:non:reference}
 
+#set($foo = "foo")
 ## Should break up escaped reference
 sssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss \$foo( bar
 bar bar 2 3 + 5)
 
+#set($jazz = "jazz")
 <p>\#if( $jazz ) Vyacheslav Ganelin \#end</p>
 
 <p>\#end \#break \#stop</p>

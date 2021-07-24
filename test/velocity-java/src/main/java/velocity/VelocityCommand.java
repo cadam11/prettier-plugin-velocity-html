@@ -1,13 +1,14 @@
 package velocity;
 
 import java.nio.file.Path;
+import java.util.List;
 
 public class VelocityCommand {
 
   private String name;
   private String template;
   private Path contextScriptPath;
-  private Path resourceLoaderPath;
+  private List<Path> resourceLoaderPath;
 
   public void setName(String name) {
     this.name = name;
@@ -33,11 +34,11 @@ public class VelocityCommand {
     this.contextScriptPath = contextScriptPath;
   }
 
-  public Path getResourceLoaderPath() {
+  public List<Path> getResourceLoaderPath() {
     return resourceLoaderPath;
   }
 
-  public void setResourceLoaderPath(Path resourceLoaderPath) {
+  public void setResourceLoaderPath(List<Path> resourceLoaderPath) {
     this.resourceLoaderPath = resourceLoaderPath;
   }
 }

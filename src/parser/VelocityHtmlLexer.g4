@@ -4,8 +4,31 @@ lexer grammar VelocityHtmlLexer;
   import { Interval } from 'antlr4ts/misc/Interval';
   type VelocityMode = "directive" | "reference";
 } 
-//@lexer::members { function memberHello() {console.log("hello, Member!");}}
 @lexer::members {
+
+  private tagStringSingle = false;
+  private tagStringDouble = false;
+
+  public setTagString(tagString: 'single' | 'double') {
+    if (tagString == 'single') {
+      this.tagStringSingle = true;
+    } else {
+      this.tagStringDouble = true;
+    }
+  }
+
+  public isTagStringDouble() {
+    return this.tagStringDouble;
+  }
+
+  public isTagStringSingle() {
+    return this.tagStringSingle;
+  }
+
+  public resetTagString() {
+    this.tagStringSingle = false;
+    this.tagStringDouble = false;
+  }
 
   private vtlPrefixes = ['if', 'foreach', 'end', 'set', 'else', 'elseif', 'include', 'parse', 'break', 'stop', 'evaluate', 'define', 'macro'];
   private maxVtlPrefixLength = this.vtlPrefixes.reduce((maxLength, vtlPrefix) => {
@@ -33,7 +56,7 @@ lexer grammar VelocityHtmlLexer;
   private static DOLLAR = "\u0024";
   private static EXCLAMATION_MARK = "\u0021";
 
-  private isStartOfVtlReference2(): boolean {
+  private isStartOfVtl(): boolean {
     
     let index;
     let mode;
@@ -290,7 +313,7 @@ VTL_COMMENT: '##' ~[\n\r\f]*;
 VTL_MULTILINE_COMMENT: '#*' ( ~[*] | ('*' ~[#]) )* '*#';
 
 // This needs to be above all velocity rules that can be escaped
-NOT_VTL_VARIABLE: {!this.isStartOfVtlReference2()}? [#$] ~[ \t\n\r\f<]* -> type(HTML_TEXT);
+NOT_VTL_VARIABLE: {!this.isStartOfVtl()}? [#$] ~[ \t\n\r\f<]* -> type(HTML_TEXT);
 
 VTL_DIRECTIVE_START : '#' '{'? VTL_IDENTIFIER '}'? VTL_WS* '(' -> pushMode(VELOCITY_MODE);
 
@@ -312,6 +335,7 @@ WS
 
 
 fragment DEFAULT_WS: [ \t\n\r\f] ; 
+// fragment NOT_DEFAULT_WS not working
 
 // handle characters which failed to match any other token
 ERROR_CHARACTER : . ;
@@ -400,11 +424,8 @@ HTML_NAME: HTML_LIBERAL_NAME;
 EQUAL: '=';
 // \- since - means "range" inside [...]
 
-HTML_STRING
-   : '"' ( VALID_ESCAPES |  ~ ["])* '"'
-   // Unescaped one must not contain spaces
-   | '\'' ( VALID_ESCAPES |  ~ ['])* '\''
-   ;
+HTML_STRING_START: '\''{this.setTagString('single')}-> pushMode(TAG_STRING);
+HTML_STRING_START_DOUBLE: '"' {this.setTagString('double')}-> type(HTML_STRING_START), pushMode(TAG_STRING);
 
 // TODO Does this make sense?
 fragment VALID_ESCAPES: '\\' ~[\\\u0000-\u001F];
@@ -413,19 +434,36 @@ TAG_CLOSE: '>' { this.popModeForCurrentTag() };
 
 SELF_CLOSING_TAG_CLOSE :'/' '>' -> popMode;
 
+// TODO Support other tags
 TAG_VTL_DIRECTIVE_START : '#' '{'? ('if'|'elseif') '}'? VTL_WS* '(' -> type(VTL_DIRECTIVE_START), pushMode(VELOCITY_MODE);
 
 TAG_VTL_ELSE: '#' '{'? 'else' '}'? -> type(VTL_ELSE);
 
 TAG_VTL_DIRECTIVE_END: '#end' -> type(VTL_DIRECTIVE_END);
 
-TAG_NOT_VTL_VARIABLE: {!this.isStartOfVtlReference2()}? [#] ~[ \t\n\r\f<]* -> type(HTML_STRING);
+TAG_NOT_VTL_VARIABLE: {!this.isStartOfVtl()}? [#] ~[ \t\n\r\f<]* -> type(HTML_NAME);
 
 HTML_WS
    : DEFAULT_WS -> skip
    ;
 
 HTML_ERROR_CHARACTER: . -> type(ERROR_CHARACTER);
+
+mode TAG_STRING;
+
+TAG_STRING_NOT_VTL_VARIABLE_SINGLE : {this.isTagStringSingle() && !this.isStartOfVtl()}? [#$] ('\\"' | ~[$#'])* -> type(HTML_STRING);
+TAG_STRING_NOT_VTL_VARIABLE_DOUBLE : {this.isTagStringDouble() && !this.isStartOfVtl()}? [#$] ('\\"' | ~[$#"])* -> type(HTML_STRING);
+
+TAG_STRING_VTL_DIRECTIVE_START : VTL_DIRECTIVE_START -> type(VTL_DIRECTIVE_START), pushMode(VELOCITY_MODE);
+
+TAG_STRING_VTL_VARIABLE:  VTL_VARIABLE {this.pushModeIfNecessary()} -> type(VTL_VARIABLE);
+
+HTML_STRING: {this.isTagStringSingle()}? ('\\"' |  ~[$#'])+;
+HTML_STRING_DOUBLE: {this.isTagStringDouble()}? ('\\"' |  ~[$#"])+ -> type(HTML_STRING) ;
+
+HTML_STRING_END: {this.isTagStringSingle()}? '\'' {this.resetTagString()} -> popMode;
+HTML_STRING_END_DOUBLE: {this.isTagStringDouble()}? '"' {this.resetTagString()} -> type(HTML_STRING_END), popMode;
+
 
 mode DOCTYPE_MODE;
 

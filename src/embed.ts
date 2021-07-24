@@ -37,9 +37,9 @@ export const embed = (
 
   if (node instanceof AttributeNode) {
     let doc: Doc | null = null;
-    if (node.name === "style" && node.value != null) {
+    if (node.name === "style" && node.value.length > 0) {
       doc = textToDoc(
-        node.value,
+        node.unescapedValue,
         {
           ...options,
           parser: "css",

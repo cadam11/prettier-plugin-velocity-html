@@ -34,7 +34,7 @@ $page.setTitle( "My Home Page" )
 $person.setAttributes( ["Strange", "Weird", "Excited"] )
 
 ## Call chain
-$app.getCustomer().getAddress().getStreet().getStreetNumer().toString().replace("1", "2").substring(0, 2).size()
+$app.getCustomer().getAddress().getStreet().getStreetNumber().toString().replace("1", "2").substring(0, 1).length()
 
 $sun.setPlanets('Earth', 'Mars', 'Neptune')
 $sun.setPlanets('Mercury')
@@ -114,7 +114,7 @@ $page.setTitle( "My Home Page" )
 $person.setAttributes( ["Strange", "Weird", "Excited"] )
 
 ## Call chain
-$app.getCustomer().getAddress().getStreet().getStreetNumer().toString().replace("1", "2").substring(0, 2).size()
+$app.getCustomer().getAddress().getStreet().getStreetNumber().toString().replace("1", "2").substring(0, 1).length()
 
 $sun.setPlanets('Earth', 'Mars', 'Neptune')
 $sun.setPlanets('Mercury')

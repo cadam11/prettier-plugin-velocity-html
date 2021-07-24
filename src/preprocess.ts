@@ -34,9 +34,21 @@ function extractWhitespaces(ast: RootNode): void {
               previousSibling != null &&
                 (previousSibling.hasTrailingSpaces = child.hasLeadingSpaces);
 
+              if (child.isFirstChild && child.parent.startNode == null) {
+                const previousNode = child.parent.prev;
+                previousNode != null &&
+                  (previousNode.hasTrailingSpaces = child.hasLeadingSpaces);
+              }
+
               const nextSibling = children[childIndex + 1];
               nextSibling != null &&
                 (nextSibling.hasLeadingSpaces = child.hasTrailingSpaces);
+
+              if (child.isLastChild && child.parent.endNode == null) {
+                const nextNode = child.parent.next;
+                nextNode != null &&
+                  (nextNode.hasLeadingSpaces = child.hasTrailingSpaces);
+              }
               if (child.text == "") {
                 return newChildren;
               } else {
