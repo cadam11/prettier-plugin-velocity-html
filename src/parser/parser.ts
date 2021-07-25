@@ -80,7 +80,6 @@ type LexerMode =
   | "AttributeRhsMode"
   | "DocTypeMode"
   | "VelocityMode"
-  | "TagStringMode"
   | "AttributeStringMode";
 
 export default function parse(
@@ -176,7 +175,7 @@ export default function parse(
           popParentStack();
         }
 
-        if (mode == "AttributeRhsMode") {
+        if (mode == "AttributeStringMode") {
           // Handled in AttributeRhsMode
           break;
         }
@@ -195,7 +194,7 @@ export default function parse(
           }
           default: {
             throw newParserException(
-              "Velocity Directive not supported at this position."
+              `Velocity Directive not supported at this position in mode ${mode}.`
             );
           }
         }
