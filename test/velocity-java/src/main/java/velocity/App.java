@@ -20,7 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
 
-import groovy.lang.GroovyShell;
+import groovy.lang.Binding;
+import groovy.util.GroovyScriptEngine;
 
 public class App {
 
@@ -120,11 +121,18 @@ public class App {
 
     final VelocityContext context = new VelocityContext();
 
-    GroovyShell shell = new GroovyShell();
     try {
       if (velocityCommand.getContextScriptPath() != null) {
-        Object data = shell.evaluate(
-          velocityCommand.getContextScriptPath().toFile()
+        GroovyScriptEngine groovyScriptEngine = new GroovyScriptEngine(
+          velocityCommand
+            .getResourceLoaderPath()
+            .stream()
+            .map(Path::toString)
+            .toArray(String[]::new)
+        );
+        Object data = groovyScriptEngine.run(
+          velocityCommand.getContextScriptPath().getFileName().toString(),
+          new Binding()
         );
         if (!(data instanceof Map)) {
           return RenderVelocityResult.ofFailure(

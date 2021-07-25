@@ -556,7 +556,7 @@ export class HtmlTagNode extends NodeWithChildren<
       this.renderDefinition.preformatted ||
       (this.tagName === "script" && this.scriptParser == null) ||
       (["style", "script"].includes(this.tagName) &&
-        this.containsVelocityNodes())
+        (this.containsVelocityNodes() || this.hasHtmlComment()))
     );
   }
 
@@ -568,6 +568,23 @@ export class HtmlTagNode extends NodeWithChildren<
       ) {
         return true;
       }
+    }
+    return false;
+  }
+
+  /**
+   * HTML comments were used to hide JS from browsers that don't support it.
+   * The babel parser screws up the formatting. For example
+   * <!--         #include( "client-storage/local-storage-read.js" )         //
+   *  -->
+   * Instead of
+   * <!--
+   *  #include( "client-storage/local-storage-read.js" )
+   *  // -->
+   */
+  private hasHtmlComment(): boolean {
+    if (this.firstChild != null && this.firstChild instanceof HtmlTextNode) {
+      return this.firstChild.text.trimLeft().startsWith("<!--");
     }
     return false;
   }

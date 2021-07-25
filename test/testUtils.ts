@@ -1,4 +1,4 @@
-import { format, Options } from "prettier";
+import { format, Options as PrettierOptions } from "prettier";
 import * as fs from "fs";
 import * as process from "process";
 import * as path from "path";
@@ -33,7 +33,7 @@ export const formatHtml = (input: string): string => {
 
 export const formatVelocity = (
   input: string,
-  options: Options | undefined
+  options: PrettierOptions | undefined
 ): string => {
   return format(input, {
     parser: "velocity-html",
@@ -43,16 +43,28 @@ export const formatVelocity = (
   });
 };
 
-export const readTestcaseFile = (path: string): [string, string, Options?] => {
+export interface TestOptions extends PrettierOptions {
+  compareScreenshots: boolean;
+}
+
+export const readTestcaseFile = (
+  path: string
+): [string, string, TestOptions] => {
   let testCaseContent = fs.readFileSync(path).toString();
   const configSegments = testCaseContent.split(
     "\n" +
       "=====================================input======================================" +
       "\n"
   );
-  let config: Options | undefined;
+  let testOptions: TestOptions = {
+    printWidth: 80,
+    compareScreenshots: true,
+  };
   if (configSegments.length > 1) {
-    config = JSON.parse(configSegments[0]) as Options;
+    testOptions = {
+      ...testOptions,
+      ...(JSON.parse(configSegments[0]) as TestOptions),
+    };
     testCaseContent = configSegments[1];
   }
   const elements = testCaseContent.split(
@@ -65,7 +77,7 @@ export const readTestcaseFile = (path: string): [string, string, Options?] => {
       `File ${path} is not valid testcase. It has ${elements.length} elements`
     );
   }
-  return [elements[0], elements[1], config];
+  return [elements[0], elements[1], testOptions];
 };
 
 export const compareScreenshots = (

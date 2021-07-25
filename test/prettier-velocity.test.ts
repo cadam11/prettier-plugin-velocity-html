@@ -124,7 +124,7 @@ describe("prettier-velocity", () => {
         ".groovy"
       )}`;
 
-      const resourceLoaderPath = [];
+      const resourceLoaderPath = [VALID_VELOCITY_PATH];
       const testCaseResourcePath = `${VALID_VELOCITY_PATH}/${testCaseName.replace(
         ".vm",
         ""
@@ -180,34 +180,38 @@ describe("prettier-velocity", () => {
       throw new Error(`${testCaseName} must end with .groovy or .vm`);
     }
     it(`should format ${testCaseName}`, async () => {
+      // if (testCaseName != "shibboleth_client_storage_read.vm") {
+      //   return;
+      // }
       const [template, expectedOutput, options] =
         readTestcaseFile(testCasePath);
 
       const formattedTemplate = formatVelocity(template, options);
 
-      const numberOfMismatchedPixels = compareScreenshots(
-        await takeScreenshot(
-          page,
-          `${testCaseName}_velocity`,
-          await renderVelocity(testCaseName, formattedTemplate)
-        ),
-        await takeScreenshot(
-          page,
-          `${testCaseName}`,
-          await renderVelocity(testCaseName, template)
-        ),
-        `${testCaseName}_diff`
-      );
-
-      // Comparing strings prints a very good diff.
-      expect(formatVelocity(template, options)).to.equal(
-        expectedOutput,
-        `Expected does not match actual. Rendered output is equal to prettier? ${
-          // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-          numberOfMismatchedPixels === 0
-        }`
-      );
-      expect(numberOfMismatchedPixels).to.equal(0);
+      if (options.compareScreenshots) {
+        const numberOfMismatchedPixels = compareScreenshots(
+          await takeScreenshot(
+            page,
+            `${testCaseName}_velocity`,
+            await renderVelocity(testCaseName, formattedTemplate)
+          ),
+          await takeScreenshot(
+            page,
+            `${testCaseName}`,
+            await renderVelocity(testCaseName, template)
+          ),
+          `${testCaseName}_diff`
+        );
+        // Comparing strings prints a very good diff.
+        expect(formatVelocity(template, options)).to.equal(
+          expectedOutput,
+          `Expected does not match actual. Rendered output is equal to prettier? ${
+            // eslint-disable-next-line @typescript-eslint/restrict-template-expressions
+            numberOfMismatchedPixels === 0
+          }`
+        );
+        expect(numberOfMismatchedPixels).to.equal(0);
+      }
     });
   });
 });

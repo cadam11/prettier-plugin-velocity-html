@@ -15,6 +15,7 @@ const program = new Command();
 interface ReadTestCaseOpts {
   file: string | undefined;
   text: string | undefined;
+  output: string | undefined;
   token: boolean;
   doc: boolean;
   ast: boolean;
@@ -47,6 +48,7 @@ function main(): void {
   program
     .command("read-test-case")
     .option("--file <file>", "file input")
+    .option("--output <file>", "file output")
     .option("--token", "display tokens")
     .option("--ast", "display AST")
     .option("--doc", "display Doc[]")
@@ -105,7 +107,11 @@ function main(): void {
       }
 
       if (options.format) {
-        console.log(prettier.format(input, prettierOptions));
+        const formatted = prettier.format(input, prettierOptions);
+        if (options.output != null) {
+          fs.writeFileSync(options.output, formatted);
+        }
+        console.log(formatted);
       }
     });
 
@@ -118,12 +124,11 @@ function main(): void {
         process.cwd()
       )}/${options.file.replace(".js", "")}`;
 
+      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
       const doc: prettier.Doc[] = require(modulePath).default as prettier.Doc[];
       console.log(
-        prettierWithDebug.__debug.printDocToString(
-          prettier.doc.builders.concat(doc),
-          { parser: "html" }
-        ).formatted
+        prettierWithDebug.__debug.printDocToString(doc, { parser: "html" })
+          .formatted
       );
     });
 
