@@ -856,6 +856,7 @@ export class VelocityDirectiveNode extends NodeWithChildren<
         renderDefinition = {
           hasVelocityCode: true,
           hasChildren: false,
+          siblingsMode: RenderMode.INLINE,
         };
       }
       if (token.type != VelocityHtmlLexer.VTL_DIRECTIVE_START) {

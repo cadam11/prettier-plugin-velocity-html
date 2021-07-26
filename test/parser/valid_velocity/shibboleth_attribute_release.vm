@@ -222,8 +222,8 @@
         </header>
         #if($serviceName)
           <p style="margin-top: 70px">
-            #springMessageText("idp.attribute-release.serviceNameLabel", "You are about to access the service:")
-            <br />
+            #springMessageText("idp.attribute-release.serviceNameLabel", "You are about to access the service:")<br
+            />
             <span class="service_name">$serviceName</span>
             #if($rpOrganizationName)
               #springMessageText("idp.attribute-release.of", "of")
@@ -235,8 +235,8 @@
         #end
         #if($serviceDescription)
           <p style="margin-top: 10px">
-            #springMessageText("idp.attribute-release.serviceDescriptionLabel", "Description as provided by this service:")
-            <br />
+            #springMessageText("idp.attribute-release.serviceDescriptionLabel", "Description as provided by this service:")<br
+            />
             <span class="service_description"
               >$encoder.encodeForHTML($serviceDescription)</span
             >
@@ -245,9 +245,9 @@
         #end
         #if($informationURL)
           <p style="margin-top: 10px">
-            <a href="$informationURL">
-              #springMessageText("idp.attribute-release.informationURLLabel", "Additional information about the service")
-            </a>
+            <a href="$informationURL"
+              >#springMessageText("idp.attribute-release.informationURLLabel", "Additional information about the service")</a
+            >
           </p>
         #end
         <div id="attributeRelease">
@@ -303,9 +303,9 @@
         </div>
         #if($privacyStatementURL)
           <p style="margin-top: 10px">
-            <a href="$privacyStatementURL">
-              #springMessageText("idp.attribute-release.privacyStatementURLLabel", "Data privacy information of the service")
-            </a>
+            <a href="$privacyStatementURL"
+              >#springMessageText("idp.attribute-release.privacyStatementURLLabel", "Data privacy information of the service")</a
+            >
           </p>
         #end
         <div style="float: left">
@@ -333,9 +333,9 @@
                 name="_shib_idp_consentOptions"
                 value="_shib_idp_doNotRememberConsent"
               />
-              <label for="_shib_idp_doNotRememberConsent">
-                #springMessageText("idp.attribute-release.doNotRememberConsent", "Ask me again at next login")
-              </label>
+              <label for="_shib_idp_doNotRememberConsent"
+                >#springMessageText("idp.attribute-release.doNotRememberConsent", "Ask me again at next login")</label
+              >
               <ul>
                 <li>
                   #springMessageText("idp.attribute-release.doNotRememberConsentItem", "I agree to send my information this time.")
@@ -352,9 +352,9 @@
                 value="_shib_idp_rememberConsent"
                 checked
               />
-              <label for="_shib_idp_rememberConsent">
-                #springMessageText("idp.attribute-release.rememberConsent", "Ask me again if information changes")
-              </label>
+              <label for="_shib_idp_rememberConsent"
+                >#springMessageText("idp.attribute-release.rememberConsent", "Ask me again if information changes")</label
+              >
               <ul>
                 <li>
                   #springMessageText("idp.attribute-release.rememberConsentItem", "I agree that the same information will be sent automatically to this service in the future.")
@@ -370,9 +370,9 @@
                 name="_shib_idp_consentOptions"
                 value="_shib_idp_globalConsent"
               />
-              <label for="_shib_idp_globalConsent">
-                #springMessageText("idp.attribute-release.globalConsent", "Do not ask me again")
-              </label>
+              <label for="_shib_idp_globalConsent"
+                >#springMessageText("idp.attribute-release.globalConsent", "Do not ask me again")</label
+              >
               <ul>
                 <li>
                   #springMessageText("idp.attribute-release.globalConsentItem", "I agree that <strong>all</strong> of my information will be released to <strong>any</strong> service.")
