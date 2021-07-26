@@ -44,6 +44,7 @@ function isInlineAndHasNoTrailingSpaces(node: ParserNode | undefined): boolean {
 }
 
 // TODO Naming. Too general. Maybe not?
+// Maybe move to VelocityDirectiveNode.forceBreakChildren
 function doInlineChildren(node: AnyNodeWithChildren | undefined): boolean {
   return (
     node != null &&
@@ -556,14 +557,13 @@ export default function print(
     const parts: Doc[] = [];
     // Make the Doc more readable
     const preChildrenParts = [`#`];
-    const formalMode = !node.forceBreakChildren() && node.formalMode;
 
     const inlineChildren = doInlineChildren(node);
-    if (formalMode || (inlineChildren && node.directive == "else")) {
+    if (node.formalMode || (inlineChildren && node.directive == "else")) {
       preChildrenParts.push("{");
     }
     preChildrenParts.push(node.directive);
-    if (formalMode || (inlineChildren && node.directive == "else")) {
+    if (node.formalMode || (inlineChildren && node.directive == "else")) {
       preChildrenParts.push("}");
     }
     if (node.hasVelocityCode) {

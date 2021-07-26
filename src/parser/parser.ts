@@ -128,7 +128,8 @@ export default function parse(
 
   let mode: LexerMode = "DefaultMode";
 
-  let velocityReferenceNode: VelocityReferenceNode | null = null;
+  let velocityModeNode: VelocityReferenceNode | VelocityDirectiveNode | null =
+    null;
   let revealedConditionalComment: VelocityToken | null = null;
   let prettierIgnore: VelocityToken[] = [];
   let velocityModeStack: LexerMode[] = [];
@@ -205,6 +206,7 @@ export default function parse(
 
         if (node.hasVelocityCode || node.hasChildren) {
           currentNode = node;
+          velocityModeNode = node;
         }
 
         if (node.hasChildren) {
@@ -364,9 +366,10 @@ export default function parse(
             break;
           }
           case VelocityHtmlLexer.VTL_VARIABLE: {
-            velocityReferenceNode = new VelocityReferenceNode(token);
-            addChild(velocityReferenceNode);
-            if (velocityReferenceNode.isFormalReference) {
+            // TODO This is broken
+            velocityModeNode = new VelocityReferenceNode(token);
+            addChild(velocityModeNode);
+            if (velocityModeNode.isFormalReference) {
               velocityModeStack = ["DefaultMode"];
               mode = "VelocityMode";
             }
@@ -376,10 +379,10 @@ export default function parse(
           case VelocityHtmlLexer.VTL_IDENTIFIER:
           case VelocityHtmlLexer.VTL_PARENS_OPEN:
           case VelocityHtmlLexer.VTL_INDEX_OPEN: {
-            if (velocityReferenceNode == null) {
+            if (velocityModeNode == null) {
               throw newParserException("Velocity reference node is null");
             }
-            velocityReferenceNode.tokens.push(token);
+            velocityModeNode.tokens.push(token);
             if (
               [
                 VelocityHtmlLexer.VTL_PARENS_OPEN,
@@ -584,13 +587,10 @@ export default function parse(
         break;
       }
       case "VelocityMode": {
-        const velocityNode =
-          currentNode instanceof VelocityDirectiveNode
-            ? currentNode
-            : velocityReferenceNode;
-        if (velocityNode == null) {
-          throw newParserException("Current node not a velocity node.");
+        if (velocityModeNode == null) {
+          throw newParserException("Did not find velocity node");
         }
+
         switch (token.type) {
           case VelocityHtmlLexer.WS:
           case VelocityHtmlLexer.VTL_REFERENCE:
@@ -599,14 +599,14 @@ export default function parse(
           case VelocityHtmlLexer.VTL_REFERENCE_DOT:
           case VelocityHtmlLexer.VTL_STRING:
           case VelocityHtmlLexer.VTL_NUMBER: {
-            velocityNode.addToken(token);
+            velocityModeNode.addToken(token);
             break;
           }
           case VelocityHtmlLexer.VTL_PARENS_OPEN:
           case VelocityHtmlLexer.VTL_INDEX_OPEN:
           case VelocityHtmlLexer.VTL_CURLY_OPEN:
           case VelocityHtmlLexer.VTL_FORMAL_REFERENCE_OPEN: {
-            velocityNode.addToken(token);
+            velocityModeNode.addToken(token);
             velocityModeStack.push("VelocityMode");
             break;
           }
@@ -616,9 +616,12 @@ export default function parse(
             if (velocityModeStack.length == 0) {
               throw newParserException("Velocity mode stack is empty");
             }
-            velocityNode.addToken(token);
+            velocityModeNode.addToken(token);
             mode = velocityModeStack.pop()!;
-            if (velocityModeStack.length == 0 && !velocityNode.hasChildren) {
+            if (
+              velocityModeStack.length == 0 &&
+              !velocityModeNode.hasChildren
+            ) {
               currentNode = parentStack[0];
             }
             break;

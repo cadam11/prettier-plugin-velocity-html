@@ -750,7 +750,6 @@ interface VelocityRenderDefinition {
   hasVelocityCode?: boolean;
   adaptiveMode?: boolean;
   preformatted?: boolean;
-  adaptiveForceBreakChildren?: boolean;
 }
 
 export class VelocityDirectiveEndNode extends NodeWithChildrenDecoration {
@@ -877,32 +876,12 @@ export class VelocityDirectiveNode extends NodeWithChildren<
       hasVelocityCode: true,
       adaptiveMode: false,
       preformatted: false,
-      adaptiveForceBreakChildren: false,
       ...renderDefinition,
     };
 
     this._isPreformatted = this.renderDefinition.preformatted;
+    this._forceBreakChildren = true;
     this.startNode = new NodeWithChildrenDecoration();
-  }
-
-  public forceBreakChildren(): boolean {
-    if (this.renderDefinition.adaptiveForceBreakChildren) {
-      if (
-        this.firstChild != undefined &&
-        this.startLocation.line < this.firstChild.startLocation.line
-      ) {
-        return true;
-      }
-      if (
-        this.lastChild != null &&
-        this.endNode != null &&
-        this.endLocation.line > this.lastChild.startLocation.line
-      ) {
-        return true;
-      }
-      return false;
-    }
-    return true;
   }
 
   public addToken(token: VelocityToken): void {

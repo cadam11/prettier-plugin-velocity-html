@@ -55,9 +55,9 @@
 ## With surrounding text and both
 <p>
 <span>text #if(true) suffixIf #{else}suffixElse#{end}@prefix</span>
-<span>text #if(false)suffixIf#{else} suffixElse #{end}@prefix</span>
+<span>text #if(false)suffixIf#else suffixElse #{end}@prefix</span>
 <span>text suffix#if(true) suffixIf #{else}suffixElse#end</span>
-<span>text suffix#if(false)suffixIf#{else} suffixElse #end</span>
+<span>text suffix#if(false)suffixIf#else suffixElse #end</span>
 </p>
 
 ## Different conditions
