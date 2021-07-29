@@ -461,6 +461,12 @@ TAG_STRING_VTL_VARIABLE:  VTL_VARIABLE {this.pushModeIfNecessary()} -> type(VTL_
 HTML_STRING: {this.isTagStringSingle()}? ('\\"' |  ~[$#'])+;
 HTML_STRING_DOUBLE: {this.isTagStringDouble()}? ('\\"' |  ~[$#"])+ -> type(HTML_STRING) ;
 
+TAG_STRING_VTL_ELSE: VTL_ELSE;
+
+TAG_STRING_VTL_DIRECTIVE_END: VTL_DIRECTIVE_END;
+
+TAG_STRING_VTL_NO_CODE_DIRECTIVE: VTL_NO_CODE_DIRECTIVE;
+
 HTML_STRING_END: {this.isTagStringSingle()}? '\'' {this.resetTagString()} -> popMode;
 HTML_STRING_END_DOUBLE: {this.isTagStringDouble()}? '"' {this.resetTagString()} -> type(HTML_STRING_END), popMode;
 

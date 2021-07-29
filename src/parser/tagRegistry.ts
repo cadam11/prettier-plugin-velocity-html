@@ -46,7 +46,7 @@ const renderDefinitions: [string, RenderDefinition][] = [
   ["isindex",           { siblingsMode: RenderMode.INLINE }],
   ["kbd",               { siblingsMode: RenderMode.INLINE }],
   ["label",             { siblingsMode: RenderMode.INLINE }],
-  ["legend",            { siblingsMode: RenderMode.INLINE }],
+  ["legend",            { siblingsMode: RenderMode.BLOCK }],
   ["listing",           { siblingsMode: RenderMode.INLINE }],
   ["map",               { siblingsMode: RenderMode.INLINE }],
   ["mark",              { siblingsMode: RenderMode.INLINE }],

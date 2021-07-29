@@ -10,12 +10,31 @@
       "args": "${workspaceRoot}/test/parser/valid_velocity/document.html ${workspaceRoot}/test/parser/valid_velocity/document.groovy"
     },
     {
-      "name": "test",
+      "name": "test:all",
       "type": "node",
       "request": "launch",
       "program": "${workspaceRoot}/node_modules/.bin/mocha",
       "args": [
         "--no-timeouts",
+        "--require",
+        "source-map-support/register",
+        "dist/**/*.test.js"
+      ],
+      "console": "integratedTerminal",
+      "outFiles": [
+        "${workspaceFolder}/dist/**/*.js"
+      ],
+      "preLaunchTask": "npm: build"
+    },
+    {
+      "name": "test:velocity",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceRoot}/node_modules/.bin/mocha",
+      "args": [
+        "--no-timeouts",
+        "--grep",
+        "prettier-velocity",
         "--require",
         "source-map-support/register",
         "dist/**/*.test.js"
