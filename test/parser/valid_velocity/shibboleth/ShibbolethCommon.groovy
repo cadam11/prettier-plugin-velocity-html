@@ -8,9 +8,15 @@ class Context {
           return ShibbolethCommon.attributeContext
         case 'net.shibboleth.idp.profile.context.RelyingPartyContext':
           return ShibbolethCommon.rpUIContext
+        case 'net.shibboleth.idp.authn.context.UsernamePasswordContext':
+          return ShibbolethCommon.usernamePasswordContext
         default:
           throw new IllegalArgumentException(className)
       }
+  }
+
+  Object getSubcontext(String className, boolean create) {
+    getSubcontext(className)
   }
 
 }
@@ -44,11 +50,30 @@ class RelyingPartyUIContext extends Context {
 
 }
 
+class AuthenticationContext extends Context {
+
+  Map<String, String> activeResults = [:]
+
+  boolean isAcceptable(Object something) {
+    true
+  }
+
+}
+
+class UsernamePasswordContext extends Context {
+
+    String username = 'username'
+
+}
+
 @Field
 static RelyingPartyUIContext rpUIContext = new RelyingPartyUIContext()
 
 @Field
 static AttributeContext attributeContext = new AttributeContext()
+
+@Field
+static UsernamePasswordContext usernamePasswordContext = new UsernamePasswordContext()
 
 class ProfileRequestContext extends Context {
 
@@ -87,6 +112,7 @@ Map<String, Object> makeCommonData() {
     'request': new Request(),
     'flowExecutionUrl': '/idp/execution',
     'encoder': new Encoder(),
-    'springMacroRequestContext': new SpringMacroRequestContext()
+    'springMacroRequestContext': new SpringMacroRequestContext(),
+    'authenticationContext': new AuthenticationContext()
   ]
 }
