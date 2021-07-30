@@ -1,0 +1,97 @@
+<!-- indent requires hardline at start of document: https://github.com/prettier/prettier/issues/11283 -->
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+
+	<div class="navigation footer">
+        <ul>
+            <li>
+                <span id="#springMessageText("authn-flows.footer-1.id", "authn-flows.footer-1.id is undefinded")"
+                      class="overlay-open">#springMessageText(
+                    "authn-flows.footer-1.label", "authn-flows.footer-1.label is undefinded")</span>
+            </li>
+            <li>
+                <span id="#springMessageText("authn-flows.footer-2.id", "authn-flows.footer-2.id is undefinded")"
+                      class="overlay-open">#springMessageText(
+                    "authn-flows.footer-2.label", "authn-flows.footer-2.label is undefinded")</span>
+            </li>
+            <li>
+                <span id="#springMessageText("authn-flows.footer-3.id", "authn-flows.footer-3.id is undefinded")"
+                      class="overlay-open">#springMessageText(
+                    "authn-flows.footer-3.label", "authn-flows.footer-3.label is undefinded")</span>
+            </li>
+            #if ($settingsTool.isFaqEnabled())
+                <li data-test-id="footer-faq-link">
+                    <span>#springMessageText("authn-flows.footer.faq.label", "")</span>
+                </li>
+            #end
+            #**
+             #if ($authenticationContext.getAttemptedFlow().getId() == "authn/BSPnPA")
+             <li>
+             <span id="#springMessageText("authn-flows.footer-ausweis.id", "authn-flows.footer-ausweis.id is undefinded")" class="overlay-open" >#springMessageText("authn-flows.footer-ausweis.label", "authn-flows.footer-ausweis.label is undefinded")</span>
+             </li>
+             #end
+             *#
+        </ul>
+    </div>
+
+                    #parse("overlays.vm")
+
+</body>
+</html>
+=====================================output=====================================
+
+              <!-- indent requires hardline at start of document: https://github.com/prettier/prettier/issues/11283 -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="navigation footer">
+      <ul>
+        <li>
+          <span
+            id="#springMessageText("authn-flows.footer-1.id", "authn-flows.footer-1.id is undefinded")"
+            class="overlay-open"
+            >#springMessageText(
+                    "authn-flows.footer-1.label", "authn-flows.footer-1.label is undefinded")</span
+          >
+        </li>
+        <li>
+          <span
+            id="#springMessageText("authn-flows.footer-2.id", "authn-flows.footer-2.id is undefinded")"
+            class="overlay-open"
+            >#springMessageText(
+                    "authn-flows.footer-2.label", "authn-flows.footer-2.label is undefinded")</span
+          >
+        </li>
+        <li>
+          <span
+            id="#springMessageText("authn-flows.footer-3.id", "authn-flows.footer-3.id is undefinded")"
+            class="overlay-open"
+            >#springMessageText(
+                    "authn-flows.footer-3.label", "authn-flows.footer-3.label is undefinded")</span
+          >
+        </li>
+        #if($settingsTool.isFaqEnabled())
+          <li data-test-id="footer-faq-link">
+            <span>#springMessageText("authn-flows.footer.faq.label", "")</span>
+          </li>
+        #end
+        #**
+             #if ($authenticationContext.getAttemptedFlow().getId() == "authn/BSPnPA")
+             <li>
+             <span id="#springMessageText("authn-flows.footer-ausweis.id", "authn-flows.footer-ausweis.id is undefinded")" class="overlay-open" >#springMessageText("authn-flows.footer-ausweis.label", "authn-flows.footer-ausweis.label is undefinded")</span>
+             </li>
+             #end
+             *#
+      </ul>
+    </div>
+
+    #parse("overlays.vm")
+  </body>
+</html>

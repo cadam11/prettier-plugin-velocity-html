@@ -24,6 +24,7 @@
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
       ],
+      "envFile": "${workspaceFolder}/.env",
       "preLaunchTask": "npm: build"
     },
     {
@@ -40,25 +41,7 @@
         "dist/**/*.test.js"
       ],
       "console": "integratedTerminal",
-      "outFiles": [
-        "${workspaceFolder}/dist/**/*.js"
-      ],
-      "preLaunchTask": "npm: build"
-    },
-    {
-      "name": "testrig:print-doc",
-      "type": "node",
-      "request": "launch",
-      "runtimeExecutable": "node",
-      "args": [
-        "--require",
-        "source-map-support/register",
-        "dist/tools/TestRig.js",
-        "print-doc",
-        "--file",
-        "dist/tools/LocalDebugDoc.js"
-      ],
-      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
       "outFiles": [
         "${workspaceFolder}/dist/**/*.js"
       ],

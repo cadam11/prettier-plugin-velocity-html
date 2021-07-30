@@ -272,11 +272,7 @@ export default function parse(
                 );
               }
               currentNode.endNode = new NodeWithChildrenDecoration();
-            } else if (
-              currentNode instanceof HtmlCloseNode ||
-              currentNode instanceof IeConditionalCommentNode ||
-              currentNode instanceof VelocityDirectiveNode
-            ) {
+            } else {
               const closeNode = new HtmlCloseNode(token);
               closeNode.tagName = tagName;
               /*
@@ -295,8 +291,6 @@ export default function parse(
               parentStack[0].children = [];
               setNewCurrentNode(closeNode);
               parentStack.unshift(currentNode);
-            } else {
-              throw newParserException();
             }
 
             currentNode.endToken = token;

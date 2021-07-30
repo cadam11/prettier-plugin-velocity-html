@@ -39,7 +39,7 @@
     "pixelmatch": "^5.2.1",
     "playwright": "^1.10.0",
     "pngjs": "^6.0.0",
-    "prettier": "^2.3.0",
+    "prettier": "^2.3.2",
     "prettier-plugin-java": "^1.2.0",
     "rimraf": "^3.0.2",
     "source-map-support": "^0.5.19",

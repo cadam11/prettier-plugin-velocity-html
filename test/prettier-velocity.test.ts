@@ -2,6 +2,7 @@ import * as fs from "fs";
 
 import { ChildProcess, spawn, SpawnOptions } from "child_process";
 import { createConnection, Socket } from "net";
+import { homedir } from 'os';
 import {
   compareScreenshots,
   formatVelocity,
@@ -29,7 +30,7 @@ const VALID_VELOCITY_PATH = `${__dirname}/parser/valid_velocity`;
 
 const openSocket = (): Promise<Socket> => {
   return new Promise((resolve, reject) => {
-    const client = createConnection("/home/fredo/server.socket", () => {
+    const client = createConnection(`${homedir()}/server.socket`, () => {
       resolve(client);
     });
   });
@@ -37,8 +38,14 @@ const openSocket = (): Promise<Socket> => {
 
 const startServer = (): Promise<ChildProcess> => {
   return new Promise((resolve, reject) => {
+
+    const JAVA_EXECUTABLE_ENV_NAME = "JAVA_16_OR_BETTER"
+    const JAVA_EXECUTABLE = process.env[JAVA_EXECUTABLE_ENV_NAME];
+    if (JAVA_EXECUTABLE == null || JAVA_EXECUTABLE.trim() == "") {
+      return reject(`Must specify env variable ${JAVA_EXECUTABLE_ENV_NAME}`);
+    }
     const spawnArgs: [string, readonly string[], SpawnOptions] = [
-      `/home/fredo/.sdkman/candidates/java/current/bin/java`,
+      JAVA_EXECUTABLE,
       [
         "-jar",
         `${__dirname}/../../test/velocity-java/target/prettier-velocity-1.0-SNAPSHOT.jar`,

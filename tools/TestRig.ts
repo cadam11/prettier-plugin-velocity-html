@@ -117,12 +117,15 @@ function main(): void {
 
   program
     .command("print-doc")
-    .option("--file <file>")
+    .option("--file <file>", "JS module has a Doc default export. Module name relative to this file.")
     .action((options: PrintDocOpts) => {
-      const modulePath = `${path.relative(
-        __dirname,
-        process.cwd()
-      )}/${options.file.replace(".js", "")}`;
+      if (options.file == null) {
+        program.help();
+        process.exit(1);
+      }
+
+      console.log(__dirname, process.cwd());
+      const modulePath = `${__dirname}/${options.file.replace(".js", "")}`;
 
       // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
       const doc: prettier.Doc[] = require(modulePath).default as prettier.Doc[];
