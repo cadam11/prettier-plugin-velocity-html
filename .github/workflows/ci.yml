@@ -1,0 +1,29 @@
+name: tests
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+
+
+
+jobs:
+  build:
+    name: tests
+    # Run on windows because it provides a graphics server
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-java@v2
+        with:
+          distribution: 'adopt' # See 'Supported distributions' for available options
+          java-version: '16'
+      - uses: actions/setup-node@v1
+        with:
+          node-version: '12.10'
+      - run: |
+          cd test/velocity-java && mvn package
+          npm install
+          JAVA_16_OR_BETTER=$(which java) npm run test
