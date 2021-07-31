@@ -1,6 +1,5 @@
 {
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "dist/src/index.js",
   "devDependencies": {
     "@types/chai": "^4.2.15",
     "@types/commander": "^2.12.2",
@@ -58,13 +57,14 @@
     "tools:testrig": "npm run build && node --require source-map-support/register dist/tools/TestRig.js",
     "tools:testrig:html": "npm run tools:testrig -- read-test-case --file tools/local/local-debug.html --doc --format --token"
   },
-  "version": "0.0.0",
-  "name": "prettier-velocity-html-plugin",
+  "version": "1.0.0",
+  "name": "prettier-plugin-velocity-html",
   "author": {
     "name": "Frederik Claus",
     "email": "f.v.claus@googlemail.com"
   },
   "dependencies": {
     "antlr4ts": "^0.5.0-alpha.4"
-  }
+  },
+  "license": "MIT"
 }
