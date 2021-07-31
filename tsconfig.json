@@ -17,7 +17,7 @@
       "es2017",
       "dom"
     ],
-    "declaration": true,
+    "declaration": false,
     "sourceMap": true,
     "outDir": "dist",
     "rootDir": ".",

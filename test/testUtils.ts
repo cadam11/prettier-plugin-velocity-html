@@ -38,7 +38,7 @@ export const formatVelocity = (
   return format(input, {
     parser: "velocity-html",
     // pluginSearchDirs: ["./dir-with-plugins"],
-    plugins: [`${__dirname}/../src`],
+    plugins: [`${__dirname}/..`],
     ...options,
   });
 };

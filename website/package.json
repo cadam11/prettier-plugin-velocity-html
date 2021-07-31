@@ -1,7 +1,7 @@
 {
   "license": "MIT",
   "scripts": {
-    "build": "webpack && docusaurus-build",
+    "build": "webpack && docusaurus-build"
   },
   "dependencies": {
     "clipboard": "2.0.6",

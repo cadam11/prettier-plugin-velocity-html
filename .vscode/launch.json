@@ -18,7 +18,7 @@
         "--no-timeouts",
         "--require",
         "source-map-support/register",
-        "dist/**/*.test.js"
+        "dist/test/index.js"
       ],
       "console": "integratedTerminal",
       "outFiles": [
@@ -38,7 +38,7 @@
         "prettier-velocity",
         "--require",
         "source-map-support/register",
-        "dist/**/*.test.js"
+        "dist/test/index.js"
       ],
       "console": "integratedTerminal",
       "envFile": "${workspaceFolder}/.env",
