@@ -1,15 +1,12 @@
-name: tests
 on:
   push:
     branches:
       - main
   pull_request:
 
-
-
 jobs:
   build:
-    name: tests
+    # TODO Fix npm run lint
     # Run on windows because it provides a graphics server
     runs-on: ubuntu-latest
     steps:
@@ -23,7 +20,14 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: '12.10'
-      - run: |
+      - name: Execute test
+        run: |
           cd test/velocity-java && mvn package
           npm install
           JAVA_16_OR_BETTER=$(which java) npm run test
+      - uses: actions/upload-artifact@v2
+        if: ${{ github.ref == 'refs/heads/main' }}
+        with:
+          name: dist
+          path: dist/src/**/*.js
+          if-no-files-found: error  
