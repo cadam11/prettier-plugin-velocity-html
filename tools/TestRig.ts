@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment, no-console */
 
+// TODO Import index.js instead of bundling
 import { CharStreams, CommonTokenStream } from "antlr4ts";
 import { VelocityHtmlLexer } from "../src/parser/generated/VelocityHtmlLexer";
 import { VelocityTokenFactory } from "../src/parser/VelocityTokenFactory";
 import * as fs from "fs";
-import * as path from "path";
 import { VelocityToken } from "../src/parser/VelocityToken";
 import { Command } from "commander";
 import * as prettier from "prettier";
