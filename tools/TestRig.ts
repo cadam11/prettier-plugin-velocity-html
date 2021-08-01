@@ -22,10 +22,6 @@ interface ReadTestCaseOpts {
   format: boolean;
 }
 
-interface PrintDocOpts {
-  file: string;
-}
-
 // @ts-ignore
 const prettierWithDebug = prettier as PrettierWithDebug;
 
@@ -114,26 +110,23 @@ function main(): void {
         console.log(formatted);
       }
     });
+  const file = "./local/printDoc";
 
-  program
-    .command("print-doc")
-    .option("--file <file>", "JS module has a Doc default export. Module name relative to this file.")
-    .action((options: PrintDocOpts) => {
-      if (options.file == null) {
-        program.help();
-        process.exit(1);
-      }
+  // Include in bundle
+  if (fs.existsSync(file)) {
+    require("./local/printDoc");
+  }
 
-      console.log(__dirname, process.cwd());
-      const modulePath = `${__dirname}/${options.file.replace(".js", "")}`;
-
-      // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
-      const doc: prettier.Doc[] = require(modulePath).default as prettier.Doc[];
-      console.log(
-        prettierWithDebug.__debug.printDocToString(doc, { parser: "html" })
-          .formatted
-      );
-    });
+  program.command("print-doc").action(() => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
+    const doc: prettier.Doc[] = require("./local/printDoc")
+      .default as prettier.Doc[];
+    // const doc: prettier.Doc = [];
+    console.log(
+      prettierWithDebug.__debug.printDocToString(doc, { parser: "html" })
+        .formatted
+    );
+  });
 
   console.log(process.argv);
   program.parse(process.argv);

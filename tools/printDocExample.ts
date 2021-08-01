@@ -1,30 +1,25 @@
-import { doc} from "prettier";
+import { doc } from "prettier";
 
 const {
-    literalline,
-    breakParent,
-    dedentToRoot,
-    fill,
-    ifBreak,
-    hardline,
-    softline,
-    join,
-    group,
-    indent,
-    line,
-    align,
-  } = doc.builders;
+  literalline,
+  breakParent,
+  dedentToRoot,
+  fill,
+  ifBreak,
+  hardline,
+  softline,
+  join,
+  group,
+  indent,
+  line,
+  align,
+} = doc.builders;
 
 export default [
+  indent([
     indent([
       indent([
-        indent([
-          align(2, ["", "</div>", breakParent]),
-          softline,
-          breakParent,
-          "</div>",
-          breakParent,
-        ]),
+        align(2, ["", "</div>", breakParent]),
         softline,
         breakParent,
         "</div>",
@@ -38,4 +33,9 @@ export default [
     softline,
     breakParent,
     "</div>",
-  ]
+    breakParent,
+  ]),
+  softline,
+  breakParent,
+  "</div>",
+];
