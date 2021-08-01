@@ -1,4 +1,5 @@
-import { AstPath, Doc, doc, ParserOptions } from "prettier";
+import { AstPath, Doc, ParserOptions } from "prettier";
+import { builders } from "prettier/doc";
 import { RenderMode } from "./parser/tagRegistry";
 import {
   AttributeNode,
@@ -33,7 +34,7 @@ const {
   group,
   indent,
   line,
-} = doc.builders;
+} = builders;
 
 function isInlineAndHasNoLeadingSpaces(node: ParserNode | undefined): boolean {
   return node != null && node.isInlineRenderMode && !node.hasLeadingSpaces;

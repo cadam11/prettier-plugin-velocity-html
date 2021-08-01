@@ -31,9 +31,13 @@ const parsersLocation = {
     property: "postcss",
   },
   "parser-velocity-html.js": {
-    parsers: ["velocity-html"]
+    parsers: ["velocity-html"],
+    property: "velocity-html"
   }
 };
+
+importScriptOnce(`lib/parser-velocity-html.js`)
+
 
 const parsers = Object.create(null);
 for (const file in parsersLocation) {
@@ -87,7 +91,11 @@ function handleMessage(message) {
     delete options.doc;
     delete options.output2;
 
-    const plugins = [{ parsers }];
+    const plugins = [{ parsers, printers: {
+      ...prettierPlugins['velocity-html'].printers
+    }, languages: {
+      ...prettierPlugins['velocity-html'].languages
+    } }];
     options.plugins = plugins;
 
     const formatResult = formatCode(message.code, options);

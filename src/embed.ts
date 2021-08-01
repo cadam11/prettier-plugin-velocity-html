@@ -1,4 +1,5 @@
-import { AstPath, doc, Doc, Options, ParserOptions } from "prettier";
+import { AstPath, Doc, Options, ParserOptions } from "prettier";
+import { builders } from "prettier/doc";
 import {
   AttributeNode,
   HtmlTagNode,
@@ -9,7 +10,7 @@ import {
 } from "./parser/VelocityParserNodes";
 import { concatChildren, printClosingTag, printOpeningTag } from "./printer";
 
-const { breakParent, group } = doc.builders;
+const { breakParent, group } = builders;
 
 const CSS_PARSER_OPTIONS = {
   parser: "css",
