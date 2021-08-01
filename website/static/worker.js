@@ -12,31 +12,14 @@ function importScriptOnce(url) {
   }
 }
 
-// importScripts("lib/parsers-location.js");
+importScripts("/parsers-location.js");
 importScripts("lib/standalone.js");
 
 
 // this is required to only load parsers when we need them
 
 
-const parsersLocation = {
-  "parser-babel.js": {
-    parsers: [
-      "babel",
-    ],
-    property: "babel",
-  },
-  "parser-postcss.js": {
-    parsers: ["css", "less", "scss"],
-    property: "postcss",
-  },
-  "parser-velocity-html.js": {
-    parsers: ["velocity-html"],
-    property: "velocity-html"
-  }
-};
-
-importScriptOnce(`lib/parser-velocity-html.js`)
+// importScriptOnce(`lib/parser-velocity-html.js`)
 
 
 const parsers = Object.create(null);
@@ -91,6 +74,8 @@ function handleMessage(message) {
     delete options.doc;
     delete options.output2;
 
+    // TODO Hack: Load parser.
+    parsers['velocity-html'];
     const plugins = [{ parsers, printers: {
       ...prettierPlugins['velocity-html'].printers
     }, languages: {

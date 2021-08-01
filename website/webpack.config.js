@@ -42,6 +42,7 @@ module.exports = {
     contentBase: path.join(__dirname, 'static'),
     setup: function(app, server) {
       app.get('/lib/:file', function (req, res) {
+        console.log(`Getting file ${req.params.file}`);
         if (req.params.file === "parser-velocity-html.js") {
           res.sendFile(path.join(__dirname, 'node_modules', 'prettier-plugin-velocity-html', 'standalone.js'))
         } else {

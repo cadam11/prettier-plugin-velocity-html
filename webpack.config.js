@@ -1,5 +1,6 @@
 "use strict";
 
+const TerserPlugin = require('terser-webpack-plugin');
 const NodePolyfillPlugin = require("node-polyfill-webpack-plugin")
 const path = require('path');
 const glob = require("glob");
@@ -34,9 +35,16 @@ const DEFAULT_CONFIG = {
   resolve: {
     extensions: [".tsx", ".ts", ".js"],
   },
+  optimization: {
+    minimizer: [new TerserPlugin({
+      // Omit LICENSE generation
+      extractComments: false,
+    })],
+  },
   stats: {
     errorDetails: true
   }
+  // stats: 'verbose'
 }
 
 if (process.env.BUILD_STANDALONE == "true") {
@@ -45,11 +53,11 @@ if (process.env.BUILD_STANDALONE == "true") {
     mode: 'production',
     target: 'web',
     entry: {
-      index: "./src/index.ts",
+      standalone: "./src/index.ts",
     },
     output: {
       path:  OUTPUT_PATH,
-      filename: 'standalone.js',
+      filename: '[name].js',
       library: {
         type: "umd"
       },
@@ -57,7 +65,12 @@ if (process.env.BUILD_STANDALONE == "true") {
     },
     plugins: [
       generateLexer, 
-      new NodePolyfillPlugin()
+      new NodePolyfillPlugin(),
+      new CopyPlugin({
+        patterns: [
+          { from: "package.json" }
+        ],
+      }),
     ]
   }
 } else {

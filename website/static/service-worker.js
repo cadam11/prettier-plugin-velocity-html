@@ -2,15 +2,15 @@
 
 "use strict";
 
-// importScripts("lib/parsers-location.js");
+importScripts("/parsers-location.js");
 importScripts("https://unpkg.com/sw-toolbox@3.6.0/sw-toolbox.js");
 
-// const parsers = Object.keys(parsersLocation).map((file) => `lib/${file}`);
+const parsers = Object.keys(parsersLocation).map((file) => `lib/${file}`);
 
 toolbox.precache([
   // Scripts
   "lib/standalone.js",
-  "lib/parsers-location.js",
+  "/parsers-location.js",
   ...parsers,
   "playground.js",
   "https://unpkg.com/sw-toolbox@3.6.0/sw-toolbox.js",
@@ -40,9 +40,6 @@ toolbox.precache([
   "https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/react/17.0.1/umd/react.production.min.js",
   "https://cdnjs.cloudflare.com/ajax/libs/react-dom/17.0.1/umd/react-dom.production.min.js",
-
-  // Images
-  "/prettier.png",
 ]);
 
 // Default to hit the cache only if there's a network error
