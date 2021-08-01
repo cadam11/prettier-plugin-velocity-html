@@ -14,7 +14,7 @@ function formatMarkdown({
   const isIdempotent = !output2 || output === output2;
 
   return [
-    `**Prettier ${version}**`,
+    `**prettier-plugin-velocity-html ${version}**`,
     `[Playground link](${url})`,
     optionsString === "" ? null : codeBlock(optionsString, "sh"),
     "",

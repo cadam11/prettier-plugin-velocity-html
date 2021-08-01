@@ -17,12 +17,12 @@ export default function ({ version }) {
   const formattedVersion = match ? `PR #${match[1]}` : `v${version}`;
 
   React.useEffect(() => {
-    document.title = `Prettier ${formattedVersion}`;
+    document.title = `prettier-plugin-velocity-html ${formattedVersion}`;
   }, [formattedVersion]);
 
   return ReactDOM.createPortal(
     <a
-      href={`https://github.com/prettier/prettier/${href}`}
+      href={`https://github.com/fvclaus/prettier-plugin-velocity-html/${href}`}
       target="_blank"
       rel="noreferrer noopener"
     >

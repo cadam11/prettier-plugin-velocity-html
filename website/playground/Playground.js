@@ -43,7 +43,7 @@ const ENABLED_OPTIONS = [
   // "vueIndentScriptAndStyle",
   // "embeddedLanguageFormatting",
 ];
-const ISSUES_URL = "https://github.com/prettier/prettier/issues/new?body=";
+const ISSUES_URL = "https://github.com/fvclaus/prettier-plugin-velocity-html/issues/new?body=";
 const MAX_LENGTH = 8000 - ISSUES_URL.length; // it seems that GitHub limit is 8195
 const COPY_MESSAGE =
   "<!-- The issue body has been saved to the clipboard. Please paste it after this line! 👇 -->\n";
@@ -216,7 +216,8 @@ class Playground extends React.Component {
                           Set selected text as range
                         </Button>
                       </SidebarCategory>
-                      <SidebarCategory title="Debug">
+                      {/* TODO Support doc and ast */}
+                      {/* <SidebarCategory title="Debug">
                         <Checkbox
                           label="show input"
                           checked={editorState.showInput}
@@ -256,7 +257,7 @@ class Playground extends React.Component {
                             Copy doc
                           </ClipboardButton>
                         )}
-                      </SidebarCategory>
+                      </SidebarCategory> */}
                       <div className="sub-options">
                         <Button onClick={this.resetOptions}>
                           Reset to defaults

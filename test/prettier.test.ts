@@ -3,6 +3,7 @@ import { expect } from "chai";
 import * as fs from "fs";
 import { Browser, chromium, Page } from "playwright";
 
+// TODO False negatives when --timeout is not set.
 import {
   takeScreenshot,
   compareScreenshots,

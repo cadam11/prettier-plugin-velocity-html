@@ -92,7 +92,8 @@ if (process.env.BUILD_STANDALONE == "true") {
           { from: "package.json" },
           { from: "LICENSE" },
           { from: "legal/**/*" },
-          { from: "Readme.md" }
+          { from: "README.md" },
+          { from: "CHANGELOG.md" }
         ],
       }),
       generateLexer
