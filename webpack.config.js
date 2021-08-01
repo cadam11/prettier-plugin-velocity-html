@@ -36,17 +36,25 @@ module.exports = {
     clean: true,
     library: {
       type: "umd"
-    }
+    },
+    globalObject: 'this'
   },
   target: 'node',
   externals: [nodeExternals()],
   plugins: [
     new CopyPlugin({
       patterns: [
-        { from: "./test/**/*",  globOptions: {
+        { 
+          from: "./test/**/*",  
+          globOptions: {
           dot: false,
           ignore: ["**/*.ts", "**/velocity-java"]
-        } },
+          }
+        },
+        { from: "package.json" },
+        { from: "LICENSE" },
+        { from: "legal/**/*" },
+        { from: "Readme.md" }
       ],
     }),
     new WebpackShellPluginNext({

@@ -15,6 +15,7 @@ function importScriptOnce(url) {
 // importScripts("lib/parsers-location.js");
 importScripts("lib/standalone.js");
 
+
 // this is required to only load parsers when we need them
 
 
@@ -29,6 +30,9 @@ const parsersLocation = {
     parsers: ["css", "less", "scss"],
     property: "postcss",
   },
+  "parser-velocity-html.js": {
+    parsers: ["velocity-html"]
+  }
 };
 
 const parsers = Object.create(null);
