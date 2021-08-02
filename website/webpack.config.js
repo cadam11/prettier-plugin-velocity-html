@@ -9,10 +9,6 @@ module.exports = {
     playground: "./playground/index.js",
   },
   devtool: 'inline-source-map',
-  // output: {
-  //   filename: "[name].js",
-  //   path: __dirname + "/static/",
-  // },
   module: {
     rules: [
       {
@@ -25,10 +21,6 @@ module.exports = {
       },
     ],
   },
-  // output: {
-  //   path: path.resolve(__dirname, './dist'),
-  //   filename: 'index_bundle.js',
-  // },
   plugins: [new HtmlWebpackPlugin({
     template: 'playground/index.html'
   })],
