@@ -1,3 +1,7 @@
+## Demo
+Try your velocity code on the [Playground](https://prettier-plugin-velocity-html.herokuapp.com/)
+
+## How it works
 There are two render modes for elements: block and inline. Block elements will break its children uniformly, whereas inline elements will try to fill as much horizontal space as possible.
 
 inline
