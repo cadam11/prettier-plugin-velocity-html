@@ -25,9 +25,3 @@ jobs:
           cd test/velocity-java && mvn package
           npm install
           JAVA_16_OR_BETTER=$(which java) npm run test
-      - uses: actions/upload-artifact@v2
-        if: ${{ github.ref == 'refs/heads/main' }}
-        with:
-          name: dist
-          path: dist/src/**/*.js
-          if-no-files-found: error  

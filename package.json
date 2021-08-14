@@ -67,7 +67,7 @@
     "heroku-cleanup": "rimraf .jdk/ && rimraf node_modules/ && du -h -d 1",
     "playground": "node dist/server.js",
     "build:production": "rimraf dist/ && webpack --mode=production",
-    "build:development": "rimraf dist/ && webpack",
+    "build:development": "rimraf dist/ && webpack --mode=development",
     "test": "npm run build:development && node --require source-map-support/register node_modules/mocha/bin/mocha dist/test/index.js --parallel --reporter spec --timeout 10000",
     "gh-pages": "rimraf docs && npm run docs && gh-pages -d docs",
     "npm-publish": "npm publish",
