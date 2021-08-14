@@ -1,1 +1,1 @@
-web: npm playground
+web: npm run playground

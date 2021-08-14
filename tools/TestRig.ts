@@ -5,6 +5,7 @@ import { CharStreams, CommonTokenStream } from "antlr4ts";
 import { VelocityHtmlLexer } from "../src/parser/generated/VelocityHtmlLexer";
 import { VelocityTokenFactory } from "../src/parser/VelocityTokenFactory";
 import * as fs from "fs";
+import * as path from "path";
 import { VelocityToken } from "../src/parser/VelocityToken";
 import { Command } from "commander";
 import * as prettier from "prettier";
@@ -110,16 +111,15 @@ function main(): void {
         console.log(formatted);
       }
     });
-  const file = "./local/printDoc";
-
-  // Include in bundle
-  if (fs.existsSync(file)) {
-    require("./local/printDoc");
-  }
 
   program.command("print-doc").action(() => {
+    if (!fs.existsSync(path.join(__dirname, "printDocLocal.js"))) {
+      throw new Error(
+        "Module ./printDocLocal does not exist. This is a local module residing in tools/local for debugging. You can copy it from printDocExample"
+      );
+    }
     // eslint-disable-next-line @typescript-eslint/no-var-requires, @typescript-eslint/no-unsafe-member-access
-    const doc: prettier.Doc[] = require("./local/printDoc")
+    const doc: prettier.Doc[] = require("./printDocLocal")
       .default as prettier.Doc[];
     // const doc: prettier.Doc = [];
     console.log(

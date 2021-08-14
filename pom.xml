@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>fvclaus</groupId>
+    <artifactId>prettier-velocity-html-plugin</artifactId>
+    <version>1.0</version>
+    <!-- Only required for Heroku deployment to run Java buildpack and install Java binary into the $PATH. -->
+    <!-- Use pom packaging to avoid default Java lifecycle with all its plugins. -->
+    <packaging>pom</packaging>
+</project>
