@@ -49,6 +49,7 @@ const DEFAULT_CONFIG = {
   // stats: 'verbose'
 }
 
+// TODO Rename
 if (process.env.BUILD_STANDALONE == "true") {
   module.exports = [{
     ...DEFAULT_CONFIG,
@@ -194,6 +195,7 @@ if (process.env.BUILD_STANDALONE == "true") {
             ignore: ["**/*.ts", "**/velocity-java"]
             }
           },
+          { from: ".npmignore"},
           { from: "package.json" },
           { from: "LICENSE" },
           { from: "legal/**/*" },

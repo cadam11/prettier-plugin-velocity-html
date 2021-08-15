@@ -1,13 +1,2 @@
-src/
-test
-tools
-.vscode
-*eslint*
-.nvmrc
-.prettierrc
-.editorconfig
-.antlr
-*.ts
-gulp*
-tsconfig*
-*.map
+test/
+tools/
