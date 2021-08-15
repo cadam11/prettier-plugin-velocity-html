@@ -1,4 +1,17 @@
 {
+  "name": "prettier-plugin-velocity-html",
+  "version": "1.0.1",
+  "author": {
+    "name": "Frederik Claus",
+    "email": "f.v.claus@googlemail.com"
+  },
+  "dependencies": {
+    "antlr4ts": "^0.5.0-alpha.4"
+  },
+  "engines": {
+    "node": "v14.15.5"
+  },
+  "license": "MIT",
   "main": "index.js",
   "devDependencies": {
     "@babel/core": "^7.15.0",
@@ -52,9 +65,7 @@
     "html-webpack-plugin": "^5.3.2",
     "js-yaml": "4.0.0",
     "lz-string": "1.4.4",
-    "express": "^4.17.1"
-  },
-  "optionalDependencies": {
+    "express": "^4.17.1",
     "playwright": "^1.10.0",
     "clipboard": "2.0.6",
     "prop-types": "15.7.2",
@@ -69,24 +80,10 @@
     "build:production": "rimraf dist/ && webpack --mode=production",
     "build:development": "rimraf dist/ && webpack --mode=development",
     "test": "npm run build:development && node --require source-map-support/register node_modules/mocha/bin/mocha dist/test/index.js --parallel --reporter spec --timeout 10000",
-    "gh-pages": "rimraf docs && npm run docs && gh-pages -d docs",
-    "npm-publish": "npm publish",
+    "npm-publish": "npm run build:production && cd dist/ && npm publish && echo 'Do not forget to tag with current version and push the tag'",
     "lint": "eslint \"./**/*.ts\"",
     "testrig": "npm run build:development && node --require source-map-support/register dist/tools/TestRig.js",
     "testrig:html": "npm run testrig -- read-test-case --file tools/local/local-debug.html --doc --format --token",
     "testrig:print-doc": "npm run testrig -- print-doc"
-  },
-  "version": "1.0.0",
-  "name": "prettier-plugin-velocity-html",
-  "author": {
-    "name": "Frederik Claus",
-    "email": "f.v.claus@googlemail.com"
-  },
-  "dependencies": {
-    "antlr4ts": "^0.5.0-alpha.4"
-  },
-  "engines": {
-    "node": "v14.15.5"
-  },
-  "license": "MIT"
+  }
 }
