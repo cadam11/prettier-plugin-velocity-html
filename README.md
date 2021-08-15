@@ -48,8 +48,93 @@ Even if Prettier can parse the HTML Velocity code, it is unlikely to improve the
 ```
 
 ## How to integrate it
-There are multiple ways to do it. The solution I used in the project that motivated this plugins works like this:
-Create a `package.json` in a folder `formatter` that will only contain dependencies to prettier. Install `prettier` and all plugins using `npm i <package-name> --save`. Add [spotless](https://github.com/diffplug/spotless) to your `pom.xml`. Follow the instructions here 
+There are multiple ways to do this. I will describe the solution I used in the project that motivated this plugin.
+### IDE integration
+- Create a `package.json` in a folder called `formatter` using `npm init`.
+- Install `prettier` and all plugins using `npm i <package-name> --save`. This installation of prettier and its plugin will be configured in your IDE
+- Add `package.json` and `package-lock.json` to your version control. Exclude `node_modules/`
+- Install the Prettier plugin for your IDE. For IntelliJ use [Prettier](https://plugins.jetbrains.com/plugin/10456-prettier). For Visual Studio Code use [prettier-vscode](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode).
+- Configure the location of your prettier installation (the Prettier executable inside the `formatter` folder). Consult the documentation for the mentioned plugins
+
+### CI Integration
+This is written for Maven
+- Add [spotless](https://github.com/diffplug/spotless) plugin to your `pom.xml`
+```
+<plugin>
+  <groupId>com.diffplug.spotless</groupId>
+  <artifactId>spotless-maven-plugin</artifactId>
+  <version>${maven-spotless-plugin.version}</version>
+  <executions>
+      <execution>
+          <id>check-formatting</id>
+          <goals>
+              <goal>check</goal>
+          </goals>
+          <phase>validate</phase>
+      </execution>
+  </executions>
+  <configuration>
+      <formats>
+          <format>
+              <includes>
+                  <include>**/src/**/*.java</include>
+                  <include>**/src/**/*.js</include>
+                  <include>**/src/**/*.xml</include>
+                  <include>**/src/**/*.vm</include>
+                  <include>pom.xml</include>
+              </includes>
+              <excludes>
+                  <exclude>**/node_modules/**</exclude>
+              </excludes>
+
+              <prettier>
+                  <npmExecutable>${project.basedir}/node/npm</npmExecutable>
+                  <!-- Prettier versions have to be duplicated here and in formatter/package.json. See https://github.com/diffplug/spotless/issues/675 -->
+                  <devDependencyProperties>
+                      <property>
+                          <name>prettier</name>
+                          <value>2.2.1</value>
+                      </property>
+                      <property>
+                          <name>@prettier/plugin-xml</name>
+                          <value>0.13.0</value>
+                      </property>
+                      <property>
+                          <name>prettier-plugin-java</name>
+                          <value>1.0.1</value>
+                      </property>
+                  </devDependencyProperties>
+                  <configFile>${project.basedir}/.prettierrc.json</configFile>
+              </prettier>
+          </format>
+      </formats>
+  </configuration>
+</plugin>
+```
+- As you can see above, spotless will install Prettier and its plugins again. It currently does not support using a existing installation. Therefore, we have to duplicate version information.
+- One way to provide Node and NPM is the [frontend-maven-plugin](https://github.com/eirslett/frontend-maven-plugin)
+```
+<plugin>
+    <groupId>com.github.eirslett</groupId>
+    <artifactId>frontend-maven-plugin</artifactId>
+    <version>${maven-frontend-plugin.version}</version>
+    <executions>
+        <execution>
+            <id>install node and npm</id>
+            <goals>
+                <goal>install-node-and-npm</goal>
+            </goals>
+            <phase>validate</phase>
+        </execution>
+    </executions>
+    <configuration>
+        <nodeVersion>v10.18.0</nodeVersion>
+        <installDirectory>${project.basedir}</installDirectory>
+    </configuration>
+</plugin>
+```
+- Run `mvn spotless:check` in your pipeline.
+
 
 ## How it works
 There are two render modes for elements: block and inline. Block elements will break its children uniformly, whereas inline elements will try to fill as much horizontal space as possible.
