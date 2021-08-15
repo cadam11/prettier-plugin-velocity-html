@@ -12,6 +12,9 @@
     "node": "v14.15.5"
   },
   "license": "MIT",
+  "repository": "fvclaus/prettier-plugin-velocity-html",
+  "homepage": "https://prettier-plugin-velocity-html.herokuapp.com/",
+  "keywords": ["prettier", "velocity"],
   "main": "index.js",
   "devDependencies": {
     "@babel/core": "^7.15.0",

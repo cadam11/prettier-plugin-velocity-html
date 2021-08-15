@@ -1,8 +1,11 @@
-Prettier plugin that formats HTML containing Velocity code.
+Prettier plugin that formats HTML containing Velocity code
 
 <br/>
 
 ### Try your Velocity code using the interactive **[Playground](https://prettier-plugin-velocity-html.herokuapp.com/)**
+or install it using `npm i prettier-plugin-velocity-html`. 
+<br/>
+The plugin will try to format all files ending in `.vm`. Alternatively you can use the `--parser "velocity-html"` switch of the Prettier CLI.
 
 <br/>
 
@@ -93,15 +96,19 @@ This is written for Maven
                   <devDependencyProperties>
                       <property>
                           <name>prettier</name>
-                          <value>2.2.1</value>
+                          <value><!-- VERSION --></value>
                       </property>
                       <property>
                           <name>@prettier/plugin-xml</name>
-                          <value>0.13.0</value>
+                          <value><!-- VERSION --></value>
                       </property>
                       <property>
                           <name>prettier-plugin-java</name>
-                          <value>1.0.1</value>
+                          <value><!-- VERSION --></value>
+                      </property>
+                      <property>
+                          <name>prettier-plugin-velocity-html</name>
+                          <value><!-- VERSION --></value>
                       </property>
                   </devDependencyProperties>
                   <configFile>${project.basedir}/.prettierrc.json</configFile>
