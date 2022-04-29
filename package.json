@@ -9,7 +9,7 @@
     "antlr4ts": "^0.5.0-alpha.4"
   },
   "engines": {
-    "node": "v14.15.5"
+    "node": ">=14.15.5"
   },
   "license": "MIT",
   "repository": "fvclaus/prettier-plugin-velocity-html",
